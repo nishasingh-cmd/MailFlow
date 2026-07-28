@@ -1,7 +1,16 @@
-import DesignSystem from './pages/DesignSystem';
+import { BrowserRouter } from 'react-router-dom';
+import { AppRoutes } from './routes';
+import { useTheme } from './hooks/useTheme';
 
 function App() {
-  return <DesignSystem />;
+  // Initialize theme hook so dark/light theme class is applied on root
+  useTheme();
+
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
 }
 
 export default App;
