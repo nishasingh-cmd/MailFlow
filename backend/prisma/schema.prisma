@@ -1,0 +1,27 @@
+// MailFlow — Prisma Schema
+// Phase 1: Project Foundation — placeholder model only.
+//
+// Full data model (Leads, Campaigns, Templates, EmailJobs, ResearchCache,
+// ActivityLogs) will be added in subsequent phases per the Technical
+// Architecture Document (Section 7: Database).
+//
+// Run: npm run prisma:migrate  (creates migration + applies to DB)
+// Run: npm run prisma:generate (re-generates the Prisma client)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Placeholder User model — confirms DB connectivity.
+/// Full user schema (password hash, roles, refresh tokens, etc.) will be
+/// added in the Authentication phase per the Security & Access Control Document.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}

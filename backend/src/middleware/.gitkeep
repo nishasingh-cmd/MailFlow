@@ -1,0 +1,5 @@
+# Middleware directory
+# Authentication (JWT), rate limiting, validation, and error-handling middleware
+# will be added in subsequent phases per:
+# - Technical Architecture Document (Section 6: Backend Architecture)
+# - Security & Access Control Document (Sections 3–8)
