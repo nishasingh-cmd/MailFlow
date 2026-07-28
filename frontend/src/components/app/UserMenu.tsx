@@ -3,14 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { Avatar } from '../ui/Avatar/Avatar';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
-
-const MOCK_USER = {
-  name: 'Nisha Singh',
-  email: 'nisha@mailflow.io',
-  role: 'Admin',
-  avatar: undefined as string | undefined,
-};
 
 const menuItems = [
   {
@@ -54,25 +48,29 @@ const menuItems = [
   },
 ];
 
-/**
- * UserMenu — avatar trigger that opens a dropdown with user info and actions.
- * Uses Phase 2 useClickOutside hook for clean dismiss behavior.
- */
 export function UserMenu({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   useClickOutside(ref, () => setOpen(false));
 
-  const handleLogout = () => {
-    localStorage.removeItem('mailflow-auth');
+  const userName = user?.name ?? 'User';
+  const userEmail = user?.email ?? '';
+  const userAvatar = user?.avatar ?? undefined;
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
     navigate(ROUTES.LOGIN);
   };
 
   const handleNavigate = (id: string) => {
     setOpen(false);
-    if (id === 'settings') navigate(ROUTES.SETTINGS);
+    if (id === 'settings' || id === 'profile') {
+      navigate(ROUTES.SETTINGS);
+    }
   };
 
   return (
@@ -86,9 +84,9 @@ export function UserMenu({ className }: { className?: string }) {
         aria-label="Open user menu"
         className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--surface-elevated)] transition-colors"
       >
-        <Avatar name={MOCK_USER.name} src={MOCK_USER.avatar} size="sm" online />
+        <Avatar name={userName} src={userAvatar} size="sm" online />
         <span className="hidden md:block text-sm font-medium text-[var(--content-primary)] max-w-[120px] truncate">
-          {MOCK_USER.name}
+          {userName}
         </span>
         <svg
           className={cn(
@@ -118,12 +116,12 @@ export function UserMenu({ className }: { className?: string }) {
         >
           {/* User info header */}
           <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--surface-border)]">
-            <Avatar name={MOCK_USER.name} size="md" online />
+            <Avatar name={userName} src={userAvatar} size="md" online />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[var(--content-primary)] truncate">
-                {MOCK_USER.name}
+                {userName}
               </p>
-              <p className="text-xs text-[var(--content-tertiary)] truncate">{MOCK_USER.email}</p>
+              <p className="text-xs text-[var(--content-tertiary)] truncate">{userEmail}</p>
             </div>
           </div>
 

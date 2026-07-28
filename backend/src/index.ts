@@ -1,10 +1,6 @@
 /**
  * MailFlow Backend — Express entry point.
- * Phase 1: Project Foundation
- *
- * Only the health-check route is registered here.
- * Auth middleware, business routes, and queue setup will be added in subsequent phases
- * per the Technical Architecture Document.
+ * Phase 4: Authentication & User Management
  */
 import express from 'express';
 import cors from 'cors';
@@ -12,6 +8,8 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { checkRedisConnection } from './config/redis';
 import healthRouter from './routes/health';
+import authRouter from './modules/auth/auth.routes';
+import userRouter from './modules/users/user.routes';
 
 const app = express();
 
@@ -23,6 +21,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/users', userRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

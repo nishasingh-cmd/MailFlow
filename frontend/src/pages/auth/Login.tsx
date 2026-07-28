@@ -2,11 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button, Input, Card } from '../../components/ui';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
@@ -15,7 +17,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -26,19 +28,25 @@ export default function Login() {
 
     setLoading(true);
 
-    // Dummy login loading simulation
-    setTimeout(() => {
-      setLoading(false);
-      localStorage.setItem('mailflow-auth', 'true');
+    try {
+      const user = await login({ email, password });
       toast.success({
         title: 'Welcome back!',
-        description: 'Successfully logged in to MailFlow.',
+        description: `Logged in as ${user.name}`,
       });
 
       const from =
         (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.DASHBOARD;
       navigate(from, { replace: true });
-    }, 1200);
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { error?: string } } };
+      const msg =
+        apiErr.response?.data?.error ?? 'Failed to log in. Please check your credentials.';
+      setError(msg);
+      toast.error({ title: 'Authentication failed', description: msg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

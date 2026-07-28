@@ -1,15 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from '../../components/ui';
+import { AuthService } from '../../services/auth.service';
+import { useToast } from '../../hooks/useToast';
 import { ROUTES } from '../../routes/routes';
 
 export default function ForgotPassword() {
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -20,10 +23,17 @@ export default function ForgotPassword() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await AuthService.forgotPassword(email);
       setSubmitted(true);
-    }, 1000);
+      toast.info('Password reset request processed.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { error?: string } } };
+      const msg = apiErr.response?.data?.error ?? 'Failed to process request. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,8 +59,9 @@ export default function ForgotPassword() {
           <div>
             <h2 className="text-xl font-bold text-[var(--content-primary)]">Check your inbox</h2>
             <p className="mt-2 text-sm text-[var(--content-secondary)] leading-relaxed">
-              We&apos;ve sent a password reset link to{' '}
-              <strong className="text-[var(--content-primary)]">{email}</strong>.
+              If an account exists for{' '}
+              <strong className="text-[var(--content-primary)]">{email}</strong>, a reset link has
+              been sent.
             </p>
           </div>
 

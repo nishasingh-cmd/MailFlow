@@ -2,10 +2,12 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card } from '../../components/ui';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
 export default function Register() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const { toast } = useToast();
 
   const [fullName, setFullName] = useState('');
@@ -15,7 +17,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -36,14 +38,21 @@ export default function Register() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await register({ name: fullName, email, password });
       toast.success({
         title: 'Account created!',
-        description: 'You can now log in with your credentials.',
+        description: 'Welcome to MailFlow.',
       });
-      navigate(ROUTES.LOGIN);
-    }, 1200);
+      navigate(ROUTES.DASHBOARD);
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { error?: string } } };
+      const msg = apiErr.response?.data?.error ?? 'Failed to create account. Please try again.';
+      setError(msg);
+      toast.error({ title: 'Registration failed', description: msg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,7 +62,7 @@ export default function Register() {
           Create your MailFlow account
         </h2>
         <p className="mt-1.5 text-sm text-[var(--content-secondary)]">
-          Start your 14-day free trial. No credit card required.
+          Start your cold outreach pipeline today.
         </p>
       </div>
 

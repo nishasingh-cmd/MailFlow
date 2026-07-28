@@ -20,4 +20,8 @@ export const env = {
   PORT: parseInt(process.env.PORT ?? '3001', 10),
   DATABASE_URL: requireEnv('DATABASE_URL'),
   REDIS_URL: requireEnv('REDIS_URL'),
+  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? 'mailflow_access_secret_dev_key_12345',
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? 'mailflow_refresh_secret_dev_key_67890',
+  JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES ?? '15m',
+  JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES ?? '7d',
 } as const;

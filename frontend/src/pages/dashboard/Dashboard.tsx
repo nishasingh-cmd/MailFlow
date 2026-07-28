@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Badge, Table, Avatar, type Column } from '../../components/ui';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
 interface RecentCampaign {
@@ -51,7 +52,10 @@ const RECENT_CAMPAIGNS: RecentCampaign[] = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [campaigns] = useState<RecentCampaign[]>(RECENT_CAMPAIGNS);
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'User';
 
   const columns: Column<RecentCampaign>[] = [
     {
@@ -128,7 +132,7 @@ export default function Dashboard() {
               <span className="text-xs text-[var(--content-tertiary)]">July 2026</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-[var(--content-primary)] tracking-tight">
-              Welcome back to MailFlow, Nisha 👋
+              Welcome back to MailFlow, {firstName} 👋
             </h1>
             <p className="text-sm text-[var(--content-secondary)] max-w-xl leading-relaxed">
               Your campaigns are performing 14% better than last week. 4,821 emails delivered with

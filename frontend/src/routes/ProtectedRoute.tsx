@@ -1,18 +1,20 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { PageLoader } from '../components/ui/Loader/Loader';
 import { ROUTES } from './routes';
 
 /**
- * ProtectedRoute — gates access to authenticated app routes.
- *
- * Phase 3: uses a localStorage flag ('mailflow-auth') as a mock auth check.
- * Phase 4 will replace this with real JWT / session validation.
+ * ProtectedRoute — gates access to authenticated app routes using real AuthContext state.
  */
 export function ProtectedRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const isAuthenticated = localStorage.getItem('mailflow-auth') === 'true';
+
+  if (isLoading) {
+    return <PageLoader label="Verifying session…" />;
+  }
 
   if (!isAuthenticated) {
-    // Preserve the attempted URL so we can redirect back after login
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
   }
 

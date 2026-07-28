@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, type SidebarSection } from '../ui/Sidebar/Sidebar';
 import { Avatar } from '../ui/Avatar/Avatar';
+import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
 /* Icons for sidebar navigation */
@@ -68,11 +69,16 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const handleNav = (path: string) => {
     navigate(path);
     onItemClick?.();
   };
+
+  const userName = user?.name ?? 'User';
+  const userEmail = user?.email ?? '';
+  const userAvatar = user?.avatar ?? undefined;
 
   const sections: SidebarSection[] = [
     {
@@ -143,18 +149,24 @@ export function AppSidebar({
       }
       footer={
         !collapsed ? (
-          <div className="flex items-center gap-2.5 px-1">
-            <Avatar name="Nisha Singh" size="sm" online />
+          <div
+            className="flex items-center gap-2.5 px-1 cursor-pointer"
+            onClick={() => handleNav(ROUTES.SETTINGS)}
+          >
+            <Avatar name={userName} src={userAvatar} size="sm" online />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-[var(--content-primary)] truncate">
-                Nisha Singh
+                {userName}
               </p>
-              <p className="text-2xs text-[var(--content-tertiary)] truncate">nisha@mailflow.io</p>
+              <p className="text-2xs text-[var(--content-tertiary)] truncate">{userEmail}</p>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center">
-            <Avatar name="Nisha Singh" size="sm" online />
+          <div
+            className="flex justify-center cursor-pointer"
+            onClick={() => handleNav(ROUTES.SETTINGS)}
+          >
+            <Avatar name={userName} src={userAvatar} size="sm" online />
           </div>
         )
       }
