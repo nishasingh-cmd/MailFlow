@@ -1,7 +1,7 @@
-import Home from './pages/Home';
+import DesignSystem from './pages/DesignSystem';
 
 function App() {
-  return <Home />;
+  return <DesignSystem />;
 }
 
 export default App;
