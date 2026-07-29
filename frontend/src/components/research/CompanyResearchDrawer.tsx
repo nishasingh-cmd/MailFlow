@@ -130,11 +130,15 @@ export function CompanyResearchDrawer({
     setIsResearching(true);
     setError(null);
     try {
-      await researchService.researchSingle(leadId);
+      const res = await researchService.researchSingle(leadId);
+      if (res.status === 'FAILED') {
+        setError(res.error ?? 'Research failed for this company.');
+      }
       await fetchResearch();
       onResearchComplete?.();
-    } catch {
-      setError('Research failed. Please try again.');
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error ?? 'Research failed. Please try again.');
     } finally {
       setIsResearching(false);
     }

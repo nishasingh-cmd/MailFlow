@@ -2,16 +2,12 @@
  * MailFlow — Research Service
  * Phase 6: AI Company Research
  *
- * Orchestrates company research: website detection, AI intelligence gathering,
- * caching, and status tracking.
+ * Orchestrates company research: validation, website detection, AI intelligence gathering,
+ * caching, status tracking, and step-by-step logging.
  */
 import { prisma } from '../../config/db';
 import { researchCompanyWithAI } from '../../services/gemini.service';
 import { ResearchProgressResponse } from '@mailflow/shared';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 function serializeDates<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(
@@ -19,26 +15,27 @@ function serializeDates<T extends Record<string, unknown>>(obj: T): T {
   ) as T;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Core Research Orchestration
-// ─────────────────────────────────────────────────────────────────────────────
-
 export class ResearchService {
   /**
    * Get or create a Company record for a given lead.
-   * Uses the lead's company name as the unique key per user.
    */
   static async getOrCreateCompany(userId: string, leadId: string) {
     const lead = await prisma.lead.findFirst({ where: { id: leadId, userId } });
-    if (!lead) throw new Error('LEAD_NOT_FOUND');
-    if (!lead.company) throw new Error('LEAD_NO_COMPANY: Lead has no company name to research');
+    if (!lead) {
+      throw new Error('LEAD_NOT_FOUND: Lead does not exist or access denied');
+    }
+    if (!lead.company || !lead.company.trim()) {
+      throw new Error('INVALID_COMPANY_NAME: Lead has no company name to research');
+    }
+
+    const companyName = lead.company.trim();
 
     // Upsert company by (userId, name)
     const company = await prisma.company.upsert({
-      where: { userId_name: { userId, name: lead.company } },
+      where: { userId_name: { userId, name: companyName } },
       create: {
         userId,
-        name: lead.company,
+        name: companyName,
         website: lead.website ?? null,
         industry: lead.industry ?? null,
         products: [],
@@ -46,7 +43,6 @@ export class ResearchService {
         techStack: [],
       },
       update: {
-        // Only backfill website / industry if not already set
         website: { set: lead.website ?? undefined },
         industry: { set: lead.industry ?? undefined },
       },
@@ -61,11 +57,11 @@ export class ResearchService {
       });
     }
 
-    return company;
+    return { company, lead };
   }
 
   /**
-   * Research a single lead's company. Skips if already COMPLETED (cache hit).
+   * Research a single lead's company with 6-step detailed logging and error recovery.
    */
   static async researchCompany(
     userId: string,
@@ -75,46 +71,65 @@ export class ResearchService {
     companyName: string;
     status: string;
     error?: string;
+    company?: unknown;
   }> {
-    // 1. Get or create the company
-    let company;
+    const startTime = Date.now();
+    console.log(`[RESEARCH] [STEP 1] Request received: Lead ID = ${leadId}, User ID = ${userId}`);
+
+    // Step 1 & 2: Fetch Lead & Company
+    let companyObj;
+    let leadObj;
     try {
-      company = await ResearchService.getOrCreateCompany(userId, leadId);
+      const { company, lead } = await ResearchService.getOrCreateCompany(userId, leadId);
+      companyObj = company;
+      leadObj = lead;
+      console.log(
+        `[RESEARCH] [STEP 2] Company detected: Name = "${companyObj.name}", Website = "${companyObj.website ?? 'None'}"`
+      );
     } catch (err) {
-      const msg = (err as Error).message;
+      const msg = (err as Error).message ?? 'Failed to detect company';
+      console.error(`[RESEARCH] [STEP 2 FAILED] Error: ${msg}`);
       return { leadId, companyName: '', status: 'FAILED', error: msg };
     }
 
-    const companyName = company.name;
+    const companyName = companyObj.name;
 
-    // 2. Cache check — if already COMPLETED, reuse it
-    if (company.research?.status === 'COMPLETED') {
+    // Cache check — if already COMPLETED, return cached data immediately
+    if (companyObj.research?.status === 'COMPLETED') {
+      console.log(
+        `[RESEARCH] [CACHE HIT] Research already COMPLETED for "${companyName}". Returning cached result.`
+      );
       return { leadId, companyName, status: 'COMPLETED' };
     }
 
-    // 3. Upsert research record → set to PROCESSING
+    // Step 3: Upsert research record → set status to PROCESSING
     const research = await prisma.companyResearch.upsert({
-      where: { companyId: company.id },
-      create: { companyId: company.id, status: 'PROCESSING' },
+      where: { companyId: companyObj.id },
+      create: { companyId: companyObj.id, status: 'PROCESSING' },
       update: {
         status: 'PROCESSING',
         errorMessage: null,
-        retryCount: { increment: company.research ? 1 : 0 },
+        retryCount: { increment: companyObj.research ? 1 : 0 },
       },
     });
 
     try {
-      // 4. Call Gemini AI
+      // Step 3 & 4: Call AI Research Providers
       const { intelligence, rawResponse } = await researchCompanyWithAI(
         companyName,
-        company.website
+        companyObj.website || leadObj.website
       );
 
-      // 5. Update Company with gathered intelligence
-      await prisma.company.update({
-        where: { id: company.id },
+      const durationMs = Date.now() - startTime;
+      console.log(
+        `[RESEARCH] [STEP 4] Response received: Provider = "${intelligence.providerUsed}", Duration = ${durationMs}ms`
+      );
+
+      // Step 5: Save Research Data to Database
+      const updatedCompany = await prisma.company.update({
+        where: { id: companyObj.id },
         data: {
-          industry: intelligence.industry || company.industry,
+          industry: intelligence.industry || companyObj.industry,
           description: intelligence.description || null,
           products: intelligence.products,
           services: intelligence.services,
@@ -122,14 +137,13 @@ export class ResearchService {
           companySize: intelligence.companySize || null,
           targetCustomers: intelligence.targetCustomers || null,
           techStack: intelligence.techStack,
-          // Detect website if missing
           website:
-            company.website || (intelligence.detectedWebsite ? intelligence.detectedWebsite : null),
+            companyObj.website ||
+            (intelligence.detectedWebsite ? intelligence.detectedWebsite : null),
         },
       });
 
-      // 6. Update research record → COMPLETED
-      await prisma.companyResearch.update({
+      const updatedResearch = await prisma.companyResearch.update({
         where: { id: research.id },
         data: {
           status: 'COMPLETED',
@@ -142,28 +156,52 @@ export class ResearchService {
         },
       });
 
-      return { leadId, companyName, status: 'COMPLETED' };
-    } catch (err) {
-      const errorMessage = (err as Error).message ?? 'Unknown AI error';
+      console.log(
+        `[RESEARCH] [STEP 5] Database saved: Company ID = ${updatedCompany.id}, Research ID = ${updatedResearch.id}, Status = COMPLETED`
+      );
 
-      // Mark as FAILED
+      // Step 6: Response Returned
+      console.log(`[RESEARCH] [STEP 6] Response returned: Lead ID = ${leadId}, Status = COMPLETED`);
+
+      return { leadId, companyName, status: 'COMPLETED' };
+    } catch (err: unknown) {
+      const rawError = (err as Error).message ?? 'Unknown research error';
+      console.error(`[RESEARCH] [FAILED] Research error for "${companyName}": ${rawError}`);
+
+      // Map to clear error message categories
+      let categorizedError = rawError;
+      if (rawError.includes('MISSING_KEY')) {
+        categorizedError =
+          'Missing API key: Neither GEMINI_API_KEY nor OPENAI_API_KEY is configured in backend/.env';
+      } else if (rawError.includes('TIMEOUT')) {
+        categorizedError =
+          'Network timeout: AI research service request timed out after 30 seconds';
+      } else if (rawError.includes('RATE_LIMIT')) {
+        categorizedError = 'Rate limit exceeded: AI provider rate limit or quota reached';
+      } else if (rawError.includes('INVALID_COMPANY_NAME')) {
+        categorizedError = 'Invalid company name: Company name must be a valid non-empty string';
+      }
+
       await prisma.companyResearch.update({
         where: { id: research.id },
         data: {
           status: 'FAILED',
-          errorMessage,
+          errorMessage: categorizedError,
         },
       });
 
-      return { leadId, companyName, status: 'FAILED', error: errorMessage };
+      console.log(`[RESEARCH] [STEP 6] Response returned: Lead ID = ${leadId}, Status = FAILED`);
+      return { leadId, companyName, status: 'FAILED', error: categorizedError };
     }
   }
 
   /**
    * Bulk research — run sequentially with progress tracking.
-   * Returns a progress summary.
    */
   static async bulkResearch(userId: string, leadIds: string[]): Promise<ResearchProgressResponse> {
+    console.log(
+      `[BULK RESEARCH] Starting bulk research for ${leadIds.length} leads (User: ${userId})`
+    );
     const results: ResearchProgressResponse['results'] = [];
     let completed = 0;
     let failed = 0;
@@ -177,6 +215,9 @@ export class ResearchService {
       else if (result.status === 'FAILED') failed += 1;
     }
 
+    console.log(
+      `[BULK RESEARCH] Completed batch: Total = ${leadIds.length}, Completed = ${completed}, Failed = ${failed}`
+    );
     return {
       total: leadIds.length,
       completed,
@@ -196,7 +237,6 @@ export class ResearchService {
     });
 
     const leadIds = leads.map((l) => l.id);
-
     if (leadIds.length === 0) {
       return { total: 0, completed: 0, failed: 0, pending: 0, results: [] };
     }
@@ -205,12 +245,11 @@ export class ResearchService {
   }
 
   /**
-   * Retry a failed research.
+   * Retry a failed research for a lead.
    */
   static async retryResearch(userId: string, leadId: string) {
-    // Reset status to PENDING first, then re-run
     const lead = await prisma.lead.findFirst({ where: { id: leadId, userId } });
-    if (!lead) throw new Error('LEAD_NOT_FOUND');
+    if (!lead) throw new Error('LEAD_NOT_FOUND: Lead not found');
 
     if (lead.companyId) {
       await prisma.companyResearch.updateMany({
@@ -231,7 +270,18 @@ export class ResearchService {
       select: { id: true, company: true, companyId: true },
     });
 
-    if (!lead) throw new Error('LEAD_NOT_FOUND');
+    if (!lead) throw new Error('LEAD_NOT_FOUND: Lead not found');
+
+    // If companyId is missing, attempt auto-linking first
+    if (!lead.companyId && lead.company) {
+      try {
+        const { company } = await ResearchService.getOrCreateCompany(userId, leadId);
+        lead.companyId = company.id;
+      } catch {
+        return null;
+      }
+    }
+
     if (!lead.companyId) return null;
 
     const company = await prisma.company.findFirst({
@@ -250,7 +300,7 @@ export class ResearchService {
   }
 
   /**
-   * Get research status for multiple leads in one call (for table display).
+   * Get research status for multiple leads in one call.
    */
   static async getBulkResearchStatus(userId: string, leadIds: string[]) {
     const leads = await prisma.lead.findMany({

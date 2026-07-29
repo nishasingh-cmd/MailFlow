@@ -25,4 +25,7 @@ export const env = {
   JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES ?? '15m',
   JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES ?? '7d',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+  TAVILY_API_KEY: process.env.TAVILY_API_KEY ?? '',
+  SERPER_API_KEY: process.env.SERPER_API_KEY ?? '',
 } as const;
