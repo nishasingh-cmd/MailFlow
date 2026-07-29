@@ -13,9 +13,10 @@ export function getRedisClient(): Redis {
     _redis = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: null, // Required by BullMQ when added in a later phase
       lazyConnect: true,
+      enableOfflineQueue: false,
       retryStrategy(times) {
-        if (env.NODE_ENV === 'development' && times > 3) {
-          return null; // Stop retrying after 3 attempts in development if Redis is offline
+        if (env.NODE_ENV === 'development' && times > 2) {
+          return null; // Stop retrying in development if Redis is offline
         }
         return Math.min(times * 200, 3000);
       },
@@ -26,11 +27,18 @@ export function getRedisClient(): Redis {
     });
 
     _redis.on('error', (err) => {
+      // Suppress unhandled error crashes when Redis is offline in dev
+      if (env.NODE_ENV === 'development') {
+        // Silently swallow reconnect errors in development mode
+        return;
+      }
       console.error('[redis] Connection error:', err.message);
     });
 
     _redis.on('reconnecting', () => {
-      console.warn('[redis] Reconnecting...');
+      if (env.NODE_ENV === 'production') {
+        console.warn('[redis] Reconnecting...');
+      }
     });
   }
   return _redis;
@@ -52,8 +60,12 @@ export async function checkRedisConnection(): Promise<boolean> {
     console.error('[redis] Unexpected ping response:', pong);
     return false;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('[redis] Failed to connect:', message);
+    if (env.NODE_ENV === 'development') {
+      console.log('[redis] Development mode — Redis server offline (non-fatal)');
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[redis] Failed to connect:', message);
+    }
     return false;
   }
 }
