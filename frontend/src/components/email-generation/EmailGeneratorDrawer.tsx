@@ -160,19 +160,36 @@ function EmailGeneratorDrawerInner({
   }, [isOpen, leadId, loadData]);
 
   // ── AI Email Generation ───────────────────────────────────────────────────
-  const handleGenerate = async (selectedTpl: EmailTemplateType = template) => {
+  const handleGenerate = async (selectedTpl: EmailTemplateType = template, isRegen = false) => {
     if (!leadId) return;
+
+    if (isRegen) {
+      console.log(`[EmailGenerator] Regeneration button clicked: leadId = ${leadId}`);
+    } else {
+      console.log(`[EmailGenerator] Generation button clicked: leadId = ${leadId}`);
+    }
+
     setIsGenerating(true);
+    const regenSeed = Date.now();
+
     try {
+      console.log(
+        `[EmailGenerator] API request sent: template = ${selectedTpl}, regenerate = ${isRegen}, seed = ${regenSeed}`
+      );
+
       const res: GeneratedEmailResult = await emailGenerationService.generateEmail({
         leadId,
         template: selectedTpl,
+        regenerate: isRegen,
+        regenSeed,
         userContext: {
           userName: senderName,
           userCompany: senderCompany,
           userProductService: senderProduct,
         },
       });
+
+      console.log(`[EmailGenerator] API response received: subject = "${res?.selectedSubject}"`);
 
       // Guard all fields — API may return partial data or nulls
       const subjects = Array.isArray(res?.subjectSuggestions) ? res.subjectSuggestions : [];
@@ -182,15 +199,24 @@ function EmailGeneratorDrawerInner({
       setSubjectSuggestions(subjects);
       setSubject(selectedSubj);
       setBody(emailBody);
-      toast.success('AI Personalised Email generated successfully!');
+
+      console.log('[EmailGenerator] Previous email replaced successfully');
+      toast.success(
+        isRegen
+          ? 'New AI email generated with fresh subjects & phrasing!'
+          : 'AI Personalised Email generated successfully!'
+      );
     } catch (err: unknown) {
       const msg = (err as Error)?.message ?? 'Failed to generate email';
+      console.error('[EmailGenerator] Generation error:', msg);
+
+      // Requirement 8: If regeneration fails, keep previous email, show toast, never clear editor.
       if (msg.includes('RESEARCH_NOT_COMPLETED')) {
         toast.error('Please complete company research for this lead first.');
       } else if (msg.includes('LEAD_NOT_FOUND')) {
         toast.error('Lead not found. Please refresh the page and try again.');
       } else {
-        toast.error(`Generation failed: ${msg}`);
+        toast.error(`Regeneration failed: ${msg}. Keeping current draft.`);
       }
     } finally {
       setIsGenerating(false);
@@ -351,7 +377,7 @@ function EmailGeneratorDrawerInner({
           {/* BUG FIX: Button prop is `loading`, not `isLoading` */}
           <Button
             variant="primary"
-            onClick={() => void handleGenerate(template)}
+            onClick={() => void handleGenerate(template, !!body)}
             loading={isGenerating}
             disabled={!isResearchCompleted || isGenerating}
             className="flex-1 shadow-lg shadow-brand-500/20"

@@ -21,6 +21,8 @@ export interface PromptContext {
   template: EmailTemplateType;
   customInstructions?: string;
   userContext?: UserOutreachContext;
+  regenerate?: boolean;
+  regenSeed?: number;
 }
 
 export class EmailPromptService {
@@ -41,8 +43,12 @@ export class EmailPromptService {
       ? ctx.opportunities.map((o) => `- ${o}`).join('\n')
       : `- Automating B2B outreach with hyper-personalized intelligence`;
 
-    return `You are an elite B2B outbound strategist crafting high-converting, personalized cold outreach emails.
+    const regenNotice = ctx.regenerate
+      ? `\nREGENERATION VARIATION NOTICE (Seed: ${ctx.regenSeed || Date.now()}):\nThis is an explicit request to REGENERATE a completely NEW email version. You MUST generate distinct, fresh subject line suggestions and write a different value hook, intro phrasing, and CTA angle than standard output while keeping the core context intact.\n`
+      : '';
 
+    return `You are an elite B2B outbound strategist crafting high-converting, personalized cold outreach emails.
+${regenNotice}
 PROSPECT & COMPANY CONTEXT:
 - Prospect Name: ${ctx.leadName}
 - Target Company: ${ctx.companyName}

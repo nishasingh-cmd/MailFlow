@@ -69,6 +69,8 @@ export class EmailGenerationService {
       companySize: company.companySize,
       template,
       customInstructions,
+      regenerate: req.regenerate,
+      regenSeed: req.regenSeed || Date.now(),
       userContext: {
         userName: userContext?.userName || user?.name || 'Sales Specialist',
         userCompany: userContext?.userCompany || 'MailFlow',

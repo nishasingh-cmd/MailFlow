@@ -235,6 +235,8 @@ export interface GenerateEmailRequest {
   template?: EmailTemplateType;
   customInstructions?: string;
   userContext?: UserOutreachContext;
+  regenerate?: boolean;
+  regenSeed?: number;
 }
 
 export interface GeneratedEmailSections {

@@ -26,14 +26,19 @@ export class EmailGeneratorService {
    * Generate personalized email and subject line suggestions.
    */
   static async generateEmail(ctx: PromptContext): Promise<GeneratedEmailResult> {
+    console.log(
+      `[EmailGenerator] Service generating email for ${ctx.leadName} (${ctx.companyName}). Regenerate: ${!!ctx.regenerate}`
+    );
     const prompt = EmailPromptService.buildEmailGenerationPrompt(ctx);
     let rawText = '';
     let providerName = '';
 
+    const temperature = ctx.regenerate ? 0.75 : 0.35;
+
     // 1. Try Gemini API if configured
     if (env.GEMINI_API_KEY) {
       try {
-        rawText = await EmailGeneratorService.callGemini(prompt);
+        rawText = await EmailGeneratorService.callGemini(prompt, temperature);
         providerName = 'Google Gemini AI';
       } catch (err) {
         console.warn(`[EMAIL_GEN] Gemini failed: ${(err as Error).message}. Trying fallback...`);
@@ -43,7 +48,7 @@ export class EmailGeneratorService {
     // 2. Try OpenAI API if Gemini failed/unconfigured
     if (!rawText && env.OPENAI_API_KEY) {
       try {
-        rawText = await EmailGeneratorService.callOpenAI(prompt);
+        rawText = await EmailGeneratorService.callOpenAI(prompt, temperature);
         providerName = 'OpenAI GPT';
       } catch (err) {
         console.warn(`[EMAIL_GEN] OpenAI failed: ${(err as Error).message}. Trying fallback...`);
@@ -52,6 +57,7 @@ export class EmailGeneratorService {
 
     // 3. Intelligent fallback engine if API unavailable
     if (!rawText) {
+      console.log(`[EmailGenerator] Using multi-variation fallback engine.`);
       return EmailGeneratorService.buildFallbackEmail(ctx);
     }
 
@@ -67,14 +73,14 @@ export class EmailGeneratorService {
 
     if (env.GEMINI_API_KEY) {
       try {
-        rawText = await EmailGeneratorService.callGemini(prompt);
+        rawText = await EmailGeneratorService.callGemini(prompt, 0.7);
       } catch (err) {
         console.warn('[EmailGenerator] Gemini subject call failed:', (err as Error).message);
       }
     }
     if (!rawText && env.OPENAI_API_KEY) {
       try {
-        rawText = await EmailGeneratorService.callOpenAI(prompt);
+        rawText = await EmailGeneratorService.callOpenAI(prompt, 0.7);
       } catch (err) {
         console.warn('[EmailGenerator] OpenAI subject call failed:', (err as Error).message);
       }
@@ -104,7 +110,7 @@ export class EmailGeneratorService {
     ];
   }
 
-  private static async callGemini(prompt: string): Promise<string> {
+  private static async callGemini(prompt: string, temperature = 0.35): Promise<string> {
     const apiKey = env.GEMINI_API_KEY;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
@@ -117,7 +123,7 @@ export class EmailGeneratorService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
+          generationConfig: { temperature, maxOutputTokens: 1200 },
         }),
         signal: controller.signal,
       });
@@ -132,7 +138,7 @@ export class EmailGeneratorService {
     }
   }
 
-  private static async callOpenAI(prompt: string): Promise<string> {
+  private static async callOpenAI(prompt: string, temperature = 0.35): Promise<string> {
     const apiKey = env.OPENAI_API_KEY;
     const url = 'https://api.openai.com/v1/chat/completions';
 
@@ -149,7 +155,7 @@ export class EmailGeneratorService {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
+          temperature,
           max_tokens: 1200,
         }),
         signal: controller.signal,
@@ -231,45 +237,89 @@ export class EmailGeneratorService {
     const senderCompany = ctx.userContext?.userCompany || 'MailFlow';
     const senderProduct = ctx.userContext?.userProductService || 'AI Outreach Automation Platform';
 
-    let intro = `I came across ${ctx.companyName}'s work in ${ctx.industry || 'your industry'} and was impressed by your team's positioning.`;
-    let pain = `Many growth-stage teams face operational hurdles with scaling outbound outreach while keeping communication authentic.`;
-    let solution = `At ${senderCompany}, our ${senderProduct} provides automated company intelligence and personalized messaging to solve this exact problem.`;
-    let cta = `Would you have 10 minutes next Tuesday for a brief intro call to explore if this fits ${ctx.companyName}'s workflow?`;
+    const seed = ctx.regenSeed || Math.floor(Math.random() * 10000);
+    const varIdx = Math.abs(seed) % 4;
+
+    const intros = [
+      `I came across ${ctx.companyName}'s work in ${ctx.industry || 'your industry'} and was impressed by your team's positioning.`,
+      `I've been following ${ctx.companyName}'s growth trajectory in ${ctx.industry || 'the sector'} and wanted to reach out directly.`,
+      `Noticeably, ${ctx.companyName} has been making strong strides in ${ctx.industry || 'your field'}, which caught my attention.`,
+      `Reaching out as I see significant potential for ${ctx.companyName} to elevate your current outbound outreach workflow.`,
+    ];
+
+    const painPoints = [
+      `Many growth-stage teams face operational hurdles with scaling outbound outreach while keeping communication authentic.`,
+      `Scaling personalized outreach across multiple decision-makers often creates severe manual bottlenecks for sales teams.`,
+      `Balancing high lead volume with tailored individual messaging is a common struggle for expanding organizations.`,
+      `Managing lead intelligence manually can drain sales efficiency and slow down campaign momentum.`,
+    ];
+
+    const solutions = [
+      `At ${senderCompany}, our ${senderProduct} provides automated company intelligence and personalized messaging to solve this exact problem.`,
+      `With ${senderCompany}, teams use our ${senderProduct} to automate lead research and draft hyper-personalized emails in seconds.`,
+      `${senderCompany}'s ${senderProduct} eliminates manual research friction while maintaining 100% human-touch messaging quality.`,
+      `Our solution at ${senderCompany} automates the heavy lifting of lead research, enabling your team to focus on closing deals.`,
+    ];
+
+    const ctas = [
+      `Would you have 10 minutes next Tuesday for a brief intro call to explore if this fits ${ctx.companyName}'s workflow?`,
+      `Are you open to a quick 5-minute preview next week to see how this works for ${ctx.companyName}?`,
+      `Would Thursday at 2 PM work for a brief 10-minute demonstration tailored to ${ctx.companyName}?`,
+      `If this aligns with your Q3 priorities, could we schedule a quick 10-minute discovery chat?`,
+    ];
 
     if (ctx.template === 'Follow-up') {
-      intro = `I wanted to follow up on my previous message regarding ${ctx.companyName}'s outbound strategy.`;
-      pain = `I know how busy things get when scaling operations and managing lead pipelines.`;
-      solution = `We've recently helped teams similar to ${ctx.companyName} reduce manual outreach effort by over 60%.`;
-      cta = `Do you have 5 minutes later this week to reconnect?`;
+      intros[0] = `I wanted to follow up on my previous message regarding ${ctx.companyName}'s outbound strategy.`;
+      intros[1] = `Following up on my note from last week about streamlining ${ctx.companyName}'s lead research.`;
     } else if (ctx.template === 'Partnership') {
-      intro = `I'm reaching out because I see a great opportunity for collaboration between ${senderCompany} and ${ctx.companyName}.`;
-      pain = `Combining our AI outreach infrastructure with ${ctx.companyName}'s domain leadership could unlock substantial synergy for both teams.`;
-      solution = `Our platform allows seamless integration for automated lead research and communication workflows.`;
-      cta = `Would you be open to exploring a potential partnership next week?`;
+      intros[0] = `I'm reaching out because I see a great opportunity for collaboration between ${senderCompany} and ${ctx.companyName}.`;
+      intros[1] = `Exploring potential synergies between ${senderCompany} and ${ctx.companyName} prompted me to write.`;
     } else if (ctx.template === 'Product Demo') {
-      intro = `I'm reaching out to give ${ctx.companyName} an exclusive preview of our new ${senderProduct}.`;
-      pain = `Manual lead research and copy-pasting outbound emails often drains precious sales bandwidth.`;
-      solution = `${senderCompany} automates 6-step company research and personalized email drafting in seconds.`;
-      cta = `Would you like a quick 10-minute live demo this Thursday?`;
+      intros[0] = `I'm reaching out to give ${ctx.companyName} an exclusive preview of our new ${senderProduct}.`;
+      intros[1] = `Would love to share a short 10-minute live demonstration of ${senderProduct} built for ${ctx.companyName}.`;
     }
 
     const sections: GeneratedEmailSections = {
       greeting: `Hi ${ctx.leadName},`,
-      introduction: intro,
-      painPointAcknowledgement: pain,
-      solutionIntroduction: solution,
-      callToAction: cta,
+      introduction: intros[varIdx % intros.length],
+      painPointAcknowledgement: painPoints[varIdx % painPoints.length],
+      solutionIntroduction: solutions[varIdx % solutions.length],
+      callToAction: ctas[varIdx % ctas.length],
       closing: `Best regards,\n${senderName}`,
     };
 
-    const subjects = [
-      `Quick idea for ${ctx.companyName}`,
-      `Helping ${ctx.companyName} automate outreach`,
-      `Reducing manual sales work at ${ctx.companyName}`,
-      `AI workflow for ${ctx.companyName}'s sales team`,
-      `Outreach strategy for ${ctx.companyName}`,
+    const subjectPools = [
+      [
+        `Quick idea for ${ctx.companyName}`,
+        `Helping ${ctx.companyName} automate outreach`,
+        `Reducing manual sales work at ${ctx.companyName}`,
+        `AI workflow for ${ctx.companyName}'s sales team`,
+        `Outreach strategy for ${ctx.companyName}`,
+      ],
+      [
+        `Idea for ${ctx.companyName}'s outreach`,
+        `Streamlining ${ctx.companyName}'s growth pipeline`,
+        `Automating sales research for ${ctx.companyName}`,
+        `Quick question regarding ${ctx.companyName}`,
+        `Scaling ${ctx.companyName}'s outbound workflow`,
+      ],
+      [
+        `New approach for ${ctx.companyName}`,
+        `AI intelligence for ${ctx.companyName}'s team`,
+        `Outreach efficiency at ${ctx.companyName}`,
+        `Quick thought for ${ctx.leadName} @ ${ctx.companyName}`,
+        `Optimizing lead engagement at ${ctx.companyName}`,
+      ],
+      [
+        `Partnership idea for ${ctx.companyName}`,
+        `Accelerating ${ctx.companyName}'s pipeline`,
+        `Modernizing outreach for ${ctx.companyName}`,
+        `Brief note for ${ctx.leadName}`,
+        `${ctx.companyName} + ${senderCompany} workflow`,
+      ],
     ];
 
+    const subjects = subjectPools[varIdx % subjectPools.length];
     const body = `${sections.greeting}\n\n${sections.introduction}\n\n${sections.painPointAcknowledgement}\n\n${sections.solutionIntroduction}\n\n${sections.callToAction}\n\n${sections.closing}`;
 
     return {
