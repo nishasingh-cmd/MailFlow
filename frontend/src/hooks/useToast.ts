@@ -1,62 +1,20 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-
-export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
-
-export interface Toast {
-  id: string;
-  variant: ToastVariant;
-  title: string;
-  description?: string;
-  duration?: number;
-}
-
-export interface ToastOptions {
-  title: string;
-  description?: string;
-  duration?: number;
-}
-
 /**
- * useToast — manages a stack of toast notifications.
- * Returns helper methods for each variant and a list of active toasts.
+ * useToast — consumes the global ToastContext.
+ *
+ * This hook now delegates to ToastContext instead of creating isolated per-component state.
+ * All toast calls across the app share one centralized state and one ToastContainer
+ * rendered inside ToastProvider in App.tsx.
  */
+import { useContext } from 'react';
+import { ToastContext } from '../context/ToastContext';
+
+// Re-export types so existing imports stay unchanged
+export type { Toast, ToastVariant, ToastOptions } from '../context/ToastContext';
+
 export function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const idRef = useRef(0);
-
-  const addToast = useCallback((variant: ToastVariant, options: ToastOptions | string) => {
-    const opts = typeof options === 'string' ? { title: options } : options;
-    const id = `toast-${++idRef.current}`;
-    const toast: Toast = {
-      id,
-      variant,
-      duration: 4000,
-      ...opts,
-    };
-    setToasts((prev) => [...prev, toast]);
-    return id;
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const clearAll = useCallback(() => setToasts([]), []);
-
-  const toastHelpers = useMemo(
-    () => ({
-      success: (opts: ToastOptions | string) => addToast('success', opts),
-      error: (opts: ToastOptions | string) => addToast('error', opts),
-      warning: (opts: ToastOptions | string) => addToast('warning', opts),
-      info: (opts: ToastOptions | string) => addToast('info', opts),
-    }),
-    [addToast]
-  );
-
-  return {
-    toasts,
-    removeToast,
-    clearAll,
-    toast: toastHelpers,
-  };
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('[MailFlow] useToast() must be used inside a <ToastProvider>.');
+  }
+  return context;
 }
