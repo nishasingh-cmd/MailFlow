@@ -10,6 +10,7 @@ import { checkRedisConnection } from './config/redis';
 import healthRouter from './routes/health';
 import authRouter from './modules/auth/auth.routes';
 import userRouter from './modules/users/user.routes';
+import leadsRouter from './modules/leads/leads.routes';
 
 const app = express();
 
@@ -20,9 +21,32 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'MailFlow API',
+    status: 'online',
+    healthCheck: '/api/health',
+    documentation: 'See project-documentation folder for API details',
+  });
+});
+
+app.get('/api', (_req, res) => {
+  res.json({
+    name: 'MailFlow API Root',
+    status: 'online',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      leads: '/api/leads',
+    },
+  });
+});
+
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
+app.use('/api/leads', leadsRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

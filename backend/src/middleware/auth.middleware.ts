@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import 'multer';
 import { verifyAccessToken, JwtTokenPayload } from '../utils/jwt';
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtTokenPayload;
+  file?: Express.Multer.File;
 }
 
 /**

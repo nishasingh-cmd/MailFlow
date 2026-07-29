@@ -11,13 +11,62 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  uuid         String   @default(uuid()) @unique
-  name         String
-  email        String   @unique
-  password     String
-  avatar       String?
-  refreshToken String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String          @id @default(cuid())
+  uuid          String          @default(uuid()) @unique
+  name          String
+  email         String          @unique
+  password      String
+  avatar        String?
+  refreshToken  String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  leads         Lead[]
+  importHistory ImportHistory[]
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+model Lead {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importHistoryId String?
+  importHistory   ImportHistory? @relation(fields: [importHistoryId], references: [id], onDelete: SetNull)
+  name            String
+  email           String
+  company         String?
+  phone           String?
+  website         String?
+  linkedin        String?
+  industry        String?
+  status          LeadStatus     @default(NEW)
+  customFields    Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([userId, email])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+model ImportHistory {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName       String
+  fileSize       Int
+  totalRows      Int
+  importedCount  Int
+  failedCount    Int
+  duplicateCount Int
+  createdAt      DateTime @default(now())
+  leads          Lead[]
+
+  @@index([userId, createdAt])
 }

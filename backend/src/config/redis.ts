@@ -13,6 +13,12 @@ export function getRedisClient(): Redis {
     _redis = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: null, // Required by BullMQ when added in a later phase
       lazyConnect: true,
+      retryStrategy(times) {
+        if (env.NODE_ENV === 'development' && times > 3) {
+          return null; // Stop retrying after 3 attempts in development if Redis is offline
+        }
+        return Math.min(times * 200, 3000);
+      },
     });
 
     _redis.on('connect', () => {

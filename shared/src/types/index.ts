@@ -17,3 +17,5 @@ export interface HealthCheckResponse {
   status: 'ok' | 'error';
   timestamp?: string;
 }
+
+export * from './lead.types';

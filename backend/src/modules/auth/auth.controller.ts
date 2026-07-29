@@ -29,6 +29,7 @@ export class AuthController {
         res.status(409).json({ error: 'An account with this email address already exists.' });
         return;
       }
+      console.error('[auth.controller] Register error:', error);
       res.status(500).json({ error: 'Failed to register account' });
     }
   }
@@ -48,6 +49,7 @@ export class AuthController {
         res.status(401).json({ error: 'Invalid email or password' });
         return;
       }
+      console.error('[auth.controller] Login error:', error);
       res.status(500).json({ error: 'Failed to log in' });
     }
   }
