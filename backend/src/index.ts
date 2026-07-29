@@ -12,6 +12,7 @@ import authRouter from './modules/auth/auth.routes';
 import userRouter from './modules/users/user.routes';
 import leadsRouter from './modules/leads/leads.routes';
 import researchRouter from './modules/research/research.routes';
+import emailGenerationRouter from './modules/email-generation/email-generation.routes';
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.get('/api', (_req, res) => {
       users: '/api/users',
       leads: '/api/leads',
       research: '/api/research',
+      emailGeneration: '/api/email-generation',
     },
   });
 });
@@ -50,6 +52,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/leads', leadsRouter);
 app.use('/api/research', researchRouter);
+app.use('/api/email-generation', emailGenerationRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

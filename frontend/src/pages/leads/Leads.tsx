@@ -17,6 +17,7 @@ import { LeadDetailsDrawer } from '../../components/leads/LeadDetailsDrawer';
 import { LeadFormModal } from '../../components/leads/LeadFormModal';
 import { ImportHistoryTable } from '../../components/leads/ImportHistoryTable';
 import { CompanyResearchDrawer } from '../../components/research/CompanyResearchDrawer';
+import { EmailGeneratorDrawer } from '../../components/email-generation/EmailGeneratorDrawer';
 import { ResearchStatusBadge } from '../../components/research/ResearchStatusBadge';
 import { BulkResearchBar } from '../../components/research/BulkResearchBar';
 import { ResearchProgressCard } from '../../components/research/ResearchProgressCard';
@@ -97,6 +98,23 @@ export default function Leads() {
   const [researchDrawerOpen, setResearchDrawerOpen] = useState(false);
   const [researchDrawerLeadId, setResearchDrawerLeadId] = useState<string | null>(null);
   const [researchDrawerCompanyName, setResearchDrawerCompanyName] = useState<string | null>(null);
+
+  // Email Generator drawer
+  const [emailDrawerOpen, setEmailDrawerOpen] = useState(false);
+  const [emailDrawerLeadId, setEmailDrawerLeadId] = useState<string | null>(null);
+  const [emailDrawerLeadName, setEmailDrawerLeadName] = useState<string | null>(null);
+  const [emailDrawerCompanyName, setEmailDrawerCompanyName] = useState<string | null>(null);
+
+  const openEmailGenerator = (
+    leadId: string,
+    leadName?: string | null,
+    companyName?: string | null
+  ) => {
+    setEmailDrawerLeadId(leadId);
+    setEmailDrawerLeadName(leadName || null);
+    setEmailDrawerCompanyName(companyName || null);
+    setEmailDrawerOpen(true);
+  };
 
   // ── Fetch Leads ────────────────────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
@@ -507,6 +525,16 @@ export default function Leads() {
       align: 'right',
       render: (lead) => (
         <div className="flex items-center justify-end gap-1">
+          {researchStatuses[lead.id] === 'COMPLETED' && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => openEmailGenerator(lead.id, lead.name, lead.company)}
+              className="text-xs shadow-sm shadow-brand-500/20"
+            >
+              ✨ Email
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => handleOpenResearch(lead)}>
             {researchStatuses[lead.id] === 'COMPLETED' ? '📊 View Research' : '🔍 Research'}
           </Button>
@@ -793,6 +821,22 @@ export default function Leads() {
         leadId={researchDrawerLeadId}
         companyName={researchDrawerCompanyName}
         onResearchComplete={fetchResearchLeads}
+        onGenerateEmail={(leadId, compName) => {
+          const foundLead =
+            leads.find((l) => l.id === leadId) || researchLeads.find((l) => l.id === leadId);
+          openEmailGenerator(leadId, foundLead?.name, compName);
+        }}
+      />
+
+      <EmailGeneratorDrawer
+        isOpen={emailDrawerOpen}
+        onClose={() => setEmailDrawerOpen(false)}
+        leadId={emailDrawerLeadId}
+        leadName={emailDrawerLeadName}
+        companyName={emailDrawerCompanyName}
+        onDraftSaved={() => {
+          fetchLeads();
+        }}
       />
     </div>
   );

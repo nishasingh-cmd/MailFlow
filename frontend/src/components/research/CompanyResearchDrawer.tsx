@@ -11,6 +11,7 @@ interface CompanyResearchDrawerProps {
   leadId: string | null;
   companyName?: string | null;
   onResearchComplete?: () => void;
+  onGenerateEmail?: (leadId: string, companyName?: string) => void;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export function CompanyResearchDrawer({
   leadId,
   companyName,
   onResearchComplete,
+  onGenerateEmail,
 }: CompanyResearchDrawerProps) {
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -356,17 +358,33 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {/* ── Re-research button if completed ── */}
+        {/* ── Action Buttons ── */}
         {hasResearch && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResearch}
-            disabled={isResearching}
-            className="w-full"
-          >
-            {isResearching ? 'Re-researching...' : '🔄 Refresh Research'}
-          </Button>
+          <div className="space-y-2 pt-2">
+            {onGenerateEmail && leadId && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onGenerateEmail(leadId, companyName || undefined);
+                }}
+                className="w-full shadow-lg shadow-brand-500/20 font-semibold"
+              >
+                ✨ Generate AI Email
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResearch}
+              disabled={isResearching}
+              className="w-full text-xs"
+            >
+              {isResearching ? 'Re-researching...' : '🔄 Refresh Research'}
+            </Button>
+          </div>
         )}
       </div>
     </Drawer>

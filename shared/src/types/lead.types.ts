@@ -214,3 +214,79 @@ export interface LeadWithResearch extends Lead {
   companyId?: string | null;
   companyRef?: Company | null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 7 — AI Email Generation Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EmailTemplateType =
+  'Cold Outreach' | 'Follow-up' | 'Partnership' | 'Product Demo' | 'Custom Template';
+
+export type DraftStatus = 'DRAFT' | 'SAVED' | 'SENT';
+
+export interface UserOutreachContext {
+  userName?: string;
+  userCompany?: string;
+  userProductService?: string;
+}
+
+export interface GenerateEmailRequest {
+  leadId: string;
+  template?: EmailTemplateType;
+  customInstructions?: string;
+  userContext?: UserOutreachContext;
+}
+
+export interface GeneratedEmailSections {
+  greeting: string;
+  introduction: string;
+  painPointAcknowledgement: string;
+  solutionIntroduction: string;
+  callToAction: string;
+  closing: string;
+}
+
+export interface GeneratedEmailResult {
+  subjectSuggestions: string[];
+  selectedSubject: string;
+  body: string;
+  sections: GeneratedEmailSections;
+  signature?: string;
+  template: EmailTemplateType;
+  promptUsed?: string;
+}
+
+export interface GenerateSubjectLinesRequest {
+  leadId: string;
+  template?: EmailTemplateType;
+}
+
+export interface EmailDraft {
+  id: string;
+  userId: string;
+  leadId: string;
+  researchId?: string | null;
+  template: string;
+  subject: string;
+  body: string;
+  status: DraftStatus;
+  createdAt: string;
+  updatedAt: string;
+  lead?: Lead;
+}
+
+export interface SaveDraftRequest {
+  leadId: string;
+  researchId?: string;
+  subject: string;
+  body: string;
+  template: string;
+  status?: DraftStatus;
+}
+
+export interface UpdateDraftRequest {
+  subject?: string;
+  body?: string;
+  template?: string;
+  status?: DraftStatus;
+}

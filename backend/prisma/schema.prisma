@@ -23,6 +23,7 @@ model User {
   leads         Lead[]
   importHistory ImportHistory[]
   companies     Company[]
+  emailDrafts   EmailDraft[]
 }
 
 enum LeadStatus {
@@ -59,6 +60,7 @@ model Lead {
   customFields    Json?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  emailDrafts     EmailDraft[]
 
   @@unique([userId, email])
   @@index([userId, status])
@@ -117,9 +119,36 @@ model CompanyResearch {
   errorMessage   String?
   retryCount     Int            @default(0)
   lastResearched DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  emailDrafts     EmailDraft[]
 
   @@index([companyId])
   @@index([status])
+}
+
+enum DraftStatus {
+  DRAFT
+  SAVED
+  SENT
+}
+
+model EmailDraft {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  researchId  String?
+  research    CompanyResearch? @relation(fields: [researchId], references: [id], onDelete: SetNull)
+  template    String           @default("Cold Outreach")
+  subject     String
+  body        String           @db.Text
+  status      DraftStatus      @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([researchId])
 }
