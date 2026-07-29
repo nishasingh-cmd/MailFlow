@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -43,15 +43,20 @@ export function useToast() {
 
   const clearAll = useCallback(() => setToasts([]), []);
 
-  return {
-    toasts,
-    removeToast,
-    clearAll,
-    toast: {
+  const toastHelpers = useMemo(
+    () => ({
       success: (opts: ToastOptions | string) => addToast('success', opts),
       error: (opts: ToastOptions | string) => addToast('error', opts),
       warning: (opts: ToastOptions | string) => addToast('warning', opts),
       info: (opts: ToastOptions | string) => addToast('info', opts),
-    },
+    }),
+    [addToast]
+  );
+
+  return {
+    toasts,
+    removeToast,
+    clearAll,
+    toast: toastHelpers,
   };
 }
