@@ -11,6 +11,7 @@ import healthRouter from './routes/health';
 import authRouter from './modules/auth/auth.routes';
 import userRouter from './modules/users/user.routes';
 import leadsRouter from './modules/leads/leads.routes';
+import researchRouter from './modules/research/research.routes';
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.get('/api', (_req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       leads: '/api/leads',
+      research: '/api/research',
     },
   });
 });
@@ -47,6 +49,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/leads', leadsRouter);
+app.use('/api/research', researchRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

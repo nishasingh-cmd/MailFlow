@@ -150,3 +150,67 @@ export interface PaginatedLeadsResponse {
   limit: number;
   totalPages: number;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 6 — AI Company Research Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ResearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface Company {
+  id: string;
+  userId: string;
+  name: string;
+  website?: string | null;
+  industry?: string | null;
+  description?: string | null;
+  products: string[];
+  services: string[];
+  headquarters?: string | null;
+  companySize?: string | null;
+  targetCustomers?: string | null;
+  techStack: string[];
+  createdAt: string;
+  updatedAt: string;
+  research?: CompanyResearch | null;
+}
+
+export interface CompanyResearch {
+  id: string;
+  companyId: string;
+  status: ResearchStatus;
+  summary?: string | null;
+  painPoints?: string[] | null;
+  opportunities?: string[] | null;
+  errorMessage?: string | null;
+  retryCount: number;
+  lastResearched?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResearchSingleRequest {
+  leadId: string;
+}
+
+export interface BulkResearchRequest {
+  leadIds: string[];
+}
+
+export interface ResearchProgressResponse {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  results: Array<{
+    leadId: string;
+    companyName: string;
+    status: ResearchStatus;
+    error?: string;
+  }>;
+}
+
+export interface LeadWithResearch extends Lead {
+  companyId?: string | null;
+  companyRef?: Company | null;
+}

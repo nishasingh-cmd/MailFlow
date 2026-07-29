@@ -1,5 +1,5 @@
 // MailFlow — Prisma Schema
-// Phase 4: Authentication & User Management Data Model
+// Phase 6: AI Company Research
 
 generator client {
   provider = "prisma-client-js"
@@ -22,6 +22,7 @@ model User {
   updatedAt     DateTime        @updatedAt
   leads         Lead[]
   importHistory ImportHistory[]
+  companies     Company[]
 }
 
 enum LeadStatus {
@@ -32,12 +33,21 @@ enum LeadStatus {
   BOUNCED
 }
 
+enum ResearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model Lead {
   id              String         @id @default(cuid())
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   importHistoryId String?
   importHistory   ImportHistory? @relation(fields: [importHistoryId], references: [id], onDelete: SetNull)
+  companyId       String?
+  companyRef      Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
   name            String
   email           String
   company         String?
@@ -53,6 +63,7 @@ model Lead {
   @@unique([userId, email])
   @@index([userId, status])
   @@index([userId, createdAt])
+  @@index([userId, companyId])
 }
 
 model ImportHistory {
@@ -69,4 +80,46 @@ model ImportHistory {
   leads          Lead[]
 
   @@index([userId, createdAt])
+}
+
+model Company {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  website         String?
+  industry        String?
+  description     String?          @db.Text
+  products        String[]
+  services        String[]
+  headquarters    String?
+  companySize     String?
+  targetCustomers String?          @db.Text
+  techStack       String[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  leads           Lead[]
+  research        CompanyResearch?
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model CompanyResearch {
+  id             String         @id @default(cuid())
+  companyId      String         @unique
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status         ResearchStatus @default(PENDING)
+  summary        String?        @db.Text
+  painPoints     Json?
+  opportunities  Json?
+  rawAiResponse  String?        @db.Text
+  errorMessage   String?
+  retryCount     Int            @default(0)
+  lastResearched DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([companyId])
+  @@index([status])
 }

@@ -24,4 +24,5 @@ export const env = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? 'mailflow_refresh_secret_dev_key_67890',
   JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES ?? '15m',
   JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES ?? '7d',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
 } as const;
