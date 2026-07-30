@@ -1,5 +1,5 @@
 // MailFlow — Prisma Schema
-// Phase 6: AI Company Research
+// Phase 8: Campaign Management
 
 generator client {
   provider = "prisma-client-js"
@@ -24,6 +24,7 @@ model User {
   importHistory ImportHistory[]
   companies     Company[]
   emailDrafts   EmailDraft[]
+  campaigns     Campaign[]
 }
 
 enum LeadStatus {
@@ -61,6 +62,7 @@ model Lead {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   emailDrafts     EmailDraft[]
+  campaignLeads   CampaignLead[]
 
   @@unique([userId, email])
   @@index([userId, status])
@@ -151,4 +153,43 @@ model EmailDraft {
   @@index([userId])
   @@index([leadId])
   @@index([researchId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 8 — Campaign Management
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  COMPLETED
+}
+
+model Campaign {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?          @db.Text
+  status        CampaignStatus   @default(DRAFT)
+  templateId    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  campaignLeads CampaignLead[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+model CampaignLead {
+  campaignId String
+  leadId     String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  addedAt    DateTime @default(now())
+
+  @@id([campaignId, leadId])
+  @@index([campaignId])
+  @@index([leadId])
 }

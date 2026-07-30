@@ -292,3 +292,79 @@ export interface UpdateDraftRequest {
   template?: string;
   status?: DraftStatus;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 8 — Campaign Management Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CampaignStatus = 'DRAFT' | 'READY' | 'COMPLETED';
+
+export interface CampaignLead {
+  campaignId: string;
+  leadId: string;
+  addedAt: string;
+  lead?: Lead & { emailDrafts?: EmailDraft[] };
+}
+
+export interface Campaign {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  status: CampaignStatus;
+  templateId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    campaignLeads: number;
+  };
+}
+
+export interface CampaignDetail extends Campaign {
+  campaignLeads: CampaignLead[];
+}
+
+export interface CreateCampaignRequest {
+  name: string;
+  campaignName?: string;
+  description?: string;
+  leadIds?: string[];
+  selectedLeadIds?: string[];
+  templateId?: string;
+  selectedTemplate?: string;
+  status?: CampaignStatus;
+  createdBy?: string;
+}
+
+export interface UpdateCampaignRequest {
+  name?: string;
+  description?: string;
+  leadIds?: string[];
+  templateId?: string;
+  status?: CampaignStatus;
+}
+
+export interface CampaignQueryFilters {
+  search?: string;
+  status?: CampaignStatus | 'ALL';
+  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'leadCount';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface CampaignStats {
+  total: number;
+  draft: number;
+  ready: number;
+  completed: number;
+}
+
+export interface PaginatedCampaignsResponse {
+  campaigns: Campaign[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  stats: CampaignStats;
+}

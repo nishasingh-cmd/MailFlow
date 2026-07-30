@@ -101,7 +101,6 @@ export function AppSidebar({
           id: ROUTES.CAMPAIGNS,
           label: 'Campaigns',
           icon: icons.campaigns,
-          badge: 3,
           onClick: () => handleNav(ROUTES.CAMPAIGNS),
         },
         {

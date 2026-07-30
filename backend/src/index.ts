@@ -1,6 +1,6 @@
 /**
  * MailFlow Backend — Express entry point.
- * Phase 4: Authentication & User Management
+ * Phase 8: Campaign Management
  */
 import express from 'express';
 import cors from 'cors';
@@ -13,6 +13,7 @@ import userRouter from './modules/users/user.routes';
 import leadsRouter from './modules/leads/leads.routes';
 import researchRouter from './modules/research/research.routes';
 import emailGenerationRouter from './modules/email-generation/email-generation.routes';
+import campaignsRouter from './modules/campaigns/campaigns.routes';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.get('/api', (_req, res) => {
       leads: '/api/leads',
       research: '/api/research',
       emailGeneration: '/api/email-generation',
+      campaigns: '/api/campaigns',
     },
   });
 });
@@ -53,6 +55,7 @@ app.use('/api/users', userRouter);
 app.use('/api/leads', leadsRouter);
 app.use('/api/research', researchRouter);
 app.use('/api/email-generation', emailGenerationRouter);
+app.use('/api/campaigns', campaignsRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

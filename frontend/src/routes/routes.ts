@@ -15,6 +15,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   LEADS: '/leads',
   CAMPAIGNS: '/campaigns',
+  CAMPAIGN_DETAIL: '/campaigns/:id',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
 } as const;
