@@ -297,7 +297,8 @@ export interface UpdateDraftRequest {
 // Phase 8 — Campaign Management Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type CampaignStatus = 'DRAFT' | 'READY' | 'COMPLETED';
+export type CampaignStatus =
+  'DRAFT' | 'READY' | 'SENDING' | 'PAUSED' | 'SENT' | 'COMPLETED' | 'FAILED';
 
 export interface CampaignLead {
   campaignId: string;

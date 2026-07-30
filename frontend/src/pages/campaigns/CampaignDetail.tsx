@@ -7,12 +7,16 @@ import { Button, Badge, Skeleton } from '../../components/ui';
 import { CampaignStatusBadge } from '../../components/campaigns/CampaignStatusBadge';
 import { EditCampaignModal } from '../../components/campaigns/EditCampaignModal';
 import { DeleteCampaignModal } from '../../components/campaigns/DeleteCampaignModal';
+import { CampaignSendModal } from '../../components/campaigns/CampaignSendModal';
 
-const STATUS_FLOW: CampaignStatus[] = ['DRAFT', 'READY', 'COMPLETED'];
-const STATUS_LABELS: Record<CampaignStatus, string> = {
+const STATUS_FLOW: CampaignStatus[] = ['DRAFT', 'READY', 'SENDING', 'COMPLETED'];
+const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Draft',
   READY: 'Ready',
+  SENDING: 'Sending...',
+  PAUSED: 'Paused',
   COMPLETED: 'Completed',
+  FAILED: 'Failed',
 };
 
 function formatDate(dateStr: string) {
@@ -54,6 +58,7 @@ export default function CampaignDetail() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const loadCampaign = useCallback(async () => {
@@ -139,6 +144,28 @@ export default function CampaignDetail() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setSendOpen(true)}
+              leftIcon={
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+              }
+            >
+              {campaign.status === 'SENDING' ? 'View Progress' : 'Send Campaign'}
+            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -433,6 +460,14 @@ export default function CampaignDetail() {
           toast.success('Campaign deleted');
           navigate('/campaigns');
         }}
+      />
+
+      <CampaignSendModal
+        open={sendOpen}
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        onClose={() => setSendOpen(false)}
+        onStatusChanged={() => loadCampaign()}
       />
     </div>
   );

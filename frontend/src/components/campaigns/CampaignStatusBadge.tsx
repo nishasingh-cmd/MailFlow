@@ -12,11 +12,15 @@ const STATUS_CONFIG: Record<
 > = {
   DRAFT: { label: 'Draft', variant: 'neutral', dot: true },
   READY: { label: 'Ready', variant: 'info', dot: true },
+  SENDING: { label: 'Sending...', variant: 'brand', dot: true },
+  PAUSED: { label: 'Paused', variant: 'warning', dot: true },
+  SENT: { label: 'Sent', variant: 'success', dot: true },
   COMPLETED: { label: 'Completed', variant: 'success', dot: true },
+  FAILED: { label: 'Failed', variant: 'error', dot: true },
 };
 
 export function CampaignStatusBadge({ status, size = 'md' }: CampaignStatusBadgeProps) {
-  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.DRAFT;
+  const config = STATUS_CONFIG[status] ?? { label: status, variant: 'neutral', dot: true };
   return (
     <Badge variant={config.variant} size={size} dot={config.dot}>
       {config.label}

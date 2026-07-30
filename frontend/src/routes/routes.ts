@@ -16,6 +16,8 @@ export const ROUTES = {
   LEADS: '/leads',
   CAMPAIGNS: '/campaigns',
   CAMPAIGN_DETAIL: '/campaigns/:id',
+  DELIVERY_LOGS: '/delivery-logs',
+  FAILED_QUEUE: '/failed-queue',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
 } as const;
@@ -27,6 +29,8 @@ export const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
   leads: 'Leads',
   campaigns: 'Campaigns',
+  'delivery-logs': 'Delivery Logs',
+  'failed-queue': 'Failed Queue',
   analytics: 'Analytics',
   settings: 'Settings',
   login: 'Login',

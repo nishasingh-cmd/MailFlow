@@ -8,12 +8,16 @@ import { CampaignTable } from '../../components/campaigns/CampaignTable';
 import { CreateCampaignModal } from '../../components/campaigns/CreateCampaignModal';
 import { EditCampaignModal } from '../../components/campaigns/EditCampaignModal';
 import { DeleteCampaignModal } from '../../components/campaigns/DeleteCampaignModal';
+import { CampaignSendModal } from '../../components/campaigns/CampaignSendModal';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
   { value: 'DRAFT', label: 'Draft' },
   { value: 'READY', label: 'Ready' },
+  { value: 'SENDING', label: 'Sending' },
+  { value: 'PAUSED', label: 'Paused' },
   { value: 'COMPLETED', label: 'Completed' },
+  { value: 'FAILED', label: 'Failed' },
 ];
 
 const SORT_OPTIONS = [
@@ -45,6 +49,9 @@ export default function Campaigns() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editCampaign, setEditCampaign] = useState<Campaign | null>(null);
   const [deleteCampaign, setDeleteCampaign] = useState<Campaign | null>(null);
+
+  // Send Modal state
+  const [sendCampaign, setSendCampaign] = useState<Campaign | null>(null);
 
   const fetchCampaigns = useCallback(
     async (pageNum = 1) => {
@@ -108,7 +115,7 @@ export default function Campaigns() {
             Campaigns
           </h1>
           <p className="text-sm text-[var(--content-secondary)] mt-0.5">
-            Create, organize, and manage your email campaigns.
+            Create, organize, and send personalized email campaigns.
           </p>
         </div>
         <Button
@@ -197,6 +204,7 @@ export default function Campaigns() {
           onEdit={(c) => setEditCampaign(c)}
           onDelete={(c) => setDeleteCampaign(c)}
           onDuplicate={handleDuplicate}
+          onSend={(c) => setSendCampaign(c)}
         />
       )}
 
@@ -316,6 +324,14 @@ export default function Campaigns() {
           setDeleteCampaign(null);
           fetchCampaigns(1);
         }}
+      />
+
+      <CampaignSendModal
+        open={!!sendCampaign}
+        campaignId={sendCampaign?.id || null}
+        campaignName={sendCampaign?.name}
+        onClose={() => setSendCampaign(null)}
+        onStatusChanged={() => fetchCampaigns(page)}
       />
     </div>
   );

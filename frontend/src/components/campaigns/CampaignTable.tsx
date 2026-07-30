@@ -12,6 +12,7 @@ interface CampaignTableProps {
   onEdit: (c: Campaign) => void;
   onDelete: (c: Campaign) => void;
   onDuplicate: (c: Campaign) => void;
+  onSend?: (c: Campaign) => void;
 }
 
 function ActionMenu({
@@ -20,12 +21,14 @@ function ActionMenu({
   onEdit,
   onDelete,
   onDuplicate,
+  onSend,
 }: {
   campaign: Campaign;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onSend?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -33,6 +36,15 @@ function ActionMenu({
 
   const items = [
     { label: 'View', icon: '👁', action: onView },
+    ...(onSend
+      ? [
+          {
+            label: campaign.status === 'SENDING' ? 'Progress' : 'Send',
+            icon: '🚀',
+            action: onSend,
+          },
+        ]
+      : []),
     { label: 'Edit', icon: '✏️', action: onEdit },
     { label: 'Duplicate', icon: '📋', action: onDuplicate },
     { label: 'Delete', icon: '🗑', action: onDelete, danger: true },
@@ -98,6 +110,7 @@ export function CampaignTable({
   onEdit,
   onDelete,
   onDuplicate,
+  onSend,
 }: CampaignTableProps) {
   const navigate = useNavigate();
 
@@ -209,6 +222,7 @@ export function CampaignTable({
                     onEdit={() => onEdit(campaign)}
                     onDelete={() => onDelete(campaign)}
                     onDuplicate={() => onDuplicate(campaign)}
+                    onSend={onSend ? () => onSend(campaign) : undefined}
                   />
                 </td>
               </tr>

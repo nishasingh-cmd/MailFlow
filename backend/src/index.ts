@@ -1,6 +1,6 @@
 /**
  * MailFlow Backend — Express entry point.
- * Phase 8: Campaign Management
+ * Phase 9: Email Delivery Engine
  */
 import express from 'express';
 import cors from 'cors';
@@ -14,6 +14,9 @@ import leadsRouter from './modules/leads/leads.routes';
 import researchRouter from './modules/research/research.routes';
 import emailGenerationRouter from './modules/email-generation/email-generation.routes';
 import campaignsRouter from './modules/campaigns/campaigns.routes';
+import smtpRouter from './modules/smtp/smtp.routes';
+import deliveryRouter from './modules/delivery/delivery.routes';
+import { DeliveryWorker } from './modules/delivery/delivery.worker';
 
 const app = express();
 
@@ -45,6 +48,8 @@ app.get('/api', (_req, res) => {
       research: '/api/research',
       emailGeneration: '/api/email-generation',
       campaigns: '/api/campaigns',
+      smtp: '/api/smtp',
+      delivery: '/api/delivery',
     },
   });
 });
@@ -56,6 +61,8 @@ app.use('/api/leads', leadsRouter);
 app.use('/api/research', researchRouter);
 app.use('/api/email-generation', emailGenerationRouter);
 app.use('/api/campaigns', campaignsRouter);
+app.use('/api/smtp', smtpRouter);
+app.use('/api/delivery', deliveryRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {
@@ -65,6 +72,9 @@ async function bootstrap() {
     console.error('[bootstrap] Redis connection required in production. Exiting.');
     process.exit(1);
   }
+
+  // Start background email queue worker
+  DeliveryWorker.startWorker(3000);
 
   app.listen(env.PORT, () => {
     console.log(`[server] MailFlow backend running on http://localhost:${env.PORT}`);

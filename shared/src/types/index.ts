@@ -19,3 +19,4 @@ export interface HealthCheckResponse {
 }
 
 export * from './lead.types';
+export * from './delivery.types';

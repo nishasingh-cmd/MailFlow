@@ -33,6 +33,24 @@ const icons = {
       />
     </svg>
   ),
+  deliveryLogs: (
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  ),
+  failedQueue: (
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  ),
   analytics: (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path
@@ -94,7 +112,6 @@ export function AppSidebar({
           id: ROUTES.LEADS,
           label: 'Leads',
           icon: icons.leads,
-          badge: 12,
           onClick: () => handleNav(ROUTES.LEADS),
         },
         {
@@ -103,17 +120,34 @@ export function AppSidebar({
           icon: icons.campaigns,
           onClick: () => handleNav(ROUTES.CAMPAIGNS),
         },
+      ],
+    },
+    {
+      title: 'Delivery Engine',
+      items: [
         {
-          id: ROUTES.ANALYTICS,
-          label: 'Analytics',
-          icon: icons.analytics,
-          onClick: () => handleNav(ROUTES.ANALYTICS),
+          id: ROUTES.DELIVERY_LOGS,
+          label: 'Delivery Logs',
+          icon: icons.deliveryLogs,
+          onClick: () => handleNav(ROUTES.DELIVERY_LOGS),
+        },
+        {
+          id: ROUTES.FAILED_QUEUE,
+          label: 'Failed Queue',
+          icon: icons.failedQueue,
+          onClick: () => handleNav(ROUTES.FAILED_QUEUE),
         },
       ],
     },
     {
       title: 'Preferences',
       items: [
+        {
+          id: ROUTES.ANALYTICS,
+          label: 'Analytics',
+          icon: icons.analytics,
+          onClick: () => handleNav(ROUTES.ANALYTICS),
+        },
         {
           id: ROUTES.SETTINGS,
           label: 'Settings',

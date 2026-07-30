@@ -14,6 +14,8 @@ import Dashboard from '../pages/dashboard/Dashboard';
 import Leads from '../pages/leads/Leads';
 import Campaigns from '../pages/campaigns/Campaigns';
 import CampaignDetail from '../pages/campaigns/CampaignDetail';
+import DeliveryLogsPage from '../pages/delivery/DeliveryLogsPage';
+import FailedQueuePage from '../pages/delivery/FailedQueuePage';
 import Analytics from '../pages/analytics/Analytics';
 import Settings from '../pages/settings/Settings';
 
@@ -34,6 +36,8 @@ export function AppRoutes() {
           <Route path={ROUTES.LEADS} element={<Leads />} />
           <Route path={ROUTES.CAMPAIGNS} element={<Campaigns />} />
           <Route path={ROUTES.CAMPAIGN_DETAIL} element={<CampaignDetail />} />
+          <Route path={ROUTES.DELIVERY_LOGS} element={<DeliveryLogsPage />} />
+          <Route path={ROUTES.FAILED_QUEUE} element={<FailedQueuePage />} />
           <Route path={ROUTES.ANALYTICS} element={<Analytics />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
         </Route>
