@@ -21,3 +21,4 @@ export interface HealthCheckResponse {
 export * from './lead.types';
 export * from './delivery.types';
 export * from './whatsapp.types';
+export * from './settings.types';

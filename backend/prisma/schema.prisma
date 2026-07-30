@@ -1,5 +1,5 @@
 // MailFlow — Prisma Schema
-// Phase 10: WhatsApp Outreach Module
+// Phase 12: Settings & Integrations Module
 
 generator client {
   provider = "prisma-client-js"
@@ -17,6 +17,9 @@ model User {
   email         String          @unique
   password      String
   avatar        String?
+  companyName   String?
+  jobTitle      String?
+  timeZone      String?         @default("UTC")
   refreshToken  String?         @db.Text
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -31,6 +34,9 @@ model User {
   whatsappDrafts WhatsappDraft[]
   whatsappQueues WhatsappQueue[]
   whatsappLogs   WhatsappLog[]
+  aiConfig       AiConfig?
+  whatsappConfig WhatsappConfig?
+  appPreferences AppPreferences?
 }
 
 enum LeadStatus {
@@ -167,7 +173,7 @@ model EmailDraft {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase 8, 9, 10 — Campaign & Delivery Engine & WhatsApp Outreach
+// Campaign & Delivery & Settings Engine
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum CampaignStatus {
@@ -380,4 +386,60 @@ model WhatsappLog {
   @@index([leadId])
   @@index([status])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 12 — Settings & Integrations Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AiConfig {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    String    @default("OPENAI") // OPENAI | GEMINI
+  apiKey      String    @db.Text // Encrypted
+  model       String    @default("gpt-4o-mini")
+  temperature Float     @default(0.7)
+  maxTokens   Int       @default(1000)
+  status      String    @default("DISCONNECTED") // CONNECTED | DISCONNECTED | INVALID_KEY | FAILED
+  lastTestedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model WhatsappConfig {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String    @default("MOCK") // MOCK | META_CLOUD
+  businessAccountId String?
+  phoneNumberId     String?
+  accessToken       String?   @db.Text // Encrypted
+  webhookUrl        String?
+  status            String    @default("MOCK_ACTIVE") // MOCK_ACTIVE | CONNECTED | DISCONNECTED | FAILED
+  lastTestedAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model AppPreferences {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme               String   @default("dark") // dark | light | system
+  language            String   @default("en")
+  timezone            String   @default("UTC")
+  defaultDashboard    String   @default("overview")
+  emailSignature      String?  @db.Text
+  defaultAiTone       String   @default("Professional")
+  autoSaveDrafts      Boolean  @default(true)
+  defaultCampaignType String   @default("EMAIL")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
 }

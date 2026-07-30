@@ -1,77 +1,123 @@
-import { useState } from 'react';
-import Profile from './Profile';
+import { useState, useEffect, useCallback } from 'react';
+import { settingsService } from '../../services/settings.service';
+import { SettingsEnvelope } from '@mailflow/shared';
+import { useToast } from '../../hooks/useToast';
+import { Skeleton } from '../../components/ui';
+import { ProfileTab } from '../../components/settings/ProfileTab';
+import { SecurityTab } from '../../components/settings/SecurityTab';
 import { SmtpSettingsForm } from '../../components/smtp/SmtpSettingsForm';
+import { AiIntegrationTab } from '../../components/settings/AiIntegrationTab';
+import { WhatsappIntegrationTab } from '../../components/settings/WhatsappIntegrationTab';
+import { AppPreferencesTab } from '../../components/settings/AppPreferencesTab';
+import { IntegrationsOverviewTab } from '../../components/settings/IntegrationsOverviewTab';
 import { cn } from '../../utils/cn';
 
+type TabKey = 'profile' | 'security' | 'email' | 'ai' | 'whatsapp' | 'preferences' | 'integrations';
+
+const TABS: Array<{ id: TabKey; label: string; icon: string }> = [
+  { id: 'profile', label: 'Profile', icon: '👤' },
+  { id: 'security', label: 'Security', icon: '🔒' },
+  { id: 'email', label: 'Email Providers', icon: '✉️' },
+  { id: 'ai', label: 'AI Integration', icon: '✨' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+  { id: 'preferences', label: 'Preferences', icon: '⚙️' },
+  { id: 'integrations', label: 'Integrations', icon: '🔌' },
+];
+
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'smtp'>('smtp');
+  const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = useState<TabKey>('profile');
+  const [data, setData] = useState<SettingsEnvelope | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await settingsService.getSettings();
+      setData(res);
+    } catch {
+      toast.error('Failed to load workspace settings.');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton variant="text" className="w-48 h-8" />
+        <Skeleton variant="rect" className="w-full h-12 rounded-xl" />
+        <Skeleton variant="rect" className="w-full h-96 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-          Settings
+          Settings & Integrations
         </h1>
         <p className="text-sm text-[var(--content-secondary)] mt-0.5">
-          Manage your account profile and email server delivery credentials.
+          Configure user profile, authentication security, SMTP delivery, AI model keys, WhatsApp
+          Cloud API, and application preferences.
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-[var(--surface-border)] gap-2">
-        <button
-          onClick={() => setActiveTab('smtp')}
-          className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
-            activeTab === 'smtp'
-              ? 'border-brand-500 text-brand-400'
-              : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
-          )}
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-[var(--surface-border)] gap-1 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all flex items-center gap-2 whitespace-nowrap',
+              activeTab === tab.id
+                ? 'border-brand-500 text-brand-400 font-semibold'
+                : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
+            )}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-          SMTP Server Configuration
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
-            activeTab === 'profile'
-              ? 'border-brand-500 text-brand-400'
-              : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
-          )}
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-          Account Profile
-        </button>
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'smtp' && <SmtpSettingsForm />}
-      {activeTab === 'profile' && <Profile />}
+      {/* Tab Panels */}
+      {activeTab === 'profile' && (
+        <ProfileTab
+          profile={data.profile}
+          onUpdated={(updated) => setData((prev) => (prev ? { ...prev, profile: updated } : prev))}
+        />
+      )}
+
+      {activeTab === 'security' && <SecurityTab />}
+
+      {activeTab === 'email' && <SmtpSettingsForm />}
+
+      {activeTab === 'ai' && <AiIntegrationTab config={data.aiConfig} onUpdated={loadSettings} />}
+
+      {activeTab === 'whatsapp' && (
+        <WhatsappIntegrationTab config={data.whatsappConfig} onUpdated={loadSettings} />
+      )}
+
+      {activeTab === 'preferences' && (
+        <AppPreferencesTab preferences={data.preferences} onUpdated={loadSettings} />
+      )}
+
+      {activeTab === 'integrations' && (
+        <IntegrationsOverviewTab
+          integrations={data.integrations}
+          onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+        />
+      )}
     </div>
   );
 }
