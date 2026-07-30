@@ -12,11 +12,14 @@ const STATUS_CONFIG: Record<
 > = {
   DRAFT: { label: 'Draft', variant: 'neutral', dot: true },
   READY: { label: 'Ready', variant: 'info', dot: true },
+  QUEUED: { label: 'Queued', variant: 'warning', dot: true },
   SENDING: { label: 'Sending...', variant: 'brand', dot: true },
   PAUSED: { label: 'Paused', variant: 'warning', dot: true },
   SENT: { label: 'Sent', variant: 'success', dot: true },
   COMPLETED: { label: 'Completed', variant: 'success', dot: true },
+  COMPLETED_WITH_ERRORS: { label: 'Completed with Errors', variant: 'warning', dot: true },
   FAILED: { label: 'Failed', variant: 'error', dot: true },
+  CANCELLED: { label: 'Cancelled', variant: 'neutral', dot: true },
 };
 
 export function CampaignStatusBadge({ status, size = 'md' }: CampaignStatusBadgeProps) {

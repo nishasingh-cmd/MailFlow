@@ -72,6 +72,16 @@ export const deliveryService = {
   },
 
   /**
+   * Cancel campaign sending
+   */
+  async cancelSending(campaignId: string): Promise<CampaignProgress> {
+    const { data: envelope } = await api.post<ApiEnvelope<CampaignProgress>>(
+      `/delivery/campaigns/${campaignId}/cancel`
+    );
+    return envelope.data;
+  },
+
+  /**
    * Get campaign progress
    */
   async getProgress(campaignId: string): Promise<CampaignProgress> {

@@ -1,23 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CampaignDetail as CampaignDetailType, CampaignStatus } from '@mailflow/shared';
+import {
+  CampaignDetail as CampaignDetailType,
+  CampaignStatus,
+  CampaignProgress,
+  CompletionSummaryData,
+} from '@mailflow/shared';
 import { campaignService } from '../../services/campaign.service';
+import { deliveryService } from '../../services/delivery.service';
 import { useToast } from '../../hooks/useToast';
 import { Button, Badge, Skeleton } from '../../components/ui';
 import { CampaignStatusBadge } from '../../components/campaigns/CampaignStatusBadge';
 import { EditCampaignModal } from '../../components/campaigns/EditCampaignModal';
 import { DeleteCampaignModal } from '../../components/campaigns/DeleteCampaignModal';
 import { CampaignSendModal } from '../../components/campaigns/CampaignSendModal';
-
-const STATUS_FLOW: CampaignStatus[] = ['DRAFT', 'READY', 'SENDING', 'COMPLETED'];
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Draft',
-  READY: 'Ready',
-  SENDING: 'Sending...',
-  PAUSED: 'Paused',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-};
+import { CompletionSummaryModal } from '../../components/campaigns/CompletionSummaryModal';
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -59,7 +56,13 @@ export default function CampaignDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Live progress & summary state
+  const [progress, setProgress] = useState<CampaignProgress | null>(null);
+  const [summaryData, setSummaryData] = useState<CompletionSummaryData | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const prevStatusRef = useRef<string | null>(null);
 
   const loadCampaign = useCallback(async () => {
     if (!id) return;
@@ -67,6 +70,10 @@ export default function CampaignDetail() {
     try {
       const data = await campaignService.getCampaignById(id);
       setCampaign(data);
+      if (['QUEUED', 'SENDING', 'PAUSED'].includes(data.status)) {
+        const p = await deliveryService.getProgress(id);
+        setProgress(p);
+      }
     } catch {
       toast.error('Campaign not found');
       navigate('/campaigns');
@@ -79,17 +86,97 @@ export default function CampaignDetail() {
     loadCampaign();
   }, [loadCampaign]);
 
-  const handleStatusChange = async (newStatus: CampaignStatus) => {
-    if (!campaign || newStatus === campaign.status) return;
-    setUpdatingStatus(true);
+  // Live Auto-Polling while Campaign is Queued, Sending, or Paused
+  const pollProgress = useCallback(async () => {
+    if (!id || !campaign) return;
+    if (!['QUEUED', 'SENDING', 'PAUSED'].includes(campaign.status)) return;
+
     try {
-      await campaignService.updateCampaign(campaign.id, { status: newStatus });
-      setCampaign((c) => (c ? { ...c, status: newStatus } : c));
-      toast.success(`Status changed to ${STATUS_LABELS[newStatus]}`);
+      const p = await deliveryService.getProgress(id);
+      setProgress(p);
+
+      // Status change detection & notifications
+      if (prevStatusRef.current && prevStatusRef.current !== p.status) {
+        if (p.status === 'SENDING') {
+          toast.info('🚀 Sending started...');
+        } else if (p.status === 'PAUSED') {
+          toast.warning('⏸ Campaign paused.');
+        } else if (p.status === 'COMPLETED' || p.status === 'COMPLETED_WITH_ERRORS') {
+          toast.success('🎉 Campaign completed successfully!');
+          setSummaryData({
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            total: p.total,
+            sent: p.sent,
+            failed: p.failed,
+            timeTaken: p.timeTaken || '—',
+            successRate: p.successRate ?? 100,
+          });
+          setSummaryOpen(true);
+          loadCampaign();
+        }
+      }
+      prevStatusRef.current = p.status;
+
+      // Update campaign status if changed on backend
+      if (p.status !== campaign.status) {
+        setCampaign((c) => (c ? { ...c, status: p.status as CampaignStatus } : c));
+      }
     } catch {
-      toast.error('Failed to update status');
+      // ignore transient poll error
+    }
+  }, [id, campaign, toast, loadCampaign]);
+
+  useEffect(() => {
+    if (campaign && ['QUEUED', 'SENDING', 'PAUSED'].includes(campaign.status)) {
+      pollProgress();
+      const interval = setInterval(pollProgress, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [campaign, pollProgress]);
+
+  const handlePause = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      const p = await deliveryService.pauseSending(id);
+      setProgress(p);
+      setCampaign((c) => (c ? { ...c, status: 'PAUSED' } : c));
+      toast.info('Campaign paused.');
+    } catch {
+      toast.error('Failed to pause campaign.');
     } finally {
-      setUpdatingStatus(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleResume = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      const p = await deliveryService.resumeSending(id);
+      setProgress(p);
+      setCampaign((c) => (c ? { ...c, status: 'SENDING' } : c));
+      toast.success('Campaign resumed.');
+    } catch {
+      toast.error('Failed to resume campaign.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      const p = await deliveryService.cancelSending(id);
+      setProgress(p);
+      setCampaign((c) => (c ? { ...c, status: 'CANCELLED' } : c));
+      toast.warning('Campaign sending cancelled.');
+    } catch {
+      toast.error('Failed to cancel campaign.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -109,7 +196,7 @@ export default function CampaignDetail() {
 
   if (!campaign) return null;
 
-  const currentStatusIdx = STATUS_FLOW.indexOf(campaign.status);
+  const isQueueActive = ['QUEUED', 'SENDING', 'PAUSED'].includes(campaign.status);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -144,28 +231,55 @@ export default function CampaignDetail() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setSendOpen(true)}
-              leftIcon={
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
+            {!isQueueActive &&
+              campaign.status !== 'COMPLETED' &&
+              campaign.status !== 'COMPLETED_WITH_ERRORS' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setSendOpen(true)}
+                  leftIcon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  }
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              }
-            >
-              {campaign.status === 'SENDING' ? 'View Progress' : 'Send Campaign'}
-            </Button>
+                  Send Campaign
+                </Button>
+              )}
+
+            {campaign.status === 'SENDING' && (
+              <>
+                <Button variant="outline" size="sm" onClick={handlePause} loading={actionLoading}>
+                  Pause Campaign
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleCancel} loading={actionLoading}>
+                  Cancel Campaign
+                </Button>
+              </>
+            )}
+
+            {campaign.status === 'PAUSED' && (
+              <>
+                <Button variant="primary" size="sm" onClick={handleResume} loading={actionLoading}>
+                  Resume Campaign
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleCancel} loading={actionLoading}>
+                  Cancel Campaign
+                </Button>
+              </>
+            )}
+
             <Button
               variant="secondary"
               size="sm"
@@ -195,250 +309,172 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* Status Timeline */}
-      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5">
-        <h2 className="text-sm font-semibold text-[var(--content-primary)] mb-4">
-          Campaign Status
-        </h2>
-        <div className="flex items-center gap-0">
-          {STATUS_FLOW.map((status, i) => {
-            const isPast = i < currentStatusIdx;
-            const isCurrent = i === currentStatusIdx;
-            const isNext = i === currentStatusIdx + 1;
-
-            return (
-              <div key={status} className="flex items-center flex-1 last:flex-none">
-                <button
-                  onClick={() => (isNext ? handleStatusChange(status) : undefined)}
-                  disabled={updatingStatus || !isNext}
-                  className={`flex flex-col items-center gap-1.5 cursor-${isNext ? 'pointer' : 'default'} transition-all group`}
-                  title={isNext ? `Mark as ${STATUS_LABELS[status]}` : undefined}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                    ${isPast ? 'bg-green-500 text-white' : ''}
-                    ${isCurrent ? 'bg-brand-500 text-white ring-4 ring-brand-500/20' : ''}
-                    ${!isPast && !isCurrent ? 'bg-[var(--surface-elevated)] text-[var(--content-tertiary)] group-hover:bg-[var(--surface-hover)]' : ''}
-                  `}
-                  >
-                    {isPast ? '✓' : i + 1}
-                  </div>
-                  <span
-                    className={`text-xs font-medium ${isCurrent ? 'text-brand-400' : isPast ? 'text-green-400' : 'text-[var(--content-tertiary)]'}`}
-                  >
-                    {STATUS_LABELS[status]}
-                  </span>
-                </button>
-                {i < STATUS_FLOW.length - 1 && (
-                  <div
-                    className={`flex-1 h-px mx-2 ${i < currentStatusIdx ? 'bg-green-500/40' : 'bg-[var(--surface-border)]'}`}
-                  />
-                )}
+      {/* Live Sending Progress Panel */}
+      {isQueueActive && progress && (
+        <div className="rounded-xl border border-brand-500/30 bg-[var(--surface-card)] p-5 space-y-4 shadow-elevation-2 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-brand-500 animate-pulse" />
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--content-primary)]">
+                  Live Sending Progress
+                </h3>
+                <p className="text-xs text-[var(--content-secondary)]">
+                  {progress.status === 'SENDING'
+                    ? 'Processing email queue in real time...'
+                    : `Status: ${progress.status}`}
+                </p>
               </div>
-            );
-          })}
-        </div>
-        {campaign.status !== 'COMPLETED' && (
-          <p className="text-xs text-[var(--content-tertiary)] mt-3">
-            Click the next step to advance the campaign status.
-          </p>
-        )}
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Leads', value: campaign.campaignLeads.length, icon: '👥' },
-          { label: 'Template', value: campaign.templateId ?? 'None', icon: '📋' },
-          { label: 'Created', value: formatDate(campaign.createdAt), icon: '📅' },
-          { label: 'Last Updated', value: formatDate(campaign.updatedAt), icon: '🔄' },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4"
-          >
-            <p className="text-lg mb-1">{card.icon}</p>
-            <p className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
-              {card.label}
-            </p>
-            <p className="text-sm font-semibold text-[var(--content-primary)] mt-1">{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Campaign Information */}
-      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5">
-        <h2 className="text-sm font-semibold text-[var(--content-primary)] mb-4">
-          Campaign Information
-        </h2>
-        <div>
-          <InfoRow label="Name">{campaign.name}</InfoRow>
-          <InfoRow label="Description">
-            {campaign.description ?? (
-              <span className="text-[var(--content-tertiary)]">No description</span>
-            )}
-          </InfoRow>
-          <InfoRow label="Status">
-            <CampaignStatusBadge status={campaign.status} size="sm" />
-          </InfoRow>
-          <InfoRow label="Template">
-            {campaign.templateId ?? <span className="text-[var(--content-tertiary)]">None</span>}
-          </InfoRow>
-          <InfoRow label="Created">{formatDateTime(campaign.createdAt)}</InfoRow>
-          <InfoRow label="Updated">{formatDateTime(campaign.updatedAt)}</InfoRow>
-        </div>
-      </div>
-
-      {/* Leads Table */}
-      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--surface-border)]">
-          <h2 className="text-sm font-semibold text-[var(--content-primary)]">
-            Selected Leads
-            <span className="ml-2 text-[var(--content-tertiary)] font-normal">
-              ({campaign.campaignLeads.length})
+            </div>
+            <span className="text-xs font-mono font-semibold text-brand-400">
+              {progress.percentage}% Complete
             </span>
-          </h2>
-          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-            Manage Leads
-          </Button>
-        </div>
+          </div>
 
-        {campaign.campaignLeads.length === 0 ? (
-          <div className="p-8 text-center text-sm text-[var(--content-tertiary)]">
-            No leads selected. Click "Edit" to add leads.
+          {/* Progress Bar */}
+          <div className="w-full h-3 rounded-full bg-[var(--surface-elevated)] overflow-hidden p-0.5 border border-[var(--surface-border)]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-blue-400 transition-all duration-500"
+              style={{ width: `${progress.percentage}%` }}
+            />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--surface-elevated)]">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden sm:table-cell">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden md:table-cell">
-                    Company
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden lg:table-cell">
-                    AI Email
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--surface-border)]">
-                {campaign.campaignLeads.map((cl) => {
-                  const lead = cl.lead;
-                  if (!lead) return null;
-                  const draft = lead.emailDrafts?.[0];
-                  return (
-                    <tr
-                      key={cl.leadId}
-                      className="hover:bg-[var(--surface-elevated)] transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium text-[var(--content-primary)]">
-                        {lead.name}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--content-secondary)] hidden sm:table-cell">
-                        {lead.email}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--content-secondary)] hidden md:table-cell">
-                        {lead.company ?? '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            lead.status === 'NEW'
-                              ? 'brand'
-                              : lead.status === 'CONTACTED'
-                                ? 'info'
-                                : lead.status === 'QUALIFIED'
-                                  ? 'success'
-                                  : lead.status === 'UNSUBSCRIBED'
-                                    ? 'warning'
-                                    : 'error'
-                          }
-                          size="sm"
-                        >
-                          {lead.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {draft ? (
-                          <span className="flex items-center gap-1.5 text-green-400 text-xs font-medium">
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2.5}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            Ready
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[var(--content-tertiary)]">
-                            Not generated
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {/* Email Preview Section */}
-      {campaign.campaignLeads.some((cl) => cl.lead?.emailDrafts?.[0]) && (
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden">
-          <div className="px-5 py-4 border-b border-[var(--surface-border)]">
-            <h2 className="text-sm font-semibold text-[var(--content-primary)]">Email Previews</h2>
-            <p className="text-xs text-[var(--content-secondary)] mt-0.5">
-              AI-generated emails attached to leads in this campaign.
-            </p>
-          </div>
-          <div className="p-5 space-y-4 max-h-80 overflow-y-auto scrollbar-none">
-            {campaign.campaignLeads
-              .filter((cl) => cl.lead?.emailDrafts?.[0])
-              .slice(0, 3)
-              .map((cl) => {
-                const draft = cl.lead!.emailDrafts![0];
-                return (
-                  <div
-                    key={cl.leadId}
-                    className="rounded-lg border border-[var(--surface-border)] p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-[var(--content-primary)]">
-                        {cl.lead!.name}
-                      </p>
-                      <Badge variant="brand" size="sm">
-                        {draft.template}
-                      </Badge>
-                    </div>
-                    <p className="text-xs font-semibold text-[var(--content-secondary)]">
-                      Subject: {draft.subject}
-                    </p>
-                    <p className="text-xs text-[var(--content-tertiary)] line-clamp-3">
-                      {draft.body}
-                    </p>
-                  </div>
-                );
-              })}
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+              <span className="text-[var(--content-tertiary)] uppercase font-semibold">Sent</span>
+              <p className="text-lg font-bold text-green-400 mt-0.5">
+                {progress.sent} / {progress.total}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+              <span className="text-[var(--content-tertiary)] uppercase font-semibold">
+                Remaining
+              </span>
+              <p className="text-lg font-bold text-blue-400 mt-0.5">{progress.pending}</p>
+            </div>
+            <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+              <span className="text-[var(--content-tertiary)] uppercase font-semibold">Failed</span>
+              <p className="text-lg font-bold text-red-400 mt-0.5">{progress.failed}</p>
+            </div>
+            <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+              <span className="text-[var(--content-tertiary)] uppercase font-semibold">
+                Current Recipient
+              </span>
+              <p className="text-xs font-mono text-[var(--content-primary)] truncate mt-1">
+                {progress.currentRecipient || '—'}
+              </p>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+          <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
+            Total Leads
+          </p>
+          <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">
+            {campaign.campaignLeads.length}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+          <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
+            Template
+          </p>
+          <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">
+            {campaign.templateId || 'None'}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+          <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
+            AI Email Drafts
+          </p>
+          <p className="text-2xl font-bold text-green-400 mt-1">
+            {campaign.campaignLeads.filter((cl) => (cl.lead?.emailDrafts?.length ?? 0) > 0).length}{' '}
+            / {campaign.campaignLeads.length}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Grid: Details + Leads Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Campaign Info */}
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5 space-y-3">
+          <h2 className="text-base font-semibold text-[var(--content-primary)] border-b border-[var(--surface-border)] pb-3">
+            Campaign Information
+          </h2>
+          <InfoRow label="Campaign Name">{campaign.name}</InfoRow>
+          <InfoRow label="Status">
+            <CampaignStatusBadge status={campaign.status} size="sm" />
+          </InfoRow>
+          <InfoRow label="Template">{campaign.templateId || '—'}</InfoRow>
+          <InfoRow label="Created">{formatDate(campaign.createdAt)}</InfoRow>
+          <InfoRow label="Last Updated">{formatDateTime(campaign.updatedAt)}</InfoRow>
+        </div>
+
+        {/* Selected Leads */}
+        <div className="lg:col-span-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--content-primary)]">
+              Campaign Leads ({campaign.campaignLeads.length})
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+              Manage Leads
+            </Button>
+          </div>
+
+          {campaign.campaignLeads.length === 0 ? (
+            <p className="text-sm text-[var(--content-tertiary)] py-6 text-center">
+              No leads added to this campaign yet. Edit the campaign to add leads.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--surface-elevated)]">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
+                      Name & Email
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
+                      Company
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
+                      AI Draft
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--surface-border)]">
+                  {campaign.campaignLeads.map((cl) => {
+                    const lead = cl.lead;
+                    const hasDraft = (lead?.emailDrafts?.length ?? 0) > 0;
+                    return (
+                      <tr
+                        key={cl.leadId}
+                        className="hover:bg-[var(--surface-elevated)] transition-colors"
+                      >
+                        <td className="px-3 py-2.5">
+                          <p className="font-medium text-[var(--content-primary)]">{lead?.name}</p>
+                          <p className="text-xs text-[var(--content-tertiary)]">{lead?.email}</p>
+                        </td>
+                        <td className="px-3 py-2.5 text-[var(--content-secondary)]">
+                          {lead?.company || '—'}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant={hasDraft ? 'success' : 'neutral'} size="sm">
+                            {hasDraft ? 'Ready' : 'Not generated'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Modals */}
       <EditCampaignModal
@@ -468,6 +504,16 @@ export default function CampaignDetail() {
         campaignName={campaign.name}
         onClose={() => setSendOpen(false)}
         onStatusChanged={() => loadCampaign()}
+      />
+
+      <CompletionSummaryModal
+        open={summaryOpen}
+        summary={summaryData}
+        onClose={() => setSummaryOpen(false)}
+        onViewLogs={() => {
+          setSummaryOpen(false);
+          navigate(`/delivery-logs?campaignId=${campaign.id}`);
+        }}
       />
     </div>
   );
