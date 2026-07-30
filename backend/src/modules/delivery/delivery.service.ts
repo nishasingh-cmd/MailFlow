@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export class DeliveryService {
   /**
-   * Get preview of personalized email for a campaign's lead before sending
+   * Get preview of personalized email for a campaign lead
    */
   static async getCampaignPreview(userId: string, campaignId: string, leadId?: string) {
     const campaign = await prisma.campaign.findFirst({
@@ -46,7 +46,7 @@ export class DeliveryService {
     const rawSubject = draft?.subject || `Outreach for ${lead.company || lead.name}`;
     const rawBody =
       draft?.body ||
-      `Hi {{firstName}},\n\nI reached out because I noticed your work at {{company}} in the {{industry}} space.\n\nBest regards,\nMailFlow Team`;
+      `Hi {{firstName}},\n\nI noticed your work at {{company}} in {{industry}}.\n\nBest regards,\nMailFlow Team`;
 
     const personalizedSubject = personalizeText(rawSubject, lead);
     const personalizedBody = personalizeText(rawBody, lead);
@@ -69,9 +69,14 @@ export class DeliveryService {
   }
 
   /**
-   * Start sending campaign — enqueues personalized emails and sets status to SENDING
+   * Start sending campaign — validates SMTP, enqueues personalized emails with duplicate protection,
+   * sets status to QUEUED -> SENDING
    */
-  static async startSending(userId: string, campaignId: string) {
+  static async startSending(
+    userId: string,
+    campaignId: string,
+    options?: { speed?: 'FAST' | 'NORMAL' | 'SLOW' }
+  ) {
     // 1. Verify user has SMTP credentials configured
     const smtp = await SmtpService.getConfig(userId);
     if (!smtp || !smtp.hasPassword) {
@@ -80,7 +85,7 @@ export class DeliveryService {
       );
     }
 
-    // 2. Fetch campaign and campaign leads
+    // 2. Fetch campaign and leads
     const campaign = await prisma.campaign.findFirst({
       where: { id: campaignId, userId },
       include: {
@@ -107,14 +112,29 @@ export class DeliveryService {
       throw new Error('Cannot send campaign with 0 leads. Please add leads first.');
     }
 
-    // 3. Check existing queue jobs for this campaign
-    const existingCount = await prisma.emailQueue.count({
-      where: { campaignId, userId },
+    // Update status to QUEUED
+    const speed = options?.speed || campaign.sendingSpeed || 'NORMAL';
+    await prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        status: 'QUEUED' as CampaignStatus,
+        sendingSpeed: speed,
+        startedAt: campaign.startedAt || new Date(),
+      },
     });
 
-    if (existingCount === 0) {
-      // Create queue jobs for each lead with personalized subject & body
-      const queueEntries = campaign.campaignLeads.map((cl) => {
+    // 3. Duplicate Protection: Check existing queue jobs for this campaign
+    const existingQueueJobs = await prisma.emailQueue.findMany({
+      where: { campaignId, userId },
+      select: { leadId: true },
+    });
+    const existingLeadIds = new Set(existingQueueJobs.map((j) => j.leadId));
+
+    // Filter leads that are not queued yet
+    const newLeads = campaign.campaignLeads.filter((cl) => !existingLeadIds.has(cl.leadId));
+
+    if (newLeads.length > 0) {
+      const queueEntries = newLeads.map((cl) => {
         const lead = cl.lead;
         const draft = lead.emailDrafts?.[0];
 
@@ -141,23 +161,23 @@ export class DeliveryService {
 
       await prisma.emailQueue.createMany({
         data: queueEntries,
-      });
-    } else {
-      // Resume any pending or failed jobs
-      await prisma.emailQueue.updateMany({
-        where: {
-          campaignId,
-          userId,
-          status: { in: ['CANCELLED', 'FAILED'] },
-          attempts: { lt: 3 },
-        },
-        data: {
-          status: 'PENDING',
-        },
+        skipDuplicates: true,
       });
     }
 
-    // 4. Update campaign status to SENDING
+    // Unpause or reset CANCELLED/FAILED jobs if restarting
+    await prisma.emailQueue.updateMany({
+      where: {
+        campaignId,
+        userId,
+        status: 'CANCELLED',
+      },
+      data: {
+        status: 'PENDING',
+      },
+    });
+
+    // Update status to SENDING
     await prisma.campaign.update({
       where: { id: campaignId },
       data: { status: 'SENDING' as CampaignStatus },
@@ -192,7 +212,41 @@ export class DeliveryService {
   }
 
   /**
-   * Get real-time campaign progress statistics
+   * Cancel campaign sending (remaining pending jobs become CANCELLED)
+   */
+  static async cancelSending(userId: string, campaignId: string) {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: campaignId, userId },
+    });
+
+    if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+
+    // Cancel all PENDING / PROCESSING queue jobs
+    await prisma.emailQueue.updateMany({
+      where: {
+        campaignId,
+        userId,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
+      data: {
+        status: 'CANCELLED' as QueueJobStatus,
+      },
+    });
+
+    // Update campaign status
+    await prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        status: 'CANCELLED' as CampaignStatus,
+        completedAt: new Date(),
+      },
+    });
+
+    return this.getCampaignProgress(userId, campaignId);
+  }
+
+  /**
+   * Get live real-time campaign progress with detailed metrics
    */
   static async getCampaignProgress(userId: string, campaignId: string) {
     const campaign = await prisma.campaign.findFirst({
@@ -221,6 +275,19 @@ export class DeliveryService {
     });
 
     const percentage = total > 0 ? Math.round(((sent + failed) / total) * 100) : 0;
+    const successRate = sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 100;
+
+    // Calculate time taken
+    let timeTaken = '—';
+    if (campaign.startedAt) {
+      const endTime = campaign.completedAt || new Date();
+      const diffSec = Math.floor(
+        (endTime.getTime() - new Date(campaign.startedAt).getTime()) / 1000
+      );
+      const mins = Math.floor(diffSec / 60);
+      const secs = diffSec % 60;
+      timeTaken = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    }
 
     return {
       campaignId: campaign.id,
@@ -231,16 +298,29 @@ export class DeliveryService {
       failed,
       pending,
       percentage,
-      batchSize: 20,
+      currentRecipient: campaign.lastSentEmail,
+      sendingSpeed: (campaign.sendingSpeed || 'NORMAL') as 'FAST' | 'NORMAL' | 'SLOW',
+      startedAt: campaign.startedAt?.toISOString() || null,
+      completedAt: campaign.completedAt?.toISOString() || null,
+      timeTaken,
+      successRate,
     };
   }
 
   /**
-   * Get paginated delivery logs
+   * Get paginated delivery logs with search & sort
    */
   static async getDeliveryLogs(
     userId: string,
-    query: { search?: string; status?: string; campaignId?: string; page?: number; limit?: number }
+    query: {
+      search?: string;
+      status?: string;
+      campaignId?: string;
+      sortBy?: 'createdAt' | 'recipientEmail' | 'subject';
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    }
   ) {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -264,10 +344,13 @@ export class DeliveryService {
       ];
     }
 
+    const sortField = query.sortBy || 'createdAt';
+    const sortDir = query.sortOrder || 'desc';
+
     const [logs, total] = await Promise.all([
       prisma.emailLog.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sortField]: sortDir },
         skip,
         take: limit,
         include: {
@@ -351,7 +434,6 @@ export class DeliveryService {
       where.id = { in: jobIds };
     }
 
-    // Reset status to PENDING and attempts to 0
     const updated = await prisma.emailQueue.updateMany({
       where,
       data: {
@@ -362,16 +444,19 @@ export class DeliveryService {
       },
     });
 
-    // Also update any FAILED campaigns back to SENDING
-    const failedJobs = await prisma.emailQueue.findMany({
+    // Re-open associated campaign status to SENDING
+    const affectedJobs = await prisma.emailQueue.findMany({
       where: { userId, status: 'PENDING' },
       select: { campaignId: true },
       distinct: ['campaignId'],
     });
 
-    for (const job of failedJobs) {
+    for (const job of affectedJobs) {
       await prisma.campaign.updateMany({
-        where: { id: job.campaignId, status: { in: ['FAILED', 'COMPLETED'] } },
+        where: {
+          id: job.campaignId,
+          status: { in: ['FAILED', 'COMPLETED', 'COMPLETED_WITH_ERRORS'] },
+        },
         data: { status: 'SENDING' },
       });
     }

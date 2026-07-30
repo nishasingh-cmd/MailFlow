@@ -8,12 +8,12 @@ export class DeliveryWorker {
   private static timerId: NodeJS.Timeout | null = null;
 
   /**
-   * Start the background delivery worker loop
+   * Start background delivery worker loop
    */
-  static startWorker(intervalMs = 3000) {
+  static startWorker(intervalMs = 1000) {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log('[DeliveryWorker] Background email delivery worker started.');
+    console.log('[DeliveryWorker] SaaS Email Delivery Engine worker running.');
 
     this.timerId = setInterval(async () => {
       try {
@@ -25,7 +25,7 @@ export class DeliveryWorker {
   }
 
   /**
-   * Stop the background delivery worker loop
+   * Stop background delivery worker loop
    */
   static stopWorker() {
     if (this.timerId) {
@@ -37,21 +37,35 @@ export class DeliveryWorker {
   }
 
   /**
-   * Process one batch of pending emails
+   * Process pending jobs per active campaign
    */
   static async processQueueBatch() {
-    // 1. Find all active campaigns currently in SENDING status
+    // 1. Fetch campaigns in SENDING or QUEUED status
     const activeCampaigns = await prisma.campaign.findMany({
-      where: { status: 'SENDING' as CampaignStatus },
-      select: { id: true, userId: true },
+      where: {
+        status: { in: ['SENDING', 'QUEUED'] as CampaignStatus[] },
+      },
+      select: { id: true, userId: true, sendingSpeed: true, status: true },
     });
 
     if (activeCampaigns.length === 0) return;
 
     for (const campaign of activeCampaigns) {
+      // If QUEUED, transition status to SENDING
+      if (campaign.status === 'QUEUED') {
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'SENDING' as CampaignStatus, startedAt: new Date() },
+        });
+      }
+
+      // Determine batch size per sending speed limit
+      const speed = campaign.sendingSpeed || 'NORMAL';
+      const batchLimit = speed === 'FAST' ? 20 : speed === 'SLOW' ? 1 : 5;
+
       const now = new Date();
 
-      // 2. Fetch pending jobs for this campaign scheduled for now or earlier
+      // Fetch batch of pending jobs
       const pendingJobs = await prisma.emailQueue.findMany({
         where: {
           campaignId: campaign.id,
@@ -59,74 +73,82 @@ export class DeliveryWorker {
           status: 'PENDING' as QueueJobStatus,
           scheduledAt: { lte: now },
         },
-        take: 20, // Configurable Batch Size: 20 emails per batch
+        take: batchLimit,
         orderBy: { scheduledAt: 'asc' },
       });
 
       if (pendingJobs.length === 0) {
-        // Check if campaign queue has completed all jobs
         await this.checkCampaignCompletion(campaign.userId, campaign.id);
         continue;
       }
 
-      // 3. Obtain user SMTP transporter
+      // Obtain user SMTP transport
       let smtpContext;
       try {
         smtpContext = await SmtpService.getTransporterForUser(campaign.userId);
       } catch (error: unknown) {
         const err = error as { message?: string };
         console.error(`[DeliveryWorker] Campaign ${campaign.id} SMTP error:`, err.message);
-        // Mark pending jobs as failed due to missing/invalid SMTP configuration
+
         await prisma.emailQueue.updateMany({
           where: { campaignId: campaign.id, status: 'PENDING' },
           data: {
             status: 'FAILED',
-            errorMessage: err.message || 'SMTP Credentials invalid or unconfigured',
+            errorMessage: err.message || 'SMTP Credentials unconfigured or invalid',
           },
         });
         await prisma.campaign.update({
           where: { id: campaign.id },
-          data: { status: 'FAILED' as CampaignStatus },
+          data: { status: 'FAILED' as CampaignStatus, completedAt: new Date() },
         });
         continue;
       }
 
       const { transporter, fromName, fromEmail, provider } = smtpContext;
 
-      // 4. Send each email in the batch
+      // Process batch
       for (const job of pendingJobs) {
         const attempts = job.attempts + 1;
 
-        // Mark as PROCESSING
-        await prisma.emailQueue.update({
-          where: { id: job.id },
-          data: {
-            status: 'PROCESSING' as QueueJobStatus,
-            attempts,
-            lastAttemptAt: new Date(),
-          },
-        });
+        // Mark as PROCESSING and update lastSentEmail on campaign for live UI recipient tracker
+        await Promise.all([
+          prisma.emailQueue.update({
+            where: { id: job.id },
+            data: {
+              status: 'PROCESSING' as QueueJobStatus,
+              attempts,
+              lastAttemptAt: new Date(),
+            },
+          }),
+          prisma.campaign.update({
+            where: { id: campaign.id },
+            data: { lastSentEmail: job.recipientEmail },
+          }),
+        ]);
 
         try {
-          await transporter.sendMail({
+          const info = await transporter.sendMail({
             from: `"${fromName}" <${fromEmail}>`,
             to: job.recipientEmail,
             subject: job.subject,
             html: job.htmlBody,
-            text: job.htmlBody.replace(/<[^>]*>?/gm, ''), // Plaintext fallback
+            text: job.htmlBody.replace(/<[^>]*>?/gm, ''),
           });
 
-          // SUCCESS
           const sentTime = new Date();
+          const messageId = info?.messageId || null;
+
+          // Mark job as SENT
           await prisma.emailQueue.update({
             where: { id: job.id },
             data: {
               status: 'SENT' as QueueJobStatus,
               sentAt: sentTime,
+              messageId,
             },
           });
 
-          // Log delivery
+          // Log delivery entry
           await prisma.emailLog.create({
             data: {
               userId: job.userId,
@@ -138,6 +160,7 @@ export class DeliveryWorker {
               status: 'SENT',
               provider: provider,
               retryCount: attempts - 1,
+              messageId,
               sentAt: sentTime,
             },
           });
@@ -148,9 +171,7 @@ export class DeliveryWorker {
               where: { id: job.leadId },
               data: { status: 'CONTACTED' },
             })
-            .catch(() => {
-              /* ignore lead status update errors */
-            });
+            .catch(() => {});
         } catch (sendError: unknown) {
           const err = sendError as { message?: string };
           const errorMessage = err.message || 'Email delivery failed';
@@ -160,7 +181,7 @@ export class DeliveryWorker {
           );
 
           if (attempts >= job.maxRetries) {
-            // Final failure
+            // Final failure -> status = FAILED
             await prisma.emailQueue.update({
               where: { id: job.id },
               data: {
@@ -169,7 +190,6 @@ export class DeliveryWorker {
               },
             });
 
-            // Log failure
             await prisma.emailLog.create({
               data: {
                 userId: job.userId,
@@ -185,9 +205,9 @@ export class DeliveryWorker {
               },
             });
           } else {
-            // Exponential backoff: 30s, 2m, 10m
+            // Automatic retries: 30s, 2m, 5m
             const backoffMs =
-              attempts === 1 ? 30 * 1000 : attempts === 2 ? 2 * 60 * 1000 : 10 * 60 * 1000;
+              attempts === 1 ? 30 * 1000 : attempts === 2 ? 2 * 60 * 1000 : 5 * 60 * 1000;
             const nextSchedule = new Date(Date.now() + backoffMs);
 
             await prisma.emailQueue.update({
@@ -202,13 +222,12 @@ export class DeliveryWorker {
         }
       }
 
-      // Check if campaign queue finished after batch
       await this.checkCampaignCompletion(campaign.userId, campaign.id);
     }
   }
 
   /**
-   * Check if campaign has finished processing all queued jobs
+   * Check campaign queue status and transition status when completed
    */
   private static async checkCampaignCompletion(userId: string, campaignId: string) {
     const remainingPendingOrProcessing = await prisma.emailQueue.count({
@@ -220,21 +239,24 @@ export class DeliveryWorker {
     });
 
     if (remainingPendingOrProcessing === 0) {
-      const failedCount = await prisma.emailQueue.count({
-        where: { campaignId, userId, status: 'FAILED' },
-      });
-      const sentCount = await prisma.emailQueue.count({
-        where: { campaignId, userId, status: 'SENT' },
-      });
+      const [failedCount, sentCount] = await Promise.all([
+        prisma.emailQueue.count({ where: { campaignId, userId, status: 'FAILED' } }),
+        prisma.emailQueue.count({ where: { campaignId, userId, status: 'SENT' } }),
+      ]);
 
       let finalStatus: CampaignStatus = 'COMPLETED';
-      if (sentCount === 0 && failedCount > 0) {
+      if (sentCount > 0 && failedCount > 0) {
+        finalStatus = 'COMPLETED_WITH_ERRORS';
+      } else if (sentCount === 0 && failedCount > 0) {
         finalStatus = 'FAILED';
       }
 
       await prisma.campaign.update({
         where: { id: campaignId },
-        data: { status: finalStatus },
+        data: {
+          status: finalStatus,
+          completedAt: new Date(),
+        },
       });
     }
   }

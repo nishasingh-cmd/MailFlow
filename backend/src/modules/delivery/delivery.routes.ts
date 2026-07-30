@@ -11,6 +11,7 @@ router.get('/campaigns/:id/preview', DeliveryController.getPreview);
 router.post('/campaigns/:id/send', DeliveryController.startSending);
 router.post('/campaigns/:id/pause', DeliveryController.pauseSending);
 router.post('/campaigns/:id/resume', DeliveryController.resumeSending);
+router.post('/campaigns/:id/cancel', DeliveryController.cancelSending);
 router.get('/campaigns/:id/progress', DeliveryController.getProgress);
 
 // Delivery logs & Failed Queue

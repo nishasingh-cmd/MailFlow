@@ -298,7 +298,18 @@ export interface UpdateDraftRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type CampaignStatus =
-  'DRAFT' | 'READY' | 'SENDING' | 'PAUSED' | 'SENT' | 'COMPLETED' | 'FAILED';
+  | 'DRAFT'
+  | 'READY'
+  | 'QUEUED'
+  | 'SENDING'
+  | 'PAUSED'
+  | 'SENT'
+  | 'COMPLETED'
+  | 'COMPLETED_WITH_ERRORS'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type SendingSpeed = 'FAST' | 'NORMAL' | 'SLOW';
 
 export interface CampaignLead {
   campaignId: string;

@@ -75,6 +75,23 @@ export class DeliveryController {
   }
 
   /**
+   * POST /api/delivery/campaigns/:id/cancel — Cancel sending campaign
+   */
+  static async cancelSending(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const progress = await DeliveryService.cancelSending(userId, id);
+      res
+        .status(200)
+        .json({ success: true, data: progress, message: 'Campaign sending cancelled.' });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      res.status(400).json({ error: err.message || 'Failed to cancel campaign' });
+    }
+  }
+
+  /**
    * GET /api/delivery/campaigns/:id/progress — Get campaign live progress
    */
   static async getProgress(req: AuthenticatedRequest, res: Response): Promise<void> {

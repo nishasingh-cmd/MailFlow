@@ -5,6 +5,8 @@
 export type SmtpProviderType = 'GMAIL' | 'OUTLOOK' | 'CUSTOM';
 export type SmtpEncryption = 'TLS' | 'SSL' | 'NONE';
 export type QueueJobStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED';
+import type { SendingSpeed } from './lead.types';
+export type { SendingSpeed };
 
 export interface SmtpConfig {
   id: string;
@@ -13,7 +15,7 @@ export interface SmtpConfig {
   host: string;
   port: number;
   username: string;
-  password?: string; // Masked when returned to UI
+  password?: string;
   hasPassword?: boolean;
   encryption: SmtpEncryption;
   fromName: string;
@@ -60,6 +62,7 @@ export interface EmailQueueItem {
   status: QueueJobStatus;
   attempts: number;
   maxRetries: number;
+  messageId?: string | null;
   scheduledAt: string;
   sentAt?: string | null;
   lastAttemptAt?: string | null;
@@ -87,6 +90,7 @@ export interface EmailLogItem {
   status: 'SENT' | 'FAILED';
   provider?: string | null;
   retryCount: number;
+  messageId?: string | null;
   errorReason?: string | null;
   sentAt?: string | null;
   createdAt: string;
@@ -109,13 +113,30 @@ export interface CampaignProgress {
   failed: number;
   pending: number;
   percentage: number;
-  batchSize: number;
+  currentRecipient?: string | null;
+  sendingSpeed: SendingSpeed;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  timeTaken?: string | null;
+  successRate?: number;
+}
+
+export interface CompletionSummaryData {
+  campaignId: string;
+  campaignName: string;
+  total: number;
+  sent: number;
+  failed: number;
+  timeTaken: string;
+  successRate: number;
 }
 
 export interface DeliveryLogsQuery {
   search?: string;
   status?: 'SENT' | 'FAILED' | 'ALL';
   campaignId?: string;
+  sortBy?: 'createdAt' | 'recipientEmail' | 'subject';
+  sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 }

@@ -1,5 +1,5 @@
 // MailFlow — Prisma Schema
-// Phase 9: Email Delivery Engine
+// Phase 9: Email Delivery Engine (SaaS Delivery System)
 
 generator client {
   provider = "prisma-client-js"
@@ -167,11 +167,14 @@ model EmailDraft {
 enum CampaignStatus {
   DRAFT
   READY
+  QUEUED
   SENDING
   PAUSED
   SENT
   COMPLETED
+  COMPLETED_WITH_ERRORS
   FAILED
+  CANCELLED
 }
 
 enum QueueJobStatus {
@@ -190,6 +193,10 @@ model Campaign {
   description   String?          @db.Text
   status        CampaignStatus   @default(DRAFT)
   templateId    String?
+  sendingSpeed  String           @default("NORMAL") // FAST | NORMAL | SLOW
+  startedAt     DateTime?
+  completedAt   DateTime?
+  lastSentEmail String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   campaignLeads CampaignLead[]
@@ -245,6 +252,7 @@ model EmailQueue {
   status         QueueJobStatus @default(PENDING)
   attempts       Int            @default(0)
   maxRetries     Int            @default(3)
+  messageId      String?
   scheduledAt    DateTime       @default(now())
   sentAt         DateTime?
   lastAttemptAt  DateTime?
@@ -252,6 +260,7 @@ model EmailQueue {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  @@unique([campaignId, leadId])
   @@index([userId])
   @@index([campaignId])
   @@index([leadId])
@@ -273,6 +282,7 @@ model EmailLog {
   status         String   // SENT | FAILED
   provider       String?
   retryCount     Int      @default(0)
+  messageId      String?
   errorReason    String?  @db.Text
   sentAt         DateTime?
   createdAt      DateTime @default(now())
