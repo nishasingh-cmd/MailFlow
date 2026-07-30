@@ -21,6 +21,8 @@ import { EmailGeneratorDrawer } from '../../components/email-generation/EmailGen
 import { ResearchStatusBadge } from '../../components/research/ResearchStatusBadge';
 import { BulkResearchBar } from '../../components/research/BulkResearchBar';
 import { ResearchProgressCard } from '../../components/research/ResearchProgressCard';
+import { WhatsappPreviewModal } from '../../components/whatsapp/WhatsappPreviewModal';
+import { WhatsappSendOptionsModal } from '../../components/whatsapp/WhatsappSendOptionsModal';
 import { useToast } from '../../hooks/useToast';
 
 const STATUS_FILTER_OPTIONS = [
@@ -114,6 +116,22 @@ export default function Leads() {
     setEmailDrawerLeadName(leadName || null);
     setEmailDrawerCompanyName(companyName || null);
     setEmailDrawerOpen(true);
+  };
+
+  // WhatsApp state
+  const [waPreviewOpen, setWaPreviewOpen] = useState(false);
+  const [waLeadId, setWaLeadId] = useState<string | null>(null);
+  const [waLeadName, setWaLeadName] = useState<string>('');
+  const [waCompanyName, setWaCompanyName] = useState<string>('');
+  const [waPhone, setWaPhone] = useState<string>('');
+  const [waBatchModalOpen, setWaBatchModalOpen] = useState(false);
+
+  const openWhatsappModal = (lead: Lead) => {
+    setWaLeadId(lead.id);
+    setWaLeadName(lead.name);
+    setWaCompanyName(lead.company || '');
+    setWaPhone(lead.phone || '');
+    setWaPreviewOpen(true);
   };
 
   // ── Fetch Leads ────────────────────────────────────────────────────────────
@@ -535,6 +553,14 @@ export default function Leads() {
               ✨ Email
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => openWhatsappModal(lead)}
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+          >
+            💬 WA
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => handleOpenResearch(lead)}>
             {researchStatuses[lead.id] === 'COMPLETED' ? '📊 View Research' : '🔍 Research'}
           </Button>
@@ -837,6 +863,24 @@ export default function Leads() {
         onDraftSaved={() => {
           fetchLeads();
         }}
+      />
+
+      <WhatsappPreviewModal
+        open={waPreviewOpen}
+        leadId={waLeadId}
+        leadName={waLeadName}
+        companyName={waCompanyName}
+        phone={waPhone}
+        onClose={() => setWaPreviewOpen(false)}
+        onSent={() => fetchLeads()}
+      />
+
+      <WhatsappSendOptionsModal
+        open={waBatchModalOpen}
+        selectedLeadIds={selectedLeadIds}
+        totalLeadsCount={totalLeads}
+        onClose={() => setWaBatchModalOpen(false)}
+        onSuccess={() => fetchLeads()}
       />
     </div>
   );

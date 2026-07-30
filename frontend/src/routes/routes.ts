@@ -18,6 +18,7 @@ export const ROUTES = {
   CAMPAIGN_DETAIL: '/campaigns/:id',
   DELIVERY_LOGS: '/delivery-logs',
   FAILED_QUEUE: '/failed-queue',
+  WHATSAPP: '/whatsapp',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
 } as const;
@@ -31,6 +32,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   campaigns: 'Campaigns',
   'delivery-logs': 'Delivery Logs',
   'failed-queue': 'Failed Queue',
+  whatsapp: 'WhatsApp Outreach',
   analytics: 'Analytics',
   settings: 'Settings',
   login: 'Login',

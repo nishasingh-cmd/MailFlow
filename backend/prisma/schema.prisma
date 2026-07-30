@@ -1,5 +1,5 @@
 // MailFlow — Prisma Schema
-// Phase 9: Email Delivery Engine (SaaS Delivery System)
+// Phase 10: WhatsApp Outreach Module
 
 generator client {
   provider = "prisma-client-js"
@@ -28,6 +28,9 @@ model User {
   smtpConfig    SmtpConfig?
   emailQueues   EmailQueue[]
   emailLogs     EmailLog[]
+  whatsappDrafts WhatsappDraft[]
+  whatsappQueues WhatsappQueue[]
+  whatsappLogs   WhatsappLog[]
 }
 
 enum LeadStatus {
@@ -68,6 +71,9 @@ model Lead {
   campaignLeads   CampaignLead[]
   emailQueues     EmailQueue[]
   emailLogs       EmailLog[]
+  whatsappDrafts  WhatsappDraft[]
+  whatsappQueues  WhatsappQueue[]
+  whatsappLogs    WhatsappLog[]
 
   @@unique([userId, email])
   @@index([userId, status])
@@ -161,7 +167,7 @@ model EmailDraft {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase 8 & 9 — Campaign & Delivery Engine
+// Phase 8, 9, 10 — Campaign & Delivery Engine & WhatsApp Outreach
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum CampaignStatus {
@@ -175,6 +181,12 @@ enum CampaignStatus {
   COMPLETED_WITH_ERRORS
   FAILED
   CANCELLED
+}
+
+enum CampaignChannel {
+  EMAIL
+  WHATSAPP
+  EMAIL_AND_WHATSAPP
 }
 
 enum QueueJobStatus {
@@ -192,6 +204,7 @@ model Campaign {
   name          String
   description   String?          @db.Text
   status        CampaignStatus   @default(DRAFT)
+  channel       CampaignChannel  @default(EMAIL)
   templateId    String?
   sendingSpeed  String           @default("NORMAL") // FAST | NORMAL | SLOW
   startedAt     DateTime?
@@ -202,6 +215,9 @@ model Campaign {
   campaignLeads CampaignLead[]
   emailQueues   EmailQueue[]
   emailLogs     EmailLog[]
+  whatsappDrafts WhatsappDraft[]
+  whatsappQueues WhatsappQueue[]
+  whatsappLogs   WhatsappLog[]
 
   @@index([userId])
   @@index([userId, status])
@@ -286,6 +302,78 @@ model EmailLog {
   errorReason    String?  @db.Text
   sentAt         DateTime?
   createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WhatsappDraft {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  message     String   @db.Text
+  status      String   @default("DRAFT") // DRAFT | QUEUED | SENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([campaignId])
+}
+
+model WhatsappQueue {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId    String?
+  campaign      Campaign?      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  leadId        String
+  lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  phone         String
+  message       String         @db.Text
+  status        QueueJobStatus @default(PENDING)
+  attempts      Int            @default(0)
+  maxRetries    Int            @default(3)
+  messageId     String?
+  scheduledAt   DateTime       @default(now())
+  sentAt        DateTime?
+  lastAttemptAt DateTime?
+  errorMessage  String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model WhatsappLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  queueId     String?
+  phone       String
+  message     String   @db.Text
+  status      String   // SENT | FAILED
+  provider    String   @default("MOCK") // MOCK | TWILIO | WHATSAPP_CLOUD
+  retryCount  Int      @default(0)
+  messageId   String?
+  errorReason String?  @db.Text
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
 
   @@index([userId])
   @@index([campaignId])

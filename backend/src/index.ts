@@ -16,7 +16,9 @@ import emailGenerationRouter from './modules/email-generation/email-generation.r
 import campaignsRouter from './modules/campaigns/campaigns.routes';
 import smtpRouter from './modules/smtp/smtp.routes';
 import deliveryRouter from './modules/delivery/delivery.routes';
+import whatsappRouter from './modules/whatsapp/whatsapp.routes';
 import { DeliveryWorker } from './modules/delivery/delivery.worker';
+import { WhatsappWorker } from './modules/whatsapp/whatsapp.worker';
 
 const app = express();
 
@@ -50,6 +52,7 @@ app.get('/api', (_req, res) => {
       campaigns: '/api/campaigns',
       smtp: '/api/smtp',
       delivery: '/api/delivery',
+      whatsapp: '/api/whatsapp',
     },
   });
 });
@@ -63,6 +66,7 @@ app.use('/api/email-generation', emailGenerationRouter);
 app.use('/api/campaigns', campaignsRouter);
 app.use('/api/smtp', smtpRouter);
 app.use('/api/delivery', deliveryRouter);
+app.use('/api/whatsapp', whatsappRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {
@@ -73,8 +77,9 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  // Start background email queue worker
+  // Start background email & whatsapp queue workers
   DeliveryWorker.startWorker(3000);
+  WhatsappWorker.startWorker(2500);
 
   app.listen(env.PORT, () => {
     console.log(`[server] MailFlow backend running on http://localhost:${env.PORT}`);

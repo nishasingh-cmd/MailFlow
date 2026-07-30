@@ -24,6 +24,12 @@ const TEMPLATE_OPTIONS = [
   { value: 'Custom Template', label: 'Custom Template' },
 ];
 
+const CHANNEL_OPTIONS = [
+  { value: 'EMAIL', label: 'Email Only' },
+  { value: 'WHATSAPP', label: 'WhatsApp Only' },
+  { value: 'EMAIL_AND_WHATSAPP', label: 'Email + WhatsApp Outreach' },
+];
+
 export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaignModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -31,6 +37,7 @@ export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaign
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [channel, setChannel] = useState<'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP'>('EMAIL');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [templateId, setTemplateId] = useState<EmailTemplateType | ''>('');
   const [nameError, setNameError] = useState('');
@@ -40,6 +47,7 @@ export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaign
     setStep(0);
     setName('');
     setDescription('');
+    setChannel('EMAIL');
     setSelectedLeadIds([]);
     setTemplateId('');
     setNameError('');
@@ -202,6 +210,13 @@ export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaign
             }}
             error={nameError}
             autoFocus
+          />
+          <Select
+            id="campaign-channel"
+            label="Outreach Channel"
+            value={channel}
+            onChange={(val) => setChannel(val as 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP')}
+            options={CHANNEL_OPTIONS}
           />
           <Textarea
             id="campaign-description"
