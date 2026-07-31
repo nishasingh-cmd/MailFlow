@@ -45,3 +45,5 @@ export type { EmptyStateProps, EmptyStateAction } from './EmptyState/EmptyState'
 
 export { Skeleton } from './Skeleton/Skeleton';
 export type { SkeletonProps, SkeletonVariant } from './Skeleton/Skeleton';
+
+export * from './Chart';

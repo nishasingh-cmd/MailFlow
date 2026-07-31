@@ -18,6 +18,7 @@ import smtpRouter from './modules/smtp/smtp.routes';
 import deliveryRouter from './modules/delivery/delivery.routes';
 import whatsappRouter from './modules/whatsapp/whatsapp.routes';
 import settingsRouter from './modules/settings/settings.routes';
+import analyticsRouter from './modules/analytics/analytics.routes';
 import { DeliveryWorker } from './modules/delivery/delivery.worker';
 import { WhatsappWorker } from './modules/whatsapp/whatsapp.worker';
 
@@ -55,6 +56,7 @@ app.get('/api', (_req, res) => {
       delivery: '/api/delivery',
       whatsapp: '/api/whatsapp',
       settings: '/api/settings',
+      analytics: '/api/analytics',
     },
   });
 });
@@ -70,6 +72,7 @@ app.use('/api/smtp', smtpRouter);
 app.use('/api/delivery', deliveryRouter);
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {

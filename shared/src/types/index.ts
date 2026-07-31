@@ -22,3 +22,4 @@ export * from './lead.types';
 export * from './delivery.types';
 export * from './whatsapp.types';
 export * from './settings.types';
+export * from './analytics.types';
