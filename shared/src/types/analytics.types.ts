@@ -96,6 +96,7 @@ export interface WhatsappAnalytics {
 }
 
 export interface TimeSeriesPoint {
+  [key: string]: string | number;
   date: string;
   emailsSent: number;
   whatsappSent: number;

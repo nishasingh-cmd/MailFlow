@@ -63,8 +63,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                   <div class="card"><div class="card-title">Total Campaigns</div><div class="card-val">${analyticsData.summary.totalCampaigns.value}</div></div>
                   <div class="card"><div class="card-title">Emails Sent</div><div class="card-val">${analyticsData.summary.emailsSent.value}</div></div>
                   <div class="card"><div class="card-title">WhatsApp Sent</div><div class="card-val">${analyticsData.summary.whatsappSent.value}</div></div>
-                  <div class="card"><div class="card-title">Open Rate</div><div class="card-val">${analyticsData.summary.openRate.value}</div></div>
-                  <div class="card"><div class="card-title">Reply Rate</div><div class="card-val">${analyticsData.summary.replyRate.value}</div></div>
+                  <div class="card"><div class="card-title">Open Rate (Est.)</div><div class="card-val">${analyticsData.summary.openRate.value}</div></div>
+                  <div class="card"><div class="card-title">Reply Rate (Est.)</div><div class="card-val">${analyticsData.summary.replyRate.value}</div></div>
                 </div>
 
                 <div class="section-title">2. Campaign Performance</div>
@@ -76,8 +76,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                       <th>Status</th>
                       <th>Emails Sent</th>
                       <th>WhatsApp Sent</th>
-                      <th>Open Rate</th>
-                      <th>Reply Rate</th>
+                      <th>Open Rate (Est.)</th>
+                      <th>Reply Rate (Est.)</th>
                     </tr>
                   </thead>
                   <tbody>

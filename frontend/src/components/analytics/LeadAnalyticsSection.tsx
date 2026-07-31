@@ -51,7 +51,7 @@ export const LeadAnalyticsSection: React.FC<LeadAnalyticsSectionProps> = ({ anal
           <p className="text-xl font-bold text-[var(--content-primary)]">
             {analytics.importedLeads.toLocaleString()}
           </p>
-          <p className="text-[11px] text-[var(--content-secondary)]">CSV & Excel Imports</p>
+          <p className="text-[11px] text-[var(--content-secondary)]">CSV &amp; Excel Imports</p>
         </div>
 
         <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3.5 rounded-xl border border-[var(--border-subtle,rgba(255,255,255,0.06))] space-y-1">
@@ -81,28 +81,40 @@ export const LeadAnalyticsSection: React.FC<LeadAnalyticsSectionProps> = ({ anal
           <h4 className="text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
             Top Industries Distribution
           </h4>
-          <BarChart data={chartData} horizontal height={180} />
+          {chartData.length > 0 ? (
+            <BarChart data={chartData} horizontal height={180} />
+          ) : (
+            <div className="flex items-center justify-center p-6 rounded-lg bg-[var(--surface-elevated,rgba(255,255,255,0.02))] border border-dashed border-[var(--border-subtle,rgba(255,255,255,0.08))] text-xs text-[var(--content-tertiary)]">
+              No industry data available.
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
           <h4 className="text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
             Geographic Coverage (Top Countries)
           </h4>
-          <div className="space-y-2">
-            {analytics.topCountries.map((c, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-elevated,rgba(255,255,255,0.03))]"
-              >
-                <span className="text-xs font-medium text-[var(--content-primary)]">
-                  {c.country}
-                </span>
-                <span className="text-xs font-semibold text-brand-400">
-                  {c.count.toLocaleString()} leads
-                </span>
-              </div>
-            ))}
-          </div>
+          {analytics.topCountries.length > 0 ? (
+            <div className="space-y-2">
+              {analytics.topCountries.map((c, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-elevated,rgba(255,255,255,0.03))]"
+                >
+                  <span className="text-xs font-medium text-[var(--content-primary)]">
+                    {c.country}
+                  </span>
+                  <span className="text-xs font-semibold text-brand-400">
+                    {c.count.toLocaleString()} leads
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center p-6 rounded-lg bg-[var(--surface-elevated,rgba(255,255,255,0.02))] border border-dashed border-[var(--border-subtle,rgba(255,255,255,0.08))] text-xs text-[var(--content-tertiary)]">
+              No geographic data available.
+            </div>
+          )}
         </div>
       </div>
     </Card>

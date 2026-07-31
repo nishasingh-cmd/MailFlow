@@ -128,15 +128,23 @@ export const CampaignPerformanceTable: React.FC<CampaignPerformanceTableProps> =
     },
     {
       key: 'openRate',
-      header: 'Open Rate',
+      header: 'Open Rate (Est.)',
       align: 'right',
-      render: (row) => <span className="font-semibold text-emerald-400">{row.openRate}%</span>,
+      render: (row) => (
+        <span className="font-semibold text-emerald-400" title="Estimated (Development Mode)">
+          {row.openRate}%
+        </span>
+      ),
     },
     {
       key: 'replyRate',
-      header: 'Reply Rate',
+      header: 'Reply Rate (Est.)',
       align: 'right',
-      render: (row) => <span className="font-semibold text-brand-400">{row.replyRate}%</span>,
+      render: (row) => (
+        <span className="font-semibold text-brand-400" title="Estimated (Development Mode)">
+          {row.replyRate}%
+        </span>
+      ),
     },
   ];
 
@@ -145,10 +153,15 @@ export const CampaignPerformanceTable: React.FC<CampaignPerformanceTableProps> =
       header={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-[var(--content-primary)]">
-              Campaign Performance
-            </h3>
-            <p className="text-xs text-[var(--content-secondary)]">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-[var(--content-primary)]">
+                Campaign Performance
+              </h3>
+              <Badge variant="neutral" size="sm">
+                Open &amp; Reply Rates: Estimated (Dev Mode)
+              </Badge>
+            </div>
+            <p className="text-xs text-[var(--content-secondary)] mt-0.5">
               Deliverability, open rate, and response metrics across all active and completed
               campaigns.
             </p>

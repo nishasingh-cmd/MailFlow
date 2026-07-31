@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export interface LineChartSeries {
   key: string;
@@ -6,21 +6,21 @@ export interface LineChartSeries {
   color: string;
 }
 
-export interface LineChartProps {
-  data: Array<Record<string, string | number>>;
-  xKey: string;
+export interface LineChartProps<T extends Record<string, unknown> = Record<string, unknown>> {
+  data: T[];
+  xKey: keyof T & string;
   series: LineChartSeries[];
   height?: number;
   className?: string;
 }
 
-export const LineChart: React.FC<LineChartProps> = ({
+export function LineChart<T extends Record<string, unknown>>({
   data,
   xKey,
   series,
   height = 260,
   className = '',
-}) => {
+}: LineChartProps<T>) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (!data || data.length === 0) {
@@ -131,7 +131,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             textAnchor="middle"
             className="fill-[var(--content-tertiary)] text-[10px]"
           >
-            {d[xKey]}
+            {String(d[xKey] ?? '')}
           </text>
         ))}
 
@@ -226,7 +226,7 @@ export const LineChart: React.FC<LineChartProps> = ({
           }}
         >
           <div className="font-semibold text-[var(--content-primary)] border-b border-[var(--border-subtle)] pb-1">
-            {data[hoveredIdx][xKey]}
+            {String(data[hoveredIdx][xKey] ?? '')}
           </div>
           {series.map((s) => (
             <div key={s.key} className="flex items-center justify-between gap-3">
@@ -243,4 +243,4 @@ export const LineChart: React.FC<LineChartProps> = ({
       )}
     </div>
   );
-};
+}

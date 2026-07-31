@@ -160,6 +160,7 @@ export class AnalyticsService {
       whatsappConfig,
       allCampaignsForFilter,
       userCampaignsWithLogs,
+      leadsWithLocation,
     ] = await Promise.all([
       prisma.lead.count({ where: leadWhere }),
       prisma.lead.count({ where: prevLeadWhere }),
@@ -221,7 +222,6 @@ export class AnalyticsService {
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
-
       prisma.campaign.findMany({
         where: {
           userId,
@@ -237,12 +237,19 @@ export class AnalyticsService {
           _count: { select: { campaignLeads: true } },
         },
       }),
+      prisma.lead.findMany({
+        where: leadWhere,
+        select: {
+          customFields: true,
+          companyRef: { select: { headquarters: true } },
+        },
+      }),
     ]);
 
     // ── Metrics Calculation ──────────────────────────────────────────────────────
     const duplicateLeadsCount = importHistorySums._sum.duplicateCount || 0;
 
-    // Simulated/calculated open & reply rates based on sent counts and delivery success
+    // Estimated open & reply rates (labeled explicitly as Development Mode estimates)
     const openRateValue =
       emailsSentCount > 0
         ? Math.min(68, Math.max(28, Math.round(42.5 + (emailsSentCount % 15))))
@@ -321,9 +328,9 @@ export class AnalyticsService {
         };
       });
 
-    // ── Industry & Company Size Distributions ──────────────────────────────────────
+    // ── Dynamic Industry Distribution (STRICTLY FROM LEAD RECORDS) ──────────────────
     const knownIndustries = leadsByIndustryRaw
-      .filter((i) => i.industry)
+      .filter((i) => i.industry && i.industry.trim().length > 0)
       .map((i) => ({
         name: i.industry as string,
         count: i._count.id,
@@ -331,31 +338,8 @@ export class AnalyticsService {
       }))
       .sort((a, b) => b.count - a.count);
 
-    if (knownIndustries.length === 0 && totalLeadsCount > 0) {
-      knownIndustries.push({
-        name: 'Technology',
-        count: Math.ceil(totalLeadsCount * 0.4),
-        percentage: 40,
-      });
-      knownIndustries.push({
-        name: 'Software & SaaS',
-        count: Math.floor(totalLeadsCount * 0.3),
-        percentage: 30,
-      });
-      knownIndustries.push({
-        name: 'Marketing & Agencies',
-        count: Math.floor(totalLeadsCount * 0.2),
-        percentage: 20,
-      });
-      knownIndustries.push({
-        name: 'Other Services',
-        count: Math.floor(totalLeadsCount * 0.1),
-        percentage: 10,
-      });
-    }
-
     const companySizeDistribution = companiesWithSize
-      .filter((c) => c.companySize)
+      .filter((c) => c.companySize && c.companySize.trim().length > 0)
       .map((c) => ({
         name: c.companySize as string,
         count: c._count.id,
@@ -366,12 +350,34 @@ export class AnalyticsService {
     const topIndustries = knownIndustries
       .slice(0, 5)
       .map((i) => ({ industry: i.name, count: i.count }));
-    const topCountries = [
-      { country: 'United States', count: Math.max(1, Math.round(totalLeadsCount * 0.55)) },
-      { country: 'United Kingdom', count: Math.max(1, Math.round(totalLeadsCount * 0.2)) },
-      { country: 'Canada', count: Math.max(1, Math.round(totalLeadsCount * 0.15)) },
-      { country: 'Australia', count: Math.max(1, Math.round(totalLeadsCount * 0.1)) },
-    ];
+
+    // ── Dynamic Country Distribution (STRICTLY FROM ACTUAL LEAD RECORDS) ────────────
+    const countryMap: Record<string, number> = {};
+    leadsWithLocation.forEach((lead) => {
+      let country: string | null = null;
+      if (lead.customFields && typeof lead.customFields === 'object') {
+        const cf = lead.customFields as Record<string, unknown>;
+        if (typeof cf.country === 'string' && cf.country.trim()) {
+          country = cf.country.trim();
+        } else if (typeof cf.location === 'string' && cf.location.trim()) {
+          country = cf.location.trim();
+        }
+      }
+      if (!country && lead.companyRef?.headquarters) {
+        const hq = lead.companyRef.headquarters.trim();
+        const parts = hq.split(',');
+        const candidate = parts[parts.length - 1].trim();
+        if (candidate) country = candidate;
+      }
+      if (country) {
+        countryMap[country] = (countryMap[country] || 0) + 1;
+      }
+    });
+
+    const topCountries = Object.entries(countryMap)
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
     // ── Activity Timeline Chart Data ───────────────────────────────────────────────
     const activityTimeline: AnalyticsOverviewResponse['charts']['activityTimeline'] = [];
@@ -388,7 +394,6 @@ export class AnalyticsService {
       const dStart = new Date(currentStart.getTime() + i * dayStepMs);
       const label = dStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-      // Calculate incremental items for chart smoothing
       const baseE = emailsSentCount > 0 ? Math.round(emailsSentCount / daysCount) : 0;
       const baseW = whatsappSentCount > 0 ? Math.round(whatsappSentCount / daysCount) : 0;
       const baseF =
@@ -479,7 +484,6 @@ export class AnalyticsService {
       },
     ];
 
-    // Filter options list for dropdowns
     const uniqueIndustries = Array.from(new Set(knownIndustries.map((i) => i.name)));
 
     return {
@@ -535,13 +539,21 @@ export class AnalyticsService {
         openRate: {
           title: 'Open Rate',
           value: `${openRateValue}%`,
-          trend: this.calcTrend(openRateValue, prevOpenRateValue),
+          trend: {
+            percentage: this.calcTrend(openRateValue, prevOpenRateValue).percentage,
+            direction: this.calcTrend(openRateValue, prevOpenRateValue).direction,
+            label: 'Estimated (Development Mode)',
+          },
           icon: 'eye',
         },
         replyRate: {
           title: 'Reply Rate',
           value: `${replyRateValue}%`,
-          trend: this.calcTrend(replyRateValue, prevReplyRateValue),
+          trend: {
+            percentage: this.calcTrend(replyRateValue, prevReplyRateValue).percentage,
+            direction: this.calcTrend(replyRateValue, prevReplyRateValue).direction,
+            label: 'Estimated (Development Mode)',
+          },
           icon: 'reply',
         },
       },
