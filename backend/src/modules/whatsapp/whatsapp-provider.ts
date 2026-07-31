@@ -92,7 +92,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
   }) {
     this.phoneNumberId = config.phoneNumberId;
     this.accessToken = config.accessToken;
-    this.graphApiVersion = config.graphApiVersion || 'v20.0';
+    this.graphApiVersion = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
   }
 
   /**
@@ -180,7 +180,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
     accessToken: string;
     graphApiVersion?: string | null;
   }): Promise<{ success: boolean; message: string; details?: Record<string, unknown> }> {
-    const version = config.graphApiVersion || 'v20.0';
+    const version = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
     const url = `https://graph.facebook.com/${version}/${config.phoneNumberId}?fields=id,verified_name,display_phone_number,quality_rating`;
 
     try {
@@ -228,6 +228,8 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
   }
 }
 
+import { env } from '../../config/env';
+
 /**
  * Factory to get active WhatsApp provider for a user
  */
@@ -253,15 +255,25 @@ export class WhatsappProviderFactory {
           return new MetaWhatsappProvider({
             phoneNumberId: config.phoneNumberId,
             accessToken: decryptedToken.trim(),
-            graphApiVersion: config.graphApiVersion,
+            graphApiVersion: config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION,
           });
         }
       }
+
+      // Fallback to environment variables if Meta Cloud is enabled in env or config is unconfigured
+      if (
+        (env.WHATSAPP_PROVIDER === 'META_CLOUD' || !config) &&
+        env.WHATSAPP_PHONE_NUMBER_ID &&
+        env.WHATSAPP_ACCESS_TOKEN
+      ) {
+        return new MetaWhatsappProvider({
+          phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
+          accessToken: env.WHATSAPP_ACCESS_TOKEN,
+          graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION,
+        });
+      }
     } catch (err) {
-      console.warn(
-        '[WhatsappProviderFactory] Error loading user provider config, falling back to MOCK:',
-        err
-      );
+      console.warn('[WhatsappProviderFactory] Error loading user provider config:', err);
     }
 
     return new MockWhatsappProvider();

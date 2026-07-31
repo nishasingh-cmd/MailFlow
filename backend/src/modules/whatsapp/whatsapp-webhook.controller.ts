@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+import { env } from '../../config/env';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +23,7 @@ export class WhatsappWebhookController {
         return;
       }
 
-      // Check verify token against database configs or standard default token
+      // Check verify token against database configs or env verify token
       const matchingConfigs = await prisma.whatsappConfig.findMany({
         where: { webhookVerifyToken: { not: null } },
         select: { webhookVerifyToken: true },
@@ -30,6 +32,7 @@ export class WhatsappWebhookController {
       const validTokens = new Set([
         'mailflow_verify_token',
         'mailflow_webhook_secret',
+        env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
         ...matchingConfigs.map((c) => c.webhookVerifyToken).filter(Boolean),
       ]);
 
@@ -53,6 +56,21 @@ export class WhatsappWebhookController {
    */
   static async receiveWebhook(req: Request, res: Response): Promise<void> {
     try {
+      const signature = req.headers['x-hub-signature-256'] as string | undefined;
+      const appSecret = env.WHATSAPP_APP_SECRET;
+
+      // Optional X-Hub-Signature-256 HMAC SHA256 signature verification
+      if (signature && appSecret) {
+        const expectedSig =
+          'sha256=' +
+          crypto.createHmac('sha256', appSecret).update(JSON.stringify(req.body)).digest('hex');
+        if (signature !== expectedSig) {
+          console.warn('[WhatsappWebhook] Invalid X-Hub-Signature-256 signature.');
+          res.status(401).json({ error: 'Unauthorized: Invalid signature' });
+          return;
+        }
+      }
+
       const body = req.body;
 
       // Ensure object is whatsapp_business_account

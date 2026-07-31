@@ -71,7 +71,8 @@ export class SettingsService {
       hasAccessToken: Boolean(wa?.accessToken),
       webhookVerifyToken: (waAny?.webhookVerifyToken as string) || 'mailflow_verify_token',
       hasAppSecret: Boolean(waAny?.appSecret),
-      graphApiVersion: (waAny?.graphApiVersion as string) || 'v20.0',
+      graphApiVersion:
+        (waAny?.graphApiVersion as string) || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
       webhookUrl: wa?.webhookUrl || `https://api.mailflow.io/v1/webhooks/whatsapp/${userId}`,
       status: (wa?.status || 'MOCK_ACTIVE') as
         'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED',
@@ -403,7 +404,7 @@ export class SettingsService {
         accessToken: encryptedToken,
         webhookVerifyToken: input.webhookVerifyToken || 'mailflow_verify_token',
         appSecret: encryptedSecret,
-        graphApiVersion: input.graphApiVersion || 'v20.0',
+        graphApiVersion: input.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
         webhookUrl: `https://api.mailflow.io/v1/webhooks/whatsapp/${userId}`,
         status,
       },
@@ -414,7 +415,7 @@ export class SettingsService {
         ...(input.accessToken ? { accessToken: encryptedToken } : {}),
         ...(input.webhookVerifyToken ? { webhookVerifyToken: input.webhookVerifyToken } : {}),
         ...(input.appSecret ? { appSecret: encryptedSecret } : {}),
-        graphApiVersion: input.graphApiVersion || 'v20.0',
+        graphApiVersion: input.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
         status,
       },
     })) as Record<string, unknown>;
@@ -426,7 +427,7 @@ export class SettingsService {
       hasAccessToken: Boolean(wa.accessToken),
       webhookVerifyToken: (wa.webhookVerifyToken as string) || 'mailflow_verify_token',
       hasAppSecret: Boolean(wa.appSecret),
-      graphApiVersion: (wa.graphApiVersion as string) || 'v20.0',
+      graphApiVersion: (wa.graphApiVersion as string) || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
       webhookUrl: wa.webhookUrl as string,
       status: wa.status as string,
       lastTestedAt: wa.lastTestedAt ? new Date(wa.lastTestedAt as string).toISOString() : null,
@@ -466,7 +467,8 @@ export class SettingsService {
     const testRes = await MetaWhatsappProvider.testConnection({
       phoneNumberId: wa.phoneNumberId,
       accessToken: rawToken,
-      graphApiVersion: (waAny?.graphApiVersion as string) || 'v20.0',
+      graphApiVersion:
+        (waAny?.graphApiVersion as string) || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
     });
 
     const newStatus = testRes.success ? 'CONNECTED' : 'FAILED';
@@ -507,7 +509,7 @@ export class SettingsService {
         accessToken: null,
         webhookVerifyToken: 'mailflow_verify_token',
         appSecret: null,
-        graphApiVersion: 'v20.0',
+        graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
         lastTestedAt: now,
       },
       update: {

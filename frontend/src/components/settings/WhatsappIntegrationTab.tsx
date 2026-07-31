@@ -25,7 +25,8 @@ export function WhatsappIntegrationTab({ config, onUpdated }: WhatsappIntegratio
     config.webhookVerifyToken || 'mailflow_verify_token'
   );
   const [appSecret, setAppSecret] = useState('');
-  const [graphApiVersion, setGraphApiVersion] = useState(config.graphApiVersion || 'v20.0');
+  const [graphApiVersion, setGraphApiVersion] = useState(config.graphApiVersion || 'v25.0');
+
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
 
