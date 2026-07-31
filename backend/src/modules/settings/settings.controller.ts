@@ -104,6 +104,20 @@ export class SettingsController {
   }
 
   /**
+   * POST /api/settings/whatsapp/reset — Reset WhatsApp Configuration to Mock Mode
+   */
+  static async resetWhatsappConfig(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const result = await SettingsService.resetWhatsappConfig(userId);
+      res.status(200).json({ success: true, data: result, message: result.message });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      res.status(400).json({ error: err.message || 'Failed to reset WhatsApp configuration' });
+    }
+  }
+
+  /**
    * PUT /api/settings/preferences — Save Application Preferences
    */
   static async updatePreferences(req: AuthenticatedRequest, res: Response): Promise<void> {

@@ -3,6 +3,7 @@ import { whatsappService } from '../../services/whatsapp.service';
 import { WhatsappLogItem, WhatsappQueueItem, WhatsappStats } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
 import { Button, Input, Select, Badge, Skeleton } from '../../components/ui';
+import { Link } from 'react-router-dom';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -17,6 +18,8 @@ function formatDateTime(dateStr?: string | null) {
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
   { value: 'SENT', label: 'Sent' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'READ', label: 'Read' },
   { value: 'FAILED', label: 'Failed' },
 ];
 
@@ -28,9 +31,14 @@ export default function WhatsappPage() {
   // Stats
   const [stats, setStats] = useState<WhatsappStats>({
     totalSent: 0,
+    delivered: 0,
+    read: 0,
     pending: 0,
     failed: 0,
     successRate: 100,
+    deliveryRate: 0,
+    readRate: 0,
+    provider: 'MOCK',
   });
 
   // History state
@@ -63,7 +71,11 @@ export default function WhatsappPage() {
     try {
       const res = await whatsappService.getHistory({
         search: search || undefined,
-        status: statusFilter !== 'ALL' ? (statusFilter as 'SENT' | 'FAILED') : undefined,
+        status:
+          statusFilter !== 'ALL'
+            ? (statusFilter as 'SENT' | 'DELIVERED' | 'READ' | 'FAILED')
+            : undefined,
+
         page,
         limit: 15,
       });
@@ -147,45 +159,77 @@ export default function WhatsappPage() {
     );
   };
 
+  const isMetaActive = stats.provider === 'META_CLOUD';
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-          💬 WhatsApp Outreach Engine
-        </h1>
-        <p className="text-sm text-[var(--content-secondary)] mt-1">
-          Monitor AI personalized WhatsApp dispatches, message queues, and delivery performance.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
+              💬 WhatsApp Outreach Engine
+            </h1>
+            <Badge variant={isMetaActive ? 'success' : 'brand'} size="md" dot>
+              {isMetaActive ? 'Provider: META CLOUD API' : 'Provider: MOCK'}
+            </Badge>
+          </div>
+          <p className="text-sm text-[var(--content-secondary)] mt-1">
+            Monitor AI personalized WhatsApp dispatches, message queues, webhooks, and live read
+            status.
+          </p>
+        </div>
+
+        <Link to="/settings">
+          <Button variant="outline" size="sm">
+            ⚙️ Configure WhatsApp API
+          </Button>
+        </Link>
       </div>
 
       {/* Top Statistics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
           <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
-            Total Delivered
+            Total Sent
           </p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{stats.totalSent}</p>
+          <p className="text-xl font-bold text-[var(--content-primary)] mt-1">{stats.totalSent}</p>
         </div>
+
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
-            Pending in Queue
+          <p className="text-2xs uppercase font-semibold text-green-400 tracking-wider">
+            Delivered
           </p>
-          <p className="text-2xl font-bold text-brand-400 mt-1">{stats.pending}</p>
+          <p className="text-xl font-bold text-green-400 mt-1">
+            {stats.delivered || stats.totalSent}
+          </p>
+          <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
+            {stats.deliveryRate || 100}% Rate
+          </p>
         </div>
+
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
-            Failed Jobs
+          <p className="text-2xs uppercase font-semibold text-emerald-400 tracking-wider">
+            Read Receipts
           </p>
-          <p className="text-2xl font-bold text-red-400 mt-1">{stats.failed}</p>
+          <p className="text-xl font-bold text-emerald-400 mt-1">{stats.read}</p>
+          <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
+            {stats.readRate}% Read Rate
+          </p>
         </div>
+
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
-            Delivery Success Rate
+          <p className="text-2xs uppercase font-semibold text-brand-400 tracking-wider">
+            Pending Queue
           </p>
-          <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">
-            {stats.successRate}%
+          <p className="text-xl font-bold text-brand-400 mt-1">{stats.pending}</p>
+        </div>
+
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
+          <p className="text-2xs uppercase font-semibold text-red-400 tracking-wider">
+            Failed Dispatches
           </p>
+          <p className="text-xl font-bold text-red-400 mt-1">{stats.failed}</p>
         </div>
       </div>
 
@@ -220,7 +264,7 @@ export default function WhatsappPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-[240px]">
               <Input
-                placeholder="Search phone, lead name, message..."
+                placeholder="Search phone, lead name, message ID..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -260,49 +304,69 @@ export default function WhatsappPage() {
                     <tr>
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Phone</th>
+                      <th className="px-4 py-3 text-left">Message ID</th>
                       <th className="px-4 py-3 text-left">Message Snippet</th>
-                      <th className="px-4 py-3 text-left">Campaign</th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Sent Time</th>
                       <th className="px-4 py-3 text-left">Provider</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--surface-border)]">
-                    {logs.map((log) => (
-                      <tr
-                        key={log.id}
-                        className="hover:bg-[var(--surface-elevated)] transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-[var(--content-primary)]">
-                            {log.lead?.name || '—'}
-                          </p>
-                          <p className="text-2xs text-[var(--content-tertiary)]">
-                            {log.lead?.company || 'Individual Lead'}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-brand-400">{log.phone}</td>
-                        <td className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-xs truncate">
-                          {log.message}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[var(--content-secondary)]">
-                          {log.campaign?.name || '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={log.status === 'SENT' ? 'success' : 'error'} size="sm">
-                            {log.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[var(--content-tertiary)]">
-                          {formatDateTime(log.sentAt || log.createdAt)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant="brand" size="sm">
-                            {log.provider || 'MOCK'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {logs.map((log) => {
+                      let statusVariant: 'success' | 'info' | 'error' | 'brand' = 'brand';
+                      if (log.status === 'READ') statusVariant = 'success';
+                      else if (log.status === 'DELIVERED') statusVariant = 'info';
+                      else if (log.status === 'FAILED') statusVariant = 'error';
+
+                      return (
+                        <tr
+                          key={log.id}
+                          className="hover:bg-[var(--surface-elevated)] transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-[var(--content-primary)]">
+                              {log.lead?.name || '—'}
+                            </p>
+                            <p className="text-2xs text-[var(--content-tertiary)]">
+                              {log.lead?.company || 'Individual Lead'}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-brand-400">
+                            {log.phone}
+                          </td>
+                          <td
+                            className="px-4 py-3 font-mono text-2xs text-[var(--content-tertiary)] max-w-[120px] truncate"
+                            title={log.messageId || ''}
+                          >
+                            {log.messageId || '—'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-xs truncate">
+                            {log.message}
+                            {log.errorReason && (
+                              <p className="text-2xs text-red-400 font-sans mt-0.5">
+                                {log.errorReason}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={statusVariant} size="sm">
+                              {log.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-[var(--content-tertiary)]">
+                            {formatDateTime(log.sentAt || log.createdAt)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              variant={log.provider === 'META_CLOUD' ? 'success' : 'neutral'}
+                              size="sm"
+                            >
+                              {log.provider || 'MOCK'}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

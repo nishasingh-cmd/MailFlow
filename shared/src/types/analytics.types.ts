@@ -89,8 +89,13 @@ export interface WhatsappAnalytics {
   queued: number;
   sending: number;
   sent: number;
+  delivered: number;
+  read: number;
   failed: number;
   cancelled: number;
+  deliveryRate: number;
+  readRate: number;
+  failedRate: number;
   mockProviderStatus: string;
   futureProviderStatus: string;
 }

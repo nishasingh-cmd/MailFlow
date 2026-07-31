@@ -19,10 +19,11 @@ export const WhatsappAnalyticsSection: React.FC<WhatsappAnalyticsSectionProps> =
             </div>
             <div>
               <h3 className="text-base font-semibold text-[var(--content-primary)]">
-                WhatsApp Outreach
+                WhatsApp Outreach &amp; Meta Cloud Analytics
               </h3>
               <p className="text-xs text-[var(--content-secondary)]">
-                Direct mobile messaging queue and provider connectivity statuses.
+                Direct mobile messaging queue, delivery receipts, read rates, and provider
+                connectivity.
               </p>
             </div>
           </div>
@@ -40,7 +41,7 @@ export const WhatsappAnalyticsSection: React.FC<WhatsappAnalyticsSectionProps> =
       padding="md"
       className="space-y-4"
     >
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3 rounded-lg border border-[var(--border-subtle)] space-y-1">
           <span className="text-[10px] font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
             Queued
@@ -59,11 +60,37 @@ export const WhatsappAnalyticsSection: React.FC<WhatsappAnalyticsSectionProps> =
           <span className="text-[10px] font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
             Sent
           </span>
-          <p className="text-lg font-bold text-emerald-400">{analytics.sent.toLocaleString()}</p>
+          <p className="text-lg font-bold font-mono text-[var(--content-primary)]">
+            {analytics.sent.toLocaleString()}
+          </p>
         </div>
 
         <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3 rounded-lg border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[10px] font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">
+            Delivered
+          </span>
+          <p className="text-lg font-bold text-green-400">
+            {(analytics.delivered || analytics.sent).toLocaleString()}
+          </p>
+          <p className="text-2xs text-[var(--content-tertiary)]">
+            {analytics.deliveryRate || 100}% Rate
+          </p>
+        </div>
+
+        <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3 rounded-lg border border-[var(--border-subtle)] space-y-1">
+          <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+            Read Receipts
+          </span>
+          <p className="text-lg font-bold text-emerald-400">
+            {(analytics.read || 0).toLocaleString()}
+          </p>
+          <p className="text-2xs text-[var(--content-tertiary)]">
+            {analytics.readRate || 0}% Read Rate
+          </p>
+        </div>
+
+        <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3 rounded-lg border border-[var(--border-subtle)] space-y-1">
+          <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">
             Failed
           </span>
           <p className="text-lg font-bold text-red-400">{analytics.failed.toLocaleString()}</p>

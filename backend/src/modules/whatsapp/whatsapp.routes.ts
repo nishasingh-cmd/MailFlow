@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import { authenticateUser } from '../../middleware/auth.middleware';
 import { WhatsappController } from './whatsapp.controller';
+import { WhatsappWebhookController } from './whatsapp-webhook.controller';
 
 const router = Router();
 
+// Public Meta Webhook Endpoints (Meta Graph API calls without JWT)
+router.get('/webhook', WhatsappWebhookController.verifyWebhook);
+router.post('/webhook', WhatsappWebhookController.receiveWebhook);
+
+// Protected App Endpoints
 router.use(authenticateUser);
 
 router.post('/generate', WhatsappController.generate);

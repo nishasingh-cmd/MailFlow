@@ -2,8 +2,14 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { encrypt, decrypt } from '../../utils/crypto';
 import { env } from '../../config/env';
+import { MetaWhatsappProvider } from '../whatsapp/whatsapp-provider';
 
 const prisma = new PrismaClient();
+
+type WhatsappConfigDb = {
+  upsert: (args: unknown) => Promise<Record<string, unknown>>;
+  update: (args: unknown) => Promise<Record<string, unknown>>;
+};
 
 export class SettingsService {
   /**
@@ -56,15 +62,20 @@ export class SettingsService {
       lastTestedAt: ai?.lastTestedAt?.toISOString() || null,
     };
 
+    const waAny = wa as Record<string, unknown> | null;
     const whatsappConfig = {
       id: wa?.id,
       provider: (wa?.provider || 'MOCK') as 'MOCK' | 'META_CLOUD',
-      businessAccountId: wa?.businessAccountId,
-      phoneNumberId: wa?.phoneNumberId,
+      businessAccountId: wa?.businessAccountId || null,
+      phoneNumberId: wa?.phoneNumberId || null,
       hasAccessToken: Boolean(wa?.accessToken),
+      webhookVerifyToken: (waAny?.webhookVerifyToken as string) || 'mailflow_verify_token',
+      hasAppSecret: Boolean(waAny?.appSecret),
+      graphApiVersion: (waAny?.graphApiVersion as string) || 'v20.0',
       webhookUrl: wa?.webhookUrl || `https://api.mailflow.io/v1/webhooks/whatsapp/${userId}`,
       status: (wa?.status || 'MOCK_ACTIVE') as
         'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED',
+      errorMessage: (waAny?.errorMessage as string) || null,
       lastTestedAt: wa?.lastTestedAt?.toISOString() || null,
     };
 
@@ -299,7 +310,6 @@ export class SettingsService {
       };
     }
 
-    // Verify key with lightweight model request
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${rawKey}`;
       const res = await fetch(url, {
@@ -347,7 +357,7 @@ export class SettingsService {
   }
 
   /**
-   * Save WhatsApp Config
+   * Save WhatsApp Business Config
    */
   static async saveWhatsappConfig(
     userId: string,
@@ -356,19 +366,34 @@ export class SettingsService {
       businessAccountId?: string;
       phoneNumberId?: string;
       accessToken?: string;
+      webhookVerifyToken?: string;
+      appSecret?: string;
+      graphApiVersion?: string;
     }
   ) {
     const existing = await prisma.whatsappConfig.findUnique({ where: { userId } });
+    const existingAny = existing as Record<string, unknown> | null;
 
     let encryptedToken = existing?.accessToken || null;
     if (input.accessToken && input.accessToken.trim()) {
       encryptedToken = encrypt(input.accessToken.trim());
     }
 
-    const provider = input.provider || 'MOCK';
-    const status = provider === 'META_CLOUD' && encryptedToken ? 'CONNECTED' : 'MOCK_ACTIVE';
+    let encryptedSecret = (existingAny?.appSecret as string) || null;
+    if (input.appSecret && input.appSecret.trim()) {
+      encryptedSecret = encrypt(input.appSecret.trim());
+    }
 
-    const wa = await prisma.whatsappConfig.upsert({
+    const provider = input.provider || 'MOCK';
+    const status =
+      provider === 'META_CLOUD' && encryptedToken && input.phoneNumberId
+        ? 'CONNECTED'
+        : provider === 'META_CLOUD'
+          ? 'DISCONNECTED'
+          : 'MOCK_ACTIVE';
+
+    const waDb = prisma.whatsappConfig as unknown as WhatsappConfigDb;
+    const wa = (await waDb.upsert({
       where: { userId },
       create: {
         userId,
@@ -376,6 +401,9 @@ export class SettingsService {
         businessAccountId: input.businessAccountId || null,
         phoneNumberId: input.phoneNumberId || null,
         accessToken: encryptedToken,
+        webhookVerifyToken: input.webhookVerifyToken || 'mailflow_verify_token',
+        appSecret: encryptedSecret,
+        graphApiVersion: input.graphApiVersion || 'v20.0',
         webhookUrl: `https://api.mailflow.io/v1/webhooks/whatsapp/${userId}`,
         status,
       },
@@ -384,29 +412,38 @@ export class SettingsService {
         businessAccountId: input.businessAccountId || null,
         phoneNumberId: input.phoneNumberId || null,
         ...(input.accessToken ? { accessToken: encryptedToken } : {}),
+        ...(input.webhookVerifyToken ? { webhookVerifyToken: input.webhookVerifyToken } : {}),
+        ...(input.appSecret ? { appSecret: encryptedSecret } : {}),
+        graphApiVersion: input.graphApiVersion || 'v20.0',
         status,
       },
-    });
+    })) as Record<string, unknown>;
 
     return {
-      provider: wa.provider,
-      businessAccountId: wa.businessAccountId,
-      phoneNumberId: wa.phoneNumberId,
+      provider: wa.provider as string,
+      businessAccountId: wa.businessAccountId as string | null,
+      phoneNumberId: wa.phoneNumberId as string | null,
       hasAccessToken: Boolean(wa.accessToken),
-      webhookUrl: wa.webhookUrl,
-      status: wa.status,
+      webhookVerifyToken: (wa.webhookVerifyToken as string) || 'mailflow_verify_token',
+      hasAppSecret: Boolean(wa.appSecret),
+      graphApiVersion: (wa.graphApiVersion as string) || 'v20.0',
+      webhookUrl: wa.webhookUrl as string,
+      status: wa.status as string,
+      lastTestedAt: wa.lastTestedAt ? new Date(wa.lastTestedAt as string).toISOString() : null,
     };
   }
 
   /**
-   * Test WhatsApp Connection
+   * Test Meta WhatsApp Cloud API Connection
    */
   static async testWhatsappConnection(userId: string) {
     const wa = await prisma.whatsappConfig.findUnique({ where: { userId } });
+    const waAny = wa as Record<string, unknown> | null;
     const now = new Date();
 
-    if (!wa || wa.provider === 'MOCK' || !wa.accessToken) {
-      await prisma.whatsappConfig.upsert({
+    if (!wa || wa.provider === 'MOCK' || !wa.accessToken || !wa.phoneNumberId) {
+      const waDb = prisma.whatsappConfig as unknown as WhatsappConfigDb;
+      await waDb.upsert({
         where: { userId },
         create: { userId, provider: 'MOCK', status: 'MOCK_ACTIVE', lastTestedAt: now },
         update: { status: 'MOCK_ACTIVE', lastTestedAt: now },
@@ -419,15 +456,76 @@ export class SettingsService {
       };
     }
 
-    await prisma.whatsappConfig.update({
+    let rawToken = wa.accessToken;
+    try {
+      rawToken = decrypt(wa.accessToken);
+    } catch {
+      rawToken = wa.accessToken;
+    }
+
+    const testRes = await MetaWhatsappProvider.testConnection({
+      phoneNumberId: wa.phoneNumberId,
+      accessToken: rawToken,
+      graphApiVersion: (waAny?.graphApiVersion as string) || 'v20.0',
+    });
+
+    const newStatus = testRes.success ? 'CONNECTED' : 'FAILED';
+
+    const waDb = prisma.whatsappConfig as unknown as WhatsappConfigDb;
+    await waDb.update({
       where: { userId },
-      data: { status: 'CONNECTED', lastTestedAt: now },
+      data: {
+        status: newStatus,
+        lastTestedAt: now,
+        errorMessage: testRes.success ? null : testRes.message,
+      },
     });
 
     return {
-      success: true,
-      message: 'Meta WhatsApp Cloud API credentials verified successfully!',
-      status: 'CONNECTED',
+      success: testRes.success,
+      message: testRes.message,
+      status: newStatus,
+      details: testRes.details,
+    };
+  }
+
+  /**
+   * Reset WhatsApp Configuration to Mock Mode
+   */
+  static async resetWhatsappConfig(userId: string) {
+    const now = new Date();
+    const waDb = prisma.whatsappConfig as unknown as WhatsappConfigDb;
+    await waDb.upsert({
+      where: { userId },
+
+      create: {
+        userId,
+        provider: 'MOCK',
+        status: 'MOCK_ACTIVE',
+        businessAccountId: null,
+        phoneNumberId: null,
+        accessToken: null,
+        webhookVerifyToken: 'mailflow_verify_token',
+        appSecret: null,
+        graphApiVersion: 'v20.0',
+        lastTestedAt: now,
+      },
+      update: {
+        provider: 'MOCK',
+        status: 'MOCK_ACTIVE',
+        businessAccountId: null,
+        phoneNumberId: null,
+        accessToken: null,
+        appSecret: null,
+        lastTestedAt: now,
+        errorMessage: null,
+      },
+    });
+
+    return {
+      provider: 'MOCK' as const,
+      status: 'MOCK_ACTIVE' as const,
+      message: 'WhatsApp integration reset to Mock Provider mode.',
     };
   }
 

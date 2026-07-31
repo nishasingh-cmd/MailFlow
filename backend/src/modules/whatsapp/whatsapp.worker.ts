@@ -54,9 +54,8 @@ export class WhatsappWorker {
 
     if (pendingJobs.length === 0) return;
 
-    const provider = WhatsappProviderFactory.getProvider();
-
     for (const job of pendingJobs) {
+      const provider = await WhatsappProviderFactory.getProviderForUser(job.userId);
       const attempts = job.attempts + 1;
 
       // Mark as PROCESSING

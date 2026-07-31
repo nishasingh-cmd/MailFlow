@@ -15,6 +15,7 @@ router.post('/ai/test', SettingsController.testAiConnection);
 
 router.post('/whatsapp', SettingsController.saveWhatsappConfig);
 router.post('/whatsapp/test', SettingsController.testWhatsappConnection);
+router.post('/whatsapp/reset', SettingsController.resetWhatsappConfig);
 
 router.put('/preferences', SettingsController.updatePreferences);
 

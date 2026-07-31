@@ -1,10 +1,12 @@
 /**
- * MailFlow — Shared Types for Phase 10: WhatsApp Outreach Module
+ * MailFlow — Shared Types for Phase 10: WhatsApp Outreach Module & Meta Cloud API Integration
  */
 
 export type CampaignChannel = 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
 export type WhatsappMessageStatus =
-  'DRAFT' | 'QUEUED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
+  'DRAFT' | 'QUEUED' | 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'CANCELLED';
+
+export type WhatsappProviderType = 'MOCK' | 'META_CLOUD';
 
 export interface WhatsappDraftItem {
   id: string;
@@ -33,12 +35,14 @@ export interface WhatsappQueueItem {
   leadId: string;
   phone: string;
   message: string;
-  status: 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED';
+  status: 'PENDING' | 'PROCESSING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'CANCELLED';
   attempts: number;
   maxRetries: number;
   messageId?: string | null;
   scheduledAt: string;
   sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
   lastAttemptAt?: string | null;
   errorMessage?: string | null;
   createdAt: string;
@@ -62,12 +66,14 @@ export interface WhatsappLogItem {
   queueId?: string | null;
   phone: string;
   message: string;
-  status: 'SENT' | 'FAILED';
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'CANCELLED';
   provider: string;
   retryCount: number;
   messageId?: string | null;
   errorReason?: string | null;
   sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
   createdAt: string;
   lead?: {
     name: string;
@@ -103,7 +109,7 @@ export interface SendWhatsappRequest {
 
 export interface WhatsappHistoryQuery {
   search?: string;
-  status?: 'SENT' | 'FAILED' | 'ALL';
+  status?: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'ALL';
   campaignId?: string;
   page?: number;
   limit?: number;
@@ -127,7 +133,44 @@ export interface PaginatedWhatsappFailedQueueResponse {
 
 export interface WhatsappStats {
   totalSent: number;
+  delivered: number;
+  read: number;
   pending: number;
   failed: number;
   successRate: number;
+  deliveryRate: number;
+  readRate: number;
+  provider: string;
+}
+
+export interface WhatsappConfigData {
+  id?: string;
+  provider: WhatsappProviderType;
+  businessAccountId?: string | null;
+  phoneNumberId?: string | null;
+  hasAccessToken: boolean;
+  webhookVerifyToken?: string | null;
+  hasAppSecret?: boolean;
+  graphApiVersion?: string | null;
+  webhookUrl?: string | null;
+  status: 'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED';
+  errorMessage?: string | null;
+  lastTestedAt?: string | null;
+}
+
+export interface SaveWhatsappConfigRequest {
+  provider: WhatsappProviderType;
+  businessAccountId?: string;
+  phoneNumberId?: string;
+  accessToken?: string;
+  webhookVerifyToken?: string;
+  appSecret?: string;
+  graphApiVersion?: string;
+}
+
+export interface TestWhatsappConnectionResponse {
+  success: boolean;
+  message: string;
+  status: 'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED';
+  details?: Record<string, unknown>;
 }

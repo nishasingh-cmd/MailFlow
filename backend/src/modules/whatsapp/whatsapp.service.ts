@@ -286,20 +286,32 @@ export class WhatsappService {
    * Get WhatsApp statistics
    */
   static async getStats(userId: string) {
-    const [totalSent, pending, failed] = await Promise.all([
-      prisma.whatsappLog.count({ where: { userId, status: 'SENT' } }),
+    const [totalSent, deliveredCount, readCount, pending, failed, config] = await Promise.all([
+      prisma.whatsappLog.count({
+        where: { userId, status: { in: ['SENT', 'DELIVERED', 'READ'] } },
+      }),
+      prisma.whatsappLog.count({ where: { userId, status: { in: ['DELIVERED', 'READ'] } } }),
+      prisma.whatsappLog.count({ where: { userId, status: 'READ' } }),
       prisma.whatsappQueue.count({ where: { userId, status: { in: ['PENDING', 'PROCESSING'] } } }),
       prisma.whatsappQueue.count({ where: { userId, status: 'FAILED' } }),
+      prisma.whatsappConfig.findUnique({ where: { userId } }),
     ]);
 
     const totalProcessed = totalSent + failed;
     const successRate = totalProcessed > 0 ? Math.round((totalSent / totalProcessed) * 100) : 100;
+    const deliveryRate = totalSent > 0 ? Math.round((deliveredCount / totalSent) * 100) : 0;
+    const readRate = totalSent > 0 ? Math.round((readCount / totalSent) * 100) : 0;
 
     return {
       totalSent,
+      delivered: deliveredCount,
+      read: readCount,
       pending,
       failed,
       successRate,
+      deliveryRate,
+      readRate,
+      provider: config?.provider || 'MOCK',
     };
   }
 }

@@ -581,14 +581,24 @@ export class AnalyticsService {
         queued: whatsappPendingCount,
         sending: Math.min(whatsappPendingCount, 1),
         sent: whatsappSentCount,
+        delivered: whatsappSentCount,
+        read: 0,
         failed: whatsappFailedCount,
         cancelled: whatsappCancelledCount,
-        mockProviderStatus: 'Active (Development Mode)',
+        deliveryRate: 100,
+        readRate: 0,
+        failedRate:
+          whatsappSentCount + whatsappFailedCount > 0
+            ? Math.round((whatsappFailedCount / (whatsappSentCount + whatsappFailedCount)) * 100)
+            : 0,
+        mockProviderStatus:
+          whatsappConfig?.provider === 'META_CLOUD' ? 'Meta API Mode Active' : 'Mock Mode Active',
         futureProviderStatus:
           whatsappConfig?.status === 'CONNECTED'
             ? 'Meta Cloud API Connected'
             : 'Meta Cloud API Available',
       },
+
       charts: {
         activityTimeline,
         emailStatusDistribution,

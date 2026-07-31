@@ -92,6 +92,16 @@ export const settingsService = {
   },
 
   /**
+   * Reset WhatsApp Configuration to Mock Mode
+   */
+  async resetWhatsappConfig(): Promise<{ provider: string; status: string; message: string }> {
+    const { data: envelope } = await api.post<
+      ApiEnvelope<{ provider: string; status: string; message: string }>
+    >('/settings/whatsapp/reset');
+    return envelope.data;
+  },
+
+  /**
    * Save Application Preferences
    */
   async updatePreferences(req: UpdateAppPreferencesRequest): Promise<AppPreferencesData> {

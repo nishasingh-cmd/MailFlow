@@ -350,6 +350,8 @@ model WhatsappQueue {
   messageId     String?
   scheduledAt   DateTime       @default(now())
   sentAt        DateTime?
+  deliveredAt   DateTime?
+  readAt        DateTime?
   lastAttemptAt DateTime?
   errorMessage  String?        @db.Text
   createdAt     DateTime       @default(now())
@@ -373,12 +375,14 @@ model WhatsappLog {
   queueId     String?
   phone       String
   message     String   @db.Text
-  status      String   // SENT | FAILED
-  provider    String   @default("MOCK") // MOCK | TWILIO | WHATSAPP_CLOUD
+  status      String   // SENT | DELIVERED | READ | FAILED | CANCELLED
+  provider    String   @default("MOCK") // MOCK | TWILIO | META_CLOUD
   retryCount  Int      @default(0)
   messageId   String?
   errorReason String?  @db.Text
   sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
   createdAt   DateTime @default(now())
 
   @@index([userId])
@@ -417,14 +421,19 @@ model WhatsappConfig {
   businessAccountId String?
   phoneNumberId     String?
   accessToken       String?   @db.Text // Encrypted
+  webhookVerifyToken String?
+  appSecret         String?   @db.Text // Encrypted
+  graphApiVersion   String?   @default("v20.0")
   webhookUrl        String?
   status            String    @default("MOCK_ACTIVE") // MOCK_ACTIVE | CONNECTED | DISCONNECTED | FAILED
+  errorMessage      String?   @db.Text
   lastTestedAt      DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   @@index([userId])
 }
+
 
 model AppPreferences {
   id                  String   @id @default(cuid())

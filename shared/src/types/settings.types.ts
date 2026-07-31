@@ -1,6 +1,7 @@
 /**
  * MailFlow — Shared Types for Phase 12: Settings & Integrations
  */
+import type { WhatsappConfigData } from './whatsapp.types';
 
 export interface UserProfileData {
   id: string;
@@ -59,29 +60,11 @@ export interface TestAiConnectionResponse {
   testedModel?: string;
 }
 
-export interface WhatsappConfigData {
-  id?: string;
-  provider: 'MOCK' | 'META_CLOUD';
-  businessAccountId?: string | null;
-  phoneNumberId?: string | null;
-  hasAccessToken: boolean;
-  webhookUrl?: string | null;
-  status: 'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED';
-  lastTestedAt?: string | null;
-}
-
-export interface SaveWhatsappConfigRequest {
-  provider: 'MOCK' | 'META_CLOUD';
-  businessAccountId?: string;
-  phoneNumberId?: string;
-  accessToken?: string;
-}
-
-export interface TestWhatsappConnectionResponse {
-  success: boolean;
-  message: string;
-  status: 'MOCK_ACTIVE' | 'CONNECTED' | 'FAILED';
-}
+export type {
+  WhatsappConfigData,
+  SaveWhatsappConfigRequest,
+  TestWhatsappConnectionResponse,
+} from './whatsapp.types';
 
 export interface AppPreferencesData {
   theme: 'dark' | 'light' | 'system';
