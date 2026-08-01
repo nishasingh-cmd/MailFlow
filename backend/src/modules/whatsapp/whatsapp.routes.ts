@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateUser } from '../../middleware/auth.middleware';
 import { WhatsappController } from './whatsapp.controller';
 import { WhatsappWebhookController } from './whatsapp-webhook.controller';
+import { WhatsappOnboardingController } from './whatsapp-onboarding.controller';
 
 const router = Router();
 
@@ -12,6 +13,14 @@ router.post('/webhook', WhatsappWebhookController.receiveWebhook);
 // Protected App Endpoints
 router.use(authenticateUser);
 
+// ── Phase 2: Embedded Signup Onboarding ────────────────────────────────────────
+router.get('/status', WhatsappOnboardingController.getStatus);
+router.post('/connect', WhatsappOnboardingController.initConnect);
+router.post('/callback', WhatsappOnboardingController.handleCallback);
+router.post('/refresh', WhatsappOnboardingController.refresh);
+router.post('/disconnect', WhatsappOnboardingController.disconnect);
+
+// ── Phase 1: Message Sending & History ─────────────────────────────────────────
 router.post('/generate', WhatsappController.generate);
 router.post('/draft', WhatsappController.saveDraft);
 router.post('/send', WhatsappController.send);

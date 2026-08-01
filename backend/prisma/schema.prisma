@@ -425,6 +425,9 @@ model WhatsappConfig {
   appSecret         String?   @db.Text // Encrypted
   graphApiVersion   String?   @default("v20.0")
   webhookUrl        String?
+  displayPhone      String?              // e.g. +91 98765 43210 — fetched from Meta Graph API
+  businessName      String?              // WhatsApp Business display name
+  connectedAt       DateTime?            // Timestamp when first CONNECTED
   status            String    @default("MOCK_ACTIVE") // MOCK_ACTIVE | CONNECTED | DISCONNECTED | FAILED
   errorMessage      String?   @db.Text
   lastTestedAt      DateTime?

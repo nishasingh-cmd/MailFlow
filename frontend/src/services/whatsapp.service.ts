@@ -6,6 +6,8 @@ import {
   PaginatedWhatsappHistoryResponse,
   PaginatedWhatsappFailedQueueResponse,
   WhatsappStats,
+  WhatsappConfigData,
+  WhatsappCallbackRequest,
 } from '@mailflow/shared';
 
 interface ApiEnvelope<T> {
@@ -118,5 +120,64 @@ export const whatsappService = {
   async getStats(): Promise<WhatsappStats> {
     const { data: envelope } = await api.get<ApiEnvelope<WhatsappStats>>('/whatsapp/stats');
     return envelope.data;
+  },
+
+  // ─── Phase 2: Embedded Signup Onboarding ─────────────────────────────────────
+
+  /**
+   * Get current WhatsApp connection status & config
+   */
+  async getConnectionStatus(): Promise<{
+    connected: boolean;
+    config: WhatsappConfigData;
+    appId: string;
+  }> {
+    const { data: envelope } =
+      await api.get<ApiEnvelope<{ connected: boolean; config: WhatsappConfigData; appId: string }>>(
+        '/whatsapp/status'
+      );
+    return envelope.data;
+  },
+
+  /**
+   * Get Meta App ID and SDK config for the Embedded Signup popup
+   */
+  async initConnect(): Promise<{ appId: string; graphApiVersion: string }> {
+    const { data: envelope } =
+      await api.post<ApiEnvelope<{ appId: string; graphApiVersion: string }>>('/whatsapp/connect');
+    return envelope.data;
+  },
+
+  /**
+   * Send the OAuth code received from Meta Embedded Signup to the backend
+   */
+  async handleCallback(req: WhatsappCallbackRequest): Promise<{ config: WhatsappConfigData }> {
+    const { data: envelope } = await api.post<ApiEnvelope<{ config: WhatsappConfigData }>>(
+      '/whatsapp/callback',
+      req
+    );
+    if (!envelope.success) {
+      throw new Error((envelope as unknown as { error?: string }).error || 'Connection failed.');
+    }
+    return envelope.data;
+  },
+
+  /**
+   * Refresh WhatsApp connection details from Meta (phone, WABA name, quality)
+   */
+  async refresh(): Promise<{ config: WhatsappConfigData }> {
+    const { data: envelope } =
+      await api.post<ApiEnvelope<{ config: WhatsappConfigData }>>('/whatsapp/refresh');
+    if (!envelope.success) {
+      throw new Error((envelope as unknown as { error?: string }).error || 'Refresh failed.');
+    }
+    return envelope.data;
+  },
+
+  /**
+   * Disconnect WhatsApp Business account (preserves all history)
+   */
+  async disconnect(): Promise<void> {
+    await api.post('/whatsapp/disconnect');
   },
 };

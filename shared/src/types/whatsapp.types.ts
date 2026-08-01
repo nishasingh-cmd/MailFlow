@@ -148,6 +148,8 @@ export interface WhatsappConfigData {
   provider: WhatsappProviderType;
   businessAccountId?: string | null;
   phoneNumberId?: string | null;
+  displayPhone?: string | null;
+  businessName?: string | null;
   hasAccessToken: boolean;
   webhookVerifyToken?: string | null;
   hasAppSecret?: boolean;
@@ -156,6 +158,7 @@ export interface WhatsappConfigData {
   status: 'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED';
   errorMessage?: string | null;
   lastTestedAt?: string | null;
+  connectedAt?: string | null;
 }
 
 export interface SaveWhatsappConfigRequest {
@@ -173,4 +176,40 @@ export interface TestWhatsappConnectionResponse {
   message: string;
   status: 'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED';
   details?: Record<string, unknown>;
+}
+
+// ─── Phase 2: Embedded Signup Types ──────────────────────────────────────────
+
+export interface WhatsappConnectInitResponse {
+  appId: string;
+  configId?: string;
+  graphApiVersion: string;
+}
+
+export interface WhatsappCallbackRequest {
+  code: string;
+  wabaId?: string;
+  phoneNumberId?: string;
+}
+
+export interface WhatsappCallbackResponse {
+  success: boolean;
+  message: string;
+  config: WhatsappConfigData;
+}
+
+export interface WhatsappStatusResponse {
+  connected: boolean;
+  config: WhatsappConfigData;
+}
+
+export interface WhatsappRefreshResponse {
+  success: boolean;
+  message: string;
+  config: WhatsappConfigData;
+}
+
+export interface WhatsappDisconnectResponse {
+  success: boolean;
+  message: string;
 }

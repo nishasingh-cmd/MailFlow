@@ -67,7 +67,9 @@ export class SettingsService {
       id: wa?.id,
       provider: (wa?.provider || 'MOCK') as 'MOCK' | 'META_CLOUD',
       businessAccountId: wa?.businessAccountId || null,
+      businessName: (waAny?.businessName as string | null) ?? null,
       phoneNumberId: wa?.phoneNumberId || null,
+      displayPhone: (waAny?.displayPhone as string | null) ?? null,
       hasAccessToken: Boolean(wa?.accessToken),
       webhookVerifyToken: (waAny?.webhookVerifyToken as string) || 'mailflow_verify_token',
       hasAppSecret: Boolean(waAny?.appSecret),
@@ -78,6 +80,7 @@ export class SettingsService {
         'MOCK_ACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'FAILED',
       errorMessage: (waAny?.errorMessage as string) || null,
       lastTestedAt: wa?.lastTestedAt?.toISOString() || null,
+      connectedAt: (waAny?.connectedAt as Date | null)?.toISOString() ?? null,
     };
 
     const preferences = {
