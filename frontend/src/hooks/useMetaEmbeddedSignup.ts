@@ -36,7 +36,13 @@ declare global {
       }) => void;
       login: (
         callback: (response: FacebookLoginResponse) => void,
-        opts?: { scope?: string; response_type?: string; extras?: Record<string, unknown> }
+        opts?: {
+          scope?: string;
+          response_type?: string;
+          override_default_response_type?: boolean;
+          redirect_uri?: string;
+          extras?: Record<string, unknown>;
+        }
       ) => void;
     };
     fbAsyncInit?: () => void;
@@ -167,53 +173,105 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
 
       setStatus('signing_up');
 
-      // 3. Open the Embedded Signup popup
-      await new Promise<void>((resolve, reject) => {
-        window.FB.login(
-          async (response: FacebookLoginResponse) => {
-            try {
-              if (response.status === 'connected' && response.authResponse?.code) {
-                // 4. Got the auth code — relay to backend for token exchange
-                setStatus('processing');
+      // Variables to store WABA & Phone ID received from Meta window message
+      let metaWabaId: string | undefined;
+      let metaPhoneId: string | undefined;
 
-                const code = response.authResponse.code;
-                const result = await whatsappService.handleCallback({ code });
-
-                setState({
-                  status: 'connected',
-                  error: null,
-                  config: result.config,
-                });
-
-                onSuccess?.(result.config);
-                resolve();
-              } else if (response.status === 'not_authorized') {
-                reject(
-                  new Error(
-                    'WhatsApp Business permissions were not granted. Please allow the required permissions to connect.'
-                  )
-                );
-              } else {
-                // User closed the popup or unknown state
-                reject(new Error('Connection cancelled. Please try again.'));
+      const messageHandler = (event: MessageEvent) => {
+        if (event.origin && event.origin.includes('facebook.com')) {
+          try {
+            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+            if (data?.type === 'WA_EMBEDDED_SIGNUP' || data?.event === 'WA_EMBEDDED_SIGNUP') {
+              const info = data.data || data.event_data;
+              if (info) {
+                metaWabaId = info.waba_id || info.wabaId;
+                metaPhoneId = info.phone_number_id || info.phoneNumberId;
               }
-            } catch (callbackErr) {
-              reject(callbackErr);
             }
-          },
-          {
-            scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
-            response_type: 'code',
-            extras: {
-              setup: {},
-              featureType: 'whatsapp_embedded_signup',
-              sessionInfoVersion: '3',
-            },
+          } catch {
+            // ignore non-json messages
           }
-        );
-      });
-    } catch (err) {
-      const message = (err as Error).message || 'An unexpected error occurred. Please try again.';
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      // 3. Open the Embedded Signup popup
+      const redirectUri = window.location.origin.endsWith('/')
+        ? window.location.origin
+        : `${window.location.origin}/`;
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          window.FB.login(
+            (response: FacebookLoginResponse) => {
+              (async () => {
+                try {
+                  if (response.status === 'connected' && response.authResponse?.code) {
+                    // 4. Got the auth code — relay to backend for token exchange
+                    setStatus('processing');
+
+                    const code = response.authResponse.code;
+                    const result = await whatsappService.handleCallback({
+                      code,
+                      wabaId: metaWabaId,
+                      phoneNumberId: metaPhoneId,
+                      redirectUri,
+                    });
+
+                    setState({
+                      status: 'connected',
+                      error: null,
+                      config: result.config,
+                    });
+
+                    onSuccess?.(result.config);
+                    resolve();
+                  } else if (response.status === 'not_authorized') {
+                    reject(
+                      new Error(
+                        'WhatsApp Business permissions were not granted. Please allow the required permissions to connect.'
+                      )
+                    );
+                  } else {
+                    // User closed the popup or unknown state
+                    reject(new Error('Connection cancelled. Please try again.'));
+                  }
+                } catch (callbackErr: unknown) {
+                  const axiosErr = callbackErr as {
+                    response?: { data?: { error?: string } };
+                    message?: string;
+                  };
+                  const msg =
+                    axiosErr.response?.data?.error ||
+                    axiosErr.message ||
+                    'Failed to complete WhatsApp connection.';
+                  reject(new Error(msg));
+                }
+              })();
+            },
+            {
+              scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
+              response_type: 'code',
+              override_default_response_type: true,
+              redirect_uri: redirectUri,
+              extras: {
+                setup: {},
+                featureType: 'whatsapp_embedded_signup',
+                sessionInfoVersion: '3',
+              },
+            }
+          );
+        });
+      } finally {
+        window.removeEventListener('message', messageHandler);
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
+      const message =
+        axiosErr.response?.data?.error ||
+        axiosErr.message ||
+        'An unexpected error occurred. Please try again.';
       setStatus('error', message);
     } finally {
       processingRef.current = false;

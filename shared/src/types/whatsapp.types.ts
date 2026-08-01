@@ -190,6 +190,7 @@ export interface WhatsappCallbackRequest {
   code: string;
   wabaId?: string;
   phoneNumberId?: string;
+  redirectUri?: string;
 }
 
 export interface WhatsappCallbackResponse {

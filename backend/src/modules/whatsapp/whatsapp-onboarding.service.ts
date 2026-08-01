@@ -109,7 +109,7 @@ function buildSnapshot(wa: Record<string, unknown> | null, userId: string): What
 
 // ─── Helper: exchange OAuth code for access token ─────────────────────────────
 
-async function exchangeCodeForToken(code: string): Promise<string> {
+async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<string> {
   const appId = env.WHATSAPP_APP_ID;
   const appSecret = env.WHATSAPP_APP_SECRET;
   const graphVersion = env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
@@ -120,13 +120,26 @@ async function exchangeCodeForToken(code: string): Promise<string> {
     );
   }
 
+  // Meta Facebook Login JS SDK default redirect_uri for popup OAuth dialog
+  const effectiveRedirectUri =
+    redirectUri && redirectUri.trim()
+      ? redirectUri.trim()
+      : env.NODE_ENV === 'production'
+        ? 'https://mailflow.io/'
+        : 'https://localhost:5173/';
+
   const url = `https://graph.facebook.com/${graphVersion}/oauth/access_token`;
+
   const params = new URLSearchParams({
     client_id: appId,
     client_secret: appSecret,
     code,
+    redirect_uri: effectiveRedirectUri,
   });
 
+  console.log(
+    `[WhatsappOnboardingService] Requesting access_token from Meta Graph API (redirect_uri: "${effectiveRedirectUri}")...`
+  );
   const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
   const resData = (await response.json()) as MetaTokenResponse;
 
@@ -136,7 +149,6 @@ async function exchangeCodeForToken(code: string): Promise<string> {
       status: response.status,
       errorCode: resData?.error?.code,
       errorType: resData?.error?.type,
-      // Never log: access_token, client_secret
     });
     throw new Error(`Meta OAuth error: ${errMsg}`);
   }
@@ -260,7 +272,8 @@ export class WhatsappOnboardingService {
     userId: string,
     code: string,
     wabaId?: string,
-    phoneNumberId?: string
+    phoneNumberId?: string,
+    redirectUri?: string
   ): Promise<WhatsappConfigSnapshot> {
     console.log(
       `[WhatsappOnboardingService] Callback received for user ${userId}. Starting credential exchange...`
@@ -271,7 +284,7 @@ export class WhatsappOnboardingService {
     }
 
     // 1. Exchange OAuth code → access token
-    const accessToken = await exchangeCodeForToken(code);
+    const accessToken = await exchangeCodeForToken(code, redirectUri);
 
     // 2. Determine phone number ID — use provided or fall back to env
     const resolvedPhoneNumberId = phoneNumberId || env.WHATSAPP_PHONE_NUMBER_ID;

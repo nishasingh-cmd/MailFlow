@@ -47,10 +47,11 @@ export class WhatsappOnboardingController {
   static async handleCallback(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { code, wabaId, phoneNumberId } = req.body as {
+      const { code, wabaId, phoneNumberId, redirectUri } = req.body as {
         code?: string;
         wabaId?: string;
         phoneNumberId?: string;
+        redirectUri?: string;
       };
 
       if (!code) {
@@ -59,14 +60,15 @@ export class WhatsappOnboardingController {
       }
 
       console.log(
-        `[WhatsappOnboardingController] Processing callback for user ${userId} | WABA: ${wabaId || 'from_env'} | Phone: ${phoneNumberId || 'from_env'}`
+        `[WhatsappOnboardingController] Processing callback for user ${userId} | WABA: ${wabaId || 'from_env'} | Phone: ${phoneNumberId || 'from_env'} | RedirectUri: ${redirectUri || 'default'}`
       );
 
       const config = await WhatsappOnboardingService.handleCallback(
         userId,
         code,
         wabaId,
-        phoneNumberId
+        phoneNumberId,
+        redirectUri
       );
 
       res.status(200).json({
