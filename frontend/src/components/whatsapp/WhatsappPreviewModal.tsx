@@ -86,14 +86,19 @@ export function WhatsappPreviewModal({
     if (!leadId || !message.trim() || sending) return;
     setSending(true);
     try {
-      await whatsappService.sendMessages({
+      const res = await whatsappService.sendMessages({
         leadIds: [leadId],
         campaignId,
         message,
       });
-      toast.success('💬 WhatsApp message queued for delivery!');
-      onSent?.();
-      onClose();
+
+      if (res && res.count > 0) {
+        toast.success(`💬 ${res.message || 'WhatsApp message queued for delivery!'}`);
+        onSent?.();
+        onClose();
+      } else {
+        toast.error('Failed to queue WhatsApp message. Please check the recipient lead details.');
+      }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
       toast.error(err.response?.data?.error || err.message || 'Failed to send WhatsApp message.');

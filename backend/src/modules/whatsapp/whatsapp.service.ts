@@ -87,8 +87,21 @@ export class WhatsappService {
     }> = [];
 
     for (const lead of targetLeads) {
-      const phone = lead.phone || '+15550000000'; // Default fallback phone for testing if phone omitted
+      console.log(
+        `[Lead] Lead ID: ${lead.id} | Name: ${lead.name} | Phone: "${lead.phone || 'N/A'}"`
+      );
 
+      if (!lead.phone || !lead.phone.trim()) {
+        if (targetLeads.length === 1) {
+          throw new Error(
+            `Lead "${lead.name}" has no phone number. Please update the phone number in Lead Management.`
+          );
+        }
+        console.warn(`[Lead] Skipping lead ${lead.id} (${lead.name}) — missing phone number.`);
+        continue;
+      }
+
+      const phone = lead.phone.trim();
       let messageText: string = input.message || '';
 
       // If message wasn't provided, generate or fetch draft
@@ -116,14 +129,29 @@ export class WhatsappService {
       });
     }
 
-    // Insert into database queue
-    const created = await prisma.whatsappQueue.createMany({
-      data: queueItems,
-    });
+    if (queueItems.length === 0) {
+      throw new Error('No leads with valid phone numbers were found to queue.');
+    }
+
+    // Insert into database queue using transaction for verified commit and explicit logging
+    const createdJobs = await prisma.$transaction(
+      queueItems.map((item) =>
+        prisma.whatsappQueue.create({
+          data: item,
+        })
+      )
+    );
+
+    for (const job of createdJobs) {
+      console.log(
+        `[Queue] Created WhatsappQueue Record | Queue ID: ${job.id} | Lead ID: ${job.leadId} | Phone: "${job.phone}" | Status: ${job.status}`
+      );
+    }
 
     return {
-      message: `${created.count} WhatsApp message(s) queued for sending.`,
-      count: created.count,
+      message: `${createdJobs.length} WhatsApp message(s) queued for sending.`,
+      count: createdJobs.length,
+      jobs: createdJobs,
     };
   }
 
@@ -243,19 +271,34 @@ export class WhatsappService {
       where.id = { in: jobIds };
     }
 
-    const updated = await prisma.whatsappQueue.updateMany({
+    const failedJobs = await prisma.whatsappQueue.findMany({
       where,
-      data: {
-        status: 'PENDING',
-        attempts: 0,
-        errorMessage: null,
-        scheduledAt: new Date(),
-      },
+      include: { lead: { select: { id: true, name: true, phone: true } } },
     });
 
+    let reQueuedCount = 0;
+    for (const job of failedJobs) {
+      const activePhone = job.lead?.phone || job.phone;
+      console.log(
+        `[Retry Queue] Job ID: ${job.id} | Lead ID: ${job.leadId} | Syncing Queue Phone: "${job.phone}" -> Latest Lead Phone: "${activePhone}"`
+      );
+
+      await prisma.whatsappQueue.update({
+        where: { id: job.id },
+        data: {
+          phone: activePhone,
+          status: 'PENDING',
+          attempts: 0,
+          errorMessage: null,
+          scheduledAt: new Date(),
+        },
+      });
+      reQueuedCount++;
+    }
+
     return {
-      message: `${updated.count} failed WhatsApp job(s) re-queued for sending.`,
-      count: updated.count,
+      message: `${reQueuedCount} failed WhatsApp job(s) re-queued with latest recipient phone numbers.`,
+      count: reQueuedCount,
     };
   }
 

@@ -457,6 +457,14 @@ export default function Leads() {
       align: 'right',
       render: (lead) => (
         <div className="flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => openWhatsappModal(lead)}
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+          >
+            💬 WA
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => handleOpenDetail(lead)}>
             View
           </Button>

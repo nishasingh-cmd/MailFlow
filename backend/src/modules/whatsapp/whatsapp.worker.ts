@@ -50,27 +50,39 @@ export class WhatsappWorker {
       },
       take: 5, // Process up to 5 jobs per batch tick
       orderBy: { scheduledAt: 'asc' },
+      include: { lead: { select: { id: true, name: true, phone: true } } },
     });
 
     if (pendingJobs.length === 0) return;
 
     for (const job of pendingJobs) {
-      const provider = await WhatsappProviderFactory.getProviderForUser(job.userId);
+      const activePhone = job.lead?.phone || job.phone;
       const attempts = job.attempts + 1;
 
-      // Mark as PROCESSING
+      console.log(
+        `[Worker] Processing Queue ID: ${job.id} | Lead ID: ${job.leadId} | Target Phone: "${activePhone}" | Attempt: ${attempts}/${job.maxRetries}`
+      );
+
+      // Transition status: PENDING -> PROCESSING ("Sending")
       await prisma.whatsappQueue.update({
         where: { id: job.id },
         data: {
           status: 'PROCESSING' as QueueJobStatus,
+          phone: activePhone,
           attempts,
           lastAttemptAt: new Date(),
         },
       });
 
+      console.log(`[Queue] Status Transition | Queue ID: ${job.id} | New Status: PROCESSING`);
+
+      let provider;
       try {
+        provider = await WhatsappProviderFactory.getProviderForUser(job.userId);
+        console.log(`[Provider] Selected Provider: ${provider.name} for Queue ID: ${job.id}`);
+
         const result = await provider.sendMessage({
-          phone: job.phone,
+          phone: activePhone,
           message: job.message,
           userId: job.userId,
           leadId: job.leadId,
@@ -79,24 +91,25 @@ export class WhatsappWorker {
 
         const sentTime = new Date();
 
-        // Mark as SENT
+        // Transition status: PROCESSING -> SENT
         await prisma.whatsappQueue.update({
           where: { id: job.id },
           data: {
             status: 'SENT' as QueueJobStatus,
+            phone: activePhone,
             sentAt: sentTime,
             messageId: result.messageId,
           },
         });
 
-        // Create log entry
-        await prisma.whatsappLog.create({
+        // Create log entry in Delivery History
+        const logEntry = await prisma.whatsappLog.create({
           data: {
             userId: job.userId,
             campaignId: job.campaignId,
             leadId: job.leadId,
             queueId: job.id,
-            phone: job.phone,
+            phone: activePhone,
             message: job.message,
             status: 'SENT',
             provider: result.provider,
@@ -106,6 +119,10 @@ export class WhatsappWorker {
           },
         });
 
+        console.log(
+          `[Worker] ✅ Queue ID: ${job.id} SENT SUCCESSFULLY | Log ID: ${logEntry.id} | Provider: ${result.provider} | Meta Message ID: ${result.messageId}`
+        );
+
         // Update Lead status to CONTACTED
         await prisma.lead
           .update({
@@ -114,52 +131,43 @@ export class WhatsappWorker {
           })
           .catch(() => {});
       } catch (error: unknown) {
-        const err = error as { message?: string };
+        const err = error as Error;
         const errorMessage = err.message || 'WhatsApp delivery failed';
+        const providerName = provider?.name || 'META_CLOUD';
+
         console.error(
-          `[WhatsappWorker] Job ${job.id} failed (attempt ${attempts}/${job.maxRetries}):`,
-          errorMessage
+          `[Worker] ❌ Queue ID ${job.id} FAILED on attempt ${attempts}/${job.maxRetries}:`,
+          err.stack || err
         );
 
-        if (attempts >= job.maxRetries) {
-          // Final failure
-          await prisma.whatsappQueue.update({
-            where: { id: job.id },
-            data: {
-              status: 'FAILED' as QueueJobStatus,
-              errorMessage,
-            },
-          });
+        // Transition status: PROCESSING -> FAILED
+        await prisma.whatsappQueue.update({
+          where: { id: job.id },
+          data: {
+            status: 'FAILED' as QueueJobStatus,
+            errorMessage,
+          },
+        });
 
-          await prisma.whatsappLog.create({
-            data: {
-              userId: job.userId,
-              campaignId: job.campaignId,
-              leadId: job.leadId,
-              queueId: job.id,
-              phone: job.phone,
-              message: job.message,
-              status: 'FAILED',
-              provider: provider.name,
-              retryCount: attempts - 1,
-              errorReason: errorMessage,
-            },
-          });
-        } else {
-          // Exponential backoff: 30s, 2m, 5m
-          const backoffMs =
-            attempts === 1 ? 30 * 1000 : attempts === 2 ? 2 * 60 * 1000 : 5 * 60 * 1000;
-          const nextSchedule = new Date(Date.now() + backoffMs);
+        // Create log entry in Delivery History & Failed Queue
+        const logEntry = await prisma.whatsappLog.create({
+          data: {
+            userId: job.userId,
+            campaignId: job.campaignId,
+            leadId: job.leadId,
+            queueId: job.id,
+            phone: activePhone,
+            message: job.message,
+            status: 'FAILED',
+            provider: providerName,
+            retryCount: attempts - 1,
+            errorReason: errorMessage,
+          },
+        });
 
-          await prisma.whatsappQueue.update({
-            where: { id: job.id },
-            data: {
-              status: 'PENDING' as QueueJobStatus,
-              scheduledAt: nextSchedule,
-              errorMessage: `Attempt ${attempts} failed: ${errorMessage}. Retrying at ${nextSchedule.toLocaleTimeString()}`,
-            },
-          });
-        }
+        console.log(
+          `[Worker] Queue ID: ${job.id} status updated to FAILED | Log ID: ${logEntry.id} created in Delivery History & Failed Queue.`
+        );
       }
     }
   }

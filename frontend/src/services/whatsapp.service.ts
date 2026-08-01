@@ -55,10 +55,14 @@ export const whatsappService = {
     message?: string;
     sendAll?: boolean;
   }): Promise<{ count: number; message: string }> {
-    const { data: envelope } = await api.post<ApiEnvelope<{ count: number; message: string }>>(
-      '/whatsapp/send',
-      opts
-    );
+    const { data: envelope } = await api.post<
+      ApiEnvelope<{ count: number; message: string }> & { error?: string }
+    >('/whatsapp/send', opts);
+
+    if (!envelope.success || envelope.error) {
+      throw new Error(envelope.error || envelope.message || 'Failed to queue WhatsApp message');
+    }
+
     return envelope.data;
   },
 

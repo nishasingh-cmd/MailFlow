@@ -36,17 +36,17 @@ export function WhatsappSendOptionsModal({
           setLoading(false);
           return;
         }
-        await whatsappService.sendMessages({
+        const res = await whatsappService.sendMessages({
           leadIds: selectedLeadIds,
           campaignId,
         });
-        toast.success(`💬 Queued ${selectedCount} WhatsApp outreach messages!`);
+        toast.success(`💬 ${res.message || `Queued ${res.count} WhatsApp outreach messages!`}`);
       } else {
-        await whatsappService.sendMessages({
+        const res = await whatsappService.sendMessages({
           campaignId,
           sendAll: !campaignId,
         });
-        toast.success('💬 Queued WhatsApp messages for all leads!');
+        toast.success(`💬 ${res.message || 'Queued WhatsApp messages for all leads!'}`);
       }
 
       onSuccess?.();

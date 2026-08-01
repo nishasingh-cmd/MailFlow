@@ -110,6 +110,9 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
 
   async sendMessage(opts: WhatsappSendOptions): Promise<WhatsappSendResult> {
     const formattedPhone = this.formatPhoneNumber(opts.phone);
+    console.log(`[Lead] Lead ID: ${opts.leadId || 'N/A'} | Input Phone: "${opts.phone}"`);
+    console.log(`[Provider] Using Provider: META_CLOUD | Recipient E.164: "+${formattedPhone}"`);
+
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${this.phoneNumberId}/messages`;
 
     const payload = {
@@ -123,7 +126,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       },
     };
 
-    console.log(`[MetaWhatsappProvider] Dispatching Meta Cloud message to ${formattedPhone}...`);
+    console.log(`[Meta API] POST ${url} | Recipient: "+${formattedPhone}"`);
 
     try {
       const response = await fetch(url, {
@@ -143,23 +146,28 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
         const errCode = metaErr?.code;
 
         if (errCode === 190) {
-          errMsg = 'Meta Access Token has expired or is invalid. Please update token in Settings.';
-        } else if (errCode === 100 || errCode === 131030) {
-          errMsg = `Recipient phone number "${formattedPhone}" is invalid or not registered on WhatsApp.`;
+          errMsg =
+            'Meta Access Token has expired or is invalid. Please regenerate a new token in the Meta Developer Dashboard and update Settings.';
+        } else if (errCode === 131030) {
+          errMsg = `⚠️ Meta Test Mode Restriction: "${formattedPhone}" is not in the allowed recipient list. Go to Meta Developer Dashboard → Your App → WhatsApp → API Setup → Step 2 → "To" dropdown → "Manage phone number list" → Add "+${formattedPhone}" and verify with the OTP sent to that number.`;
+        } else if (errCode === 100) {
+          errMsg = `Recipient phone number "${formattedPhone}" is invalid or not registered on WhatsApp. Check the number format (E.164 with country code).`;
         } else if (errCode === 130429 || errCode === 80007) {
-          errMsg = 'Meta WhatsApp API rate limit exceeded. Retrying shortly.';
+          errMsg =
+            'Meta WhatsApp API rate limit exceeded. Please wait a few minutes before retrying.';
         } else if (metaErr?.error_user_msg) {
           errMsg = metaErr.error_user_msg;
         }
 
-        console.error(`[MetaWhatsappProvider] Error (Code ${errCode || 'unknown'}):`, errMsg);
+        console.error(
+          `[Meta API] Response Error (HTTP ${response.status}, Code ${errCode || 'unknown'}):`,
+          errMsg
+        );
         throw new Error(errMsg);
       }
 
       const metaMessageId = resData?.messages?.[0]?.id || `wamid_${Date.now()}`;
-      console.log(
-        `[MetaWhatsappProvider] ✅ Dispatch successful. Meta Message ID: ${metaMessageId}`
-      );
+      console.log(`[Meta API] ✅ Dispatch Successful | Meta Message ID: ${metaMessageId}`);
 
       return {
         success: true,

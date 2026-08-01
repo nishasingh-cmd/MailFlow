@@ -75,6 +75,12 @@ export class WhatsappController {
         sendAll?: boolean;
       };
 
+      console.log(
+        `[API] Received WhatsApp send request | User ID: ${userId} | leadIds: ${JSON.stringify(
+          leadIds || []
+        )} | campaignId: ${campaignId || 'N/A'} | sendAll: ${!!sendAll}`
+      );
+
       const result = await WhatsappService.enqueueMessages(userId, {
         leadIds,
         campaignId,
@@ -82,10 +88,22 @@ export class WhatsappController {
         sendAll,
       });
 
+      if (!result || result.count === 0) {
+        console.warn(`[API] Enqueue returned 0 queued messages for user ${userId}.`);
+        res.status(400).json({
+          success: false,
+          error: 'No WhatsApp messages were queued. Please check recipient lead phone numbers.',
+        });
+        return;
+      }
+
       res.status(200).json({ success: true, data: result, message: result.message });
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      res.status(400).json({ error: err.message || 'Failed to send WhatsApp messages' });
+      const err = error as Error;
+      console.error('[API] WhatsApp send controller exception:', err.stack || err);
+      res
+        .status(400)
+        .json({ success: false, error: err.message || 'Failed to send WhatsApp messages' });
     }
   }
 
