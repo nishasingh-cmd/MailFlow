@@ -108,8 +108,20 @@ function buildSnapshot(wa: Record<string, unknown> | null, userId: string): What
 }
 
 // ─── Helper: exchange OAuth code for access token ─────────────────────────────
-
-async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<string> {
+//
+// IMPORTANT: The Meta Embedded Signup popup (triggered via the JS SDK's
+// FB.login() with response_type: 'code') does NOT use a redirect_uri when it
+// generates the authorization code — it's a popup + postMessage flow, not a
+// redirect-based OAuth flow. Sending a redirect_uri here — even a plausible
+// one like the current page URL — causes Meta to reject the exchange with
+// "Error validating verification code... redirect_uri is identical to..."
+//
+// Authorization codes from Meta are single-use. Retrying the exchange with a
+// different redirect_uri after a failed attempt does NOT help — the first
+// (failed) attempt already consumes the code, so every subsequent attempt
+// fails too, no matter what's changed. The fix is to get it right in one
+// shot: never send redirect_uri for this flow.
+async function exchangeCodeForToken(code: string): Promise<string> {
   const appId = env.WHATSAPP_APP_ID;
   const appSecret = env.WHATSAPP_APP_SECRET;
   const graphVersion = env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
@@ -121,42 +133,19 @@ async function exchangeCodeForToken(code: string, redirectUri?: string): Promise
   }
 
   const url = `https://graph.facebook.com/${graphVersion}/oauth/access_token`;
+  const params = new URLSearchParams({
+    client_id: appId,
+    client_secret: appSecret,
+    code,
+  });
 
-  const tryExchange = async (uri?: string) => {
-    const params = new URLSearchParams({
-      client_id: appId,
-      client_secret: appSecret,
-      code,
-    });
-    if (uri !== undefined) {
-      params.append('redirect_uri', uri);
-    }
-    const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
-    const resData = (await response.json()) as MetaTokenResponse;
-    return { ok: response.ok && Boolean(resData.access_token), resData, status: response.status };
-  };
+  const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
+  const resData = (await response.json()) as MetaTokenResponse;
 
-  // Attempt 1: Standard FB SDK default (empty string) or passed redirectUri
-  let result = await tryExchange(redirectUri ?? '');
-
-  // Attempt 2: If failed and redirectUri was provided, try without redirect_uri parameter
-  if (!result.ok) {
-    const alt1 = await tryExchange(redirectUri);
-    if (alt1.ok) result = alt1;
-  }
-
-  // Attempt 3: Omit redirect_uri completely
-  if (!result.ok) {
-    const alt2 = await tryExchange(undefined);
-    if (alt2.ok) result = alt2;
-  }
-
-  const resData = result.resData;
-
-  if (!result.ok || !resData.access_token) {
-    const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${result.status}).`;
+  if (!response.ok || !resData.access_token) {
+    const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${response.status}).`;
     console.error('[WhatsappOnboardingService] Token exchange failed:', {
-      status: result.status,
+      status: response.status,
       errorCode: resData?.error?.code,
       errorType: resData?.error?.type,
     });
@@ -277,13 +266,17 @@ export class WhatsappOnboardingService {
    * 2. Fetch WABA + phone number details from Meta
    * 3. Encrypt and upsert WhatsappConfig
    * 4. Return normalised config snapshot
+   *
+   * `redirectUri` is accepted for backward API compatibility with older
+   * frontend builds but is intentionally NOT forwarded to Meta — the
+   * Embedded Signup popup flow doesn't use one. See exchangeCodeForToken().
    */
   static async handleCallback(
     userId: string,
     code: string,
     wabaId?: string,
     phoneNumberId?: string,
-    redirectUri?: string
+    _redirectUri?: string
   ): Promise<WhatsappConfigSnapshot> {
     console.log(
       `[WhatsappOnboardingService] Callback received for user ${userId}. Starting credential exchange...`
@@ -294,7 +287,7 @@ export class WhatsappOnboardingService {
     }
 
     // 1. Exchange OAuth code → access token
-    const accessToken = await exchangeCodeForToken(code, redirectUri);
+    const accessToken = await exchangeCodeForToken(code);
 
     // 2. Determine phone number ID — use provided or fall back to env
     const resolvedPhoneNumberId = phoneNumberId || env.WHATSAPP_PHONE_NUMBER_ID;

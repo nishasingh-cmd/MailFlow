@@ -198,7 +198,13 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
               (async () => {
                 try {
                   if (response.status === 'connected' && response.authResponse?.code) {
-                    // 4. Got the auth code — relay to backend for token exchange
+                    // 4. Got the auth code — relay to backend for token exchange.
+                    // NOTE: no redirectUri is sent here. The Embedded Signup popup
+                    // flow via the JS SDK does not use a redirect_uri when it
+                    // generates this code, so passing one during the backend's
+                    // token exchange causes Meta to reject it with a
+                    // "redirect_uri mismatch" error — and since the code is
+                    // single-use, that failed attempt burns the code for good.
                     setStatus('processing');
 
                     const code = response.authResponse.code;
@@ -206,7 +212,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                       code,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
-                      redirectUri: window.location.href.split('#')[0],
                     });
 
                     setState({
