@@ -489,4 +489,105 @@ export class DeliveryService {
       count: deleted.count,
     };
   }
+
+  /**
+   * Send single email directly to a lead using user's configured SMTP credentials
+   */
+  static async sendSingleEmail(
+    userId: string,
+    input: { leadId: string; subject: string; body: string }
+  ) {
+    if (!input.leadId || !input.subject || !input.body) {
+      throw new Error('Lead ID, subject, and body are required.');
+    }
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: input.leadId, userId },
+    });
+
+    if (!lead) {
+      throw new Error('LEAD_NOT_FOUND: Recipient lead not found.');
+    }
+
+    if (!lead.email) {
+      throw new Error('Lead does not have a valid email address.');
+    }
+
+    // Obtain user SMTP transport
+    const { transporter, fromName, fromEmail, provider } =
+      await SmtpService.getTransporterForUser(userId);
+
+    const sentTime = new Date();
+
+    try {
+      const info = await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: lead.email,
+        subject: input.subject,
+        html: input.body.replace(/\n/g, '<br />'),
+        text: input.body,
+      });
+
+      const messageId = info?.messageId || null;
+
+      // Log email delivery
+      await prisma.emailLog.create({
+        data: {
+          userId,
+          leadId: lead.id,
+          recipientEmail: lead.email,
+          subject: input.subject,
+          status: 'SENT',
+          provider: provider,
+          retryCount: 0,
+          messageId,
+          sentAt: sentTime,
+        },
+      });
+
+      // Update lead status to CONTACTED
+      await prisma.lead
+        .update({
+          where: { id: lead.id },
+          data: { status: 'CONTACTED' },
+        })
+        .catch(() => {});
+
+      // Mark any pending/saved draft for this lead as SENT
+      await prisma.emailDraft
+        .updateMany({
+          where: { leadId: lead.id, userId },
+          data: { status: 'SENT' },
+        })
+        .catch(() => {});
+
+      return {
+        success: true,
+        message: `Email sent successfully to ${lead.email}!`,
+        recipientEmail: lead.email,
+        sentAt: sentTime,
+      };
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      const errorMessage = err.message || 'Email delivery failed';
+
+      // Log failure in email logs
+      await prisma.emailLog
+        .create({
+          data: {
+            userId,
+            leadId: lead.id,
+            recipientEmail: lead.email,
+            subject: input.subject,
+            status: 'FAILED',
+            provider: provider,
+            retryCount: 0,
+            errorReason: errorMessage,
+          },
+        })
+        .catch(() => {});
+
+      throw new Error(`Failed to send email: ${errorMessage}`);
+    }
+  }
 }

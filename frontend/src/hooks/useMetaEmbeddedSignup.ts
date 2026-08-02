@@ -36,13 +36,7 @@ declare global {
       }) => void;
       login: (
         callback: (response: FacebookLoginResponse) => void,
-        opts?: {
-          scope?: string;
-          response_type?: string;
-          override_default_response_type?: boolean;
-          redirect_uri?: string;
-          extras?: Record<string, unknown>;
-        }
+        opts?: { scope?: string; response_type?: string; extras?: Record<string, unknown> }
       ) => void;
     };
     fbAsyncInit?: () => void;
@@ -197,10 +191,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
       window.addEventListener('message', messageHandler);
 
       // 3. Open the Embedded Signup popup
-      const redirectUri = window.location.origin.endsWith('/')
-        ? window.location.origin
-        : `${window.location.origin}/`;
-
       try {
         await new Promise<void>((resolve, reject) => {
           window.FB.login(
@@ -216,7 +206,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                       code,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
-                      redirectUri,
+                      redirectUri: window.location.href.split('#')[0],
                     });
 
                     setState({
@@ -253,8 +243,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             {
               scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
               response_type: 'code',
-              override_default_response_type: true,
-              redirect_uri: redirectUri,
               extras: {
                 setup: {},
                 featureType: 'whatsapp_embedded_signup',

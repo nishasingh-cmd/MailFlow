@@ -134,4 +134,18 @@ export const deliveryService = {
     );
     return envelope.data;
   },
+
+  /**
+   * Send a single email directly to a lead
+   */
+  async sendSingleEmail(input: {
+    leadId: string;
+    subject: string;
+    body: string;
+  }): Promise<{ success: boolean; message: string; recipientEmail: string }> {
+    const { data: envelope } = await api.post<
+      ApiEnvelope<{ success: boolean; message: string; recipientEmail: string }>
+    >('/delivery/send-single', input);
+    return envelope.data;
+  },
 };

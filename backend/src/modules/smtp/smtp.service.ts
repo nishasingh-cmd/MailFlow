@@ -166,6 +166,11 @@ export class SmtpService {
       const err = error as { message?: string; code?: string };
       console.error('[SmtpService] SMTP Verify Error:', err);
       if (err.code === 'EAUTH') {
+        if (opts.host.includes('gmail')) {
+          throw new Error(
+            'Gmail SMTP Authentication failed. Google requires a 16-character App Password (not your normal Google account password). Please generate an App Password in your Google Account (Security -> 2-Step Verification -> App Passwords).'
+          );
+        }
         throw new Error(
           'SMTP Authentication failed. Please check your username/email and password or App Password.'
         );

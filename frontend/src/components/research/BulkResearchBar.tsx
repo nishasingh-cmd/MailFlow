@@ -3,6 +3,7 @@ import { Button } from '../ui';
 interface BulkResearchBarProps {
   selectedCount: number;
   onResearchSelected: () => void;
+  onSendEmailSelected?: () => void;
   onClear: () => void;
   isResearching: boolean;
 }
@@ -10,6 +11,7 @@ interface BulkResearchBarProps {
 export function BulkResearchBar({
   selectedCount,
   onResearchSelected,
+  onSendEmailSelected,
   onClear,
   isResearching,
 }: BulkResearchBarProps) {
@@ -25,6 +27,17 @@ export function BulkResearchBar({
       </div>
 
       <div className="flex items-center gap-2">
+        {onSendEmailSelected && (
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={onSendEmailSelected}
+            disabled={isResearching}
+          >
+            ✉️ Send Email ({selectedCount})
+          </Button>
+        )}
+
         <Button size="sm" variant="outline" onClick={onResearchSelected} disabled={isResearching}>
           {isResearching ? (
             <span className="flex items-center gap-1.5">
@@ -48,7 +61,7 @@ export function BulkResearchBar({
 
         <button
           onClick={onClear}
-          className="text-xs text-[var(--content-tertiary)] hover:text-[var(--content-secondary)] transition-colors"
+          className="text-xs text-[var(--content-tertiary)] hover:text-[var(--content-secondary)] transition-colors ml-1"
         >
           Clear
         </button>

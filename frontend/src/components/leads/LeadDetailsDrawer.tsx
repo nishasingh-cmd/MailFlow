@@ -7,6 +7,7 @@ interface LeadDetailsDrawerProps {
   lead: (Lead & { importHistory?: ImportHistory | null }) | null;
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
+  onGenerateEmail?: (lead: Lead) => void;
 }
 
 export function LeadDetailsDrawer({
@@ -15,6 +16,7 @@ export function LeadDetailsDrawer({
   lead,
   onEdit,
   onDelete,
+  onGenerateEmail,
 }: LeadDetailsDrawerProps) {
   if (!lead) return null;
 
@@ -53,28 +55,38 @@ export function LeadDetailsDrawer({
         </div>
 
         {/* Quick Actions */}
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-3 gap-2">
+          {onGenerateEmail && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                onClose();
+                onGenerateEmail(lead);
+              }}
+            >
+              ✨ Email
+            </Button>
+          )}
           <Button
             size="sm"
             variant="secondary"
-            className="w-1/2"
             onClick={() => {
               onClose();
               onEdit(lead);
             }}
           >
-            Edit Lead
+            Edit
           </Button>
           <Button
             size="sm"
             variant="danger"
-            className="w-1/2"
             onClick={() => {
               onClose();
               onDelete(lead);
             }}
           >
-            Delete Lead
+            Delete
           </Button>
         </div>
 

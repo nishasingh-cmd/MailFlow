@@ -120,33 +120,43 @@ async function exchangeCodeForToken(code: string, redirectUri?: string): Promise
     );
   }
 
-  // Meta Facebook Login JS SDK default redirect_uri for popup OAuth dialog
-  const effectiveRedirectUri =
-    redirectUri && redirectUri.trim()
-      ? redirectUri.trim()
-      : env.NODE_ENV === 'production'
-        ? 'https://mailflow.io/'
-        : 'https://localhost:5173/';
-
   const url = `https://graph.facebook.com/${graphVersion}/oauth/access_token`;
 
-  const params = new URLSearchParams({
-    client_id: appId,
-    client_secret: appSecret,
-    code,
-    redirect_uri: effectiveRedirectUri,
-  });
+  const tryExchange = async (uri?: string) => {
+    const params = new URLSearchParams({
+      client_id: appId,
+      client_secret: appSecret,
+      code,
+    });
+    if (uri !== undefined) {
+      params.append('redirect_uri', uri);
+    }
+    const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
+    const resData = (await response.json()) as MetaTokenResponse;
+    return { ok: response.ok && Boolean(resData.access_token), resData, status: response.status };
+  };
 
-  console.log(
-    `[WhatsappOnboardingService] Requesting access_token from Meta Graph API (redirect_uri: "${effectiveRedirectUri}")...`
-  );
-  const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
-  const resData = (await response.json()) as MetaTokenResponse;
+  // Attempt 1: Standard FB SDK default (empty string) or passed redirectUri
+  let result = await tryExchange(redirectUri ?? '');
 
-  if (!response.ok || !resData.access_token) {
-    const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${response.status}).`;
+  // Attempt 2: If failed and redirectUri was provided, try without redirect_uri parameter
+  if (!result.ok) {
+    const alt1 = await tryExchange(redirectUri);
+    if (alt1.ok) result = alt1;
+  }
+
+  // Attempt 3: Omit redirect_uri completely
+  if (!result.ok) {
+    const alt2 = await tryExchange(undefined);
+    if (alt2.ok) result = alt2;
+  }
+
+  const resData = result.resData;
+
+  if (!result.ok || !resData.access_token) {
+    const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${result.status}).`;
     console.error('[WhatsappOnboardingService] Token exchange failed:', {
-      status: response.status,
+      status: result.status,
       errorCode: resData?.error?.code,
       errorType: resData?.error?.type,
     });

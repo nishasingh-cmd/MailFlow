@@ -18,6 +18,7 @@ import { LeadFormModal } from '../../components/leads/LeadFormModal';
 import { ImportHistoryTable } from '../../components/leads/ImportHistoryTable';
 import { CompanyResearchDrawer } from '../../components/research/CompanyResearchDrawer';
 import { EmailGeneratorDrawer } from '../../components/email-generation/EmailGeneratorDrawer';
+import { CreateCampaignModal } from '../../components/campaigns/CreateCampaignModal';
 import { ResearchStatusBadge } from '../../components/research/ResearchStatusBadge';
 import { BulkResearchBar } from '../../components/research/BulkResearchBar';
 import { ResearchProgressCard } from '../../components/research/ResearchProgressCard';
@@ -70,6 +71,7 @@ export default function Leads() {
   // ── Modals & Drawers State ─────────────────────────────────────────────────
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   const [selectedLeadDetail, setSelectedLeadDetail] = useState<
@@ -710,13 +712,18 @@ export default function Leads() {
 
             {/* Bulk Actions Banner */}
             {selectedLeadIds.length > 0 && (
-              <div className="p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center justify-between text-sm">
+              <div className="p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center justify-between text-sm animate-fade-in">
                 <span className="text-[var(--content-primary)] font-medium">
                   {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? 's' : ''} selected
                 </span>
-                <Button size="sm" variant="danger" onClick={handleBulkDelete}>
-                  Delete Selected ({selectedLeadIds.length})
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="primary" onClick={() => setIsCreateCampaignOpen(true)}>
+                    ✉️ Send Email to Selected ({selectedLeadIds.length})
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={handleBulkDelete}>
+                    Delete Selected ({selectedLeadIds.length})
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -800,6 +807,7 @@ export default function Leads() {
             <BulkResearchBar
               selectedCount={selectedLeadIds.length}
               onResearchSelected={handleBulkResearch}
+              onSendEmailSelected={() => setIsCreateCampaignOpen(true)}
               onClear={() => setSelectedLeadIds([])}
               isResearching={isResearching}
             />
@@ -847,6 +855,9 @@ export default function Leads() {
         onDelete={(lead) => {
           handleDeleteSingle(lead);
         }}
+        onGenerateEmail={(lead) => {
+          openEmailGenerator(lead.id, lead.name, lead.company);
+        }}
       />
 
       <CompanyResearchDrawer
@@ -870,6 +881,16 @@ export default function Leads() {
         companyName={emailDrawerCompanyName}
         onDraftSaved={() => {
           fetchLeads();
+        }}
+      />
+
+      <CreateCampaignModal
+        open={isCreateCampaignOpen}
+        onClose={() => setIsCreateCampaignOpen(false)}
+        initialSelectedLeadIds={selectedLeadIds}
+        onCreated={() => {
+          fetchLeads();
+          setSelectedLeadIds([]);
         }}
       />
 

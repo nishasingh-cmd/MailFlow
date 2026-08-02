@@ -294,8 +294,8 @@ model EmailLog {
   id             String   @id @default(cuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  campaignId     String
-  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId     String?
+  campaign       Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   leadId         String
   lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   queueId        String?

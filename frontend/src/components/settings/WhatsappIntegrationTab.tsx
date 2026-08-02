@@ -16,10 +16,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WhatsappConfigData } from '@mailflow/shared';
 import { whatsappService } from '../../services/whatsapp.service';
-import { settingsService } from '../../services/settings.service';
 import { useMetaEmbeddedSignup } from '../../hooks/useMetaEmbeddedSignup';
 import { useToast } from '../../hooks/useToast';
-import { Button, Badge, Skeleton, ConfirmModal, Input, Textarea } from '../ui';
+import { Button, Badge, Skeleton, ConfirmModal } from '../ui';
 
 interface WhatsappIntegrationTabProps {
   config: WhatsappConfigData;
@@ -235,13 +234,11 @@ function DisconnectedState({
   status,
   errorMessage,
   onConnect,
-  onManualSuccess,
   connecting,
 }: {
   status: WhatsappConfigData['status'];
   errorMessage?: string | null;
   onConnect: () => void;
-  onManualSuccess: () => void;
   connecting: boolean;
 }) {
   return (
@@ -309,151 +306,15 @@ function DisconnectedState({
           id="wa-connect-btn"
           className="w-full max-w-xs"
         >
-          {connecting ? 'Connecting…' : 'Connect WhatsApp (Popup)'}
+          {connecting ? 'Connecting…' : 'Connect WhatsApp'}
         </Button>
 
         <p className="text-2xs text-[var(--content-tertiary)] max-w-xs">
           A Meta popup will open. Log in to Facebook, select your Business Manager and phone number,
           then grant permissions.
         </p>
-
-        {/* Divider */}
-        <div className="w-full max-w-md my-2 flex items-center gap-3">
-          <div className="flex-1 h-px bg-[var(--surface-border)]" />
-          <span className="text-2xs font-semibold uppercase text-[var(--content-tertiary)]">
-            OR CONNECT MANUALLY
-          </span>
-          <div className="flex-1 h-px bg-[var(--surface-border)]" />
-        </div>
-
-        {/* Manual Credentials Option */}
-        <ManualConnectForm onConnected={onManualSuccess} />
       </div>
     </div>
-  );
-}
-
-// ─── Manual Connection Form ───────────────────────────────────────────────────
-function ManualConnectForm({ onConnected }: { onConnected: () => void }) {
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [phoneNumberId, setPhoneNumberId] = useState('1234002809793277');
-  const [businessAccountId, setBusinessAccountId] = useState('1797609154756761');
-  const [accessToken, setAccessToken] = useState(
-    'EAGSCxmMyfZC8BSO78ZCDeP6qIsftKyLaEjqDuwOc8qZCcdTu7ffbYlZBKtBf0FbNYHqb0B2rBOVc8tXJE4MTAYbae3ZBIZA9h3vOSURvGZAE2tDqsUWg1Rj3HVMfC9EEsrojKVDlyRty1ct8IAh8YvHfjXiaN5junj0VVUF3QrUfSQLxGOpJLmSMwVeTkLl5TycalACKlZC7dvBl6ZCSZBrSNc1wrYF1aPbFCkgErHe5o0AfM9Vwn9Fhta9TUb2gWvZBnc6ZB2KWODNVbtiT4CwtzgiI'
-  );
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumberId || !accessToken) {
-      toast.error('Phone Number ID and Access Token are required.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 1. Save manual config
-      await settingsService.saveWhatsappConfig({
-        provider: 'META_CLOUD',
-        phoneNumberId,
-        businessAccountId,
-        accessToken,
-        graphApiVersion: 'v25.0',
-      });
-
-      // 2. Test & verify connection
-      const testRes = await settingsService.testWhatsappConnection();
-
-      if (testRes.success) {
-        toast.success('✅ Meta WhatsApp Cloud API connected successfully!');
-        onConnected();
-      } else {
-        toast.error(testRes.message || 'Verification failed. Please check your credentials.');
-      }
-    } catch (err) {
-      toast.error((err as Error).message || 'Failed to save WhatsApp credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="text-xs font-medium text-brand-400 hover:text-brand-300 underline underline-offset-4 transition-colors"
-      >
-        🔑 Connect manually using Meta Access Token & Phone Number ID
-      </button>
-    );
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full max-w-md text-left space-y-4 pt-2 border-t border-[var(--surface-border)]"
-    >
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-[var(--content-primary)]">
-          Enter Meta Cloud API Credentials
-        </h4>
-        <button
-          type="button"
-          onClick={() => setIsOpen(false)}
-          className="text-2xs text-[var(--content-tertiary)] hover:text-[var(--content-primary)]"
-        >
-          Close
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <label className="block text-2xs font-medium text-[var(--content-secondary)] mb-1">
-            Phone Number ID <span className="text-red-400">*</span>
-          </label>
-          <Input
-            value={phoneNumberId}
-            onChange={(e) => setPhoneNumberId(e.target.value)}
-            placeholder="e.g. 1234002809793277"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-2xs font-medium text-[var(--content-secondary)] mb-1">
-            WhatsApp Business Account ID (WABA ID)
-          </label>
-          <Input
-            value={businessAccountId}
-            onChange={(e) => setBusinessAccountId(e.target.value)}
-            placeholder="e.g. 1797609154756761"
-          />
-        </div>
-
-        <div>
-          <label className="block text-2xs font-medium text-[var(--content-secondary)] mb-1">
-            Meta Access Token <span className="text-red-400">*</span>
-          </label>
-          <Textarea
-            value={accessToken}
-            onChange={(e) => setAccessToken(e.target.value)}
-            placeholder="Paste your system user or temporary access token..."
-            rows={3}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <Button type="button" variant="outline" size="sm" onClick={() => setIsOpen(false)}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" size="sm" loading={loading} disabled={loading}>
-          {loading ? 'Verifying…' : 'Verify & Connect'}
-        </Button>
-      </div>
-    </form>
   );
 }
 
@@ -552,20 +413,6 @@ export function WhatsappIntegrationTab({
     launchSignup();
   };
 
-  const handleManualSuccess = async () => {
-    resetSignup();
-    setLoading(true);
-    try {
-      const result = await whatsappService.getConnectionStatus();
-      setConfig(result.config);
-      onUpdated();
-    } catch {
-      // silently ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-4 animate-fade-in">
@@ -617,7 +464,6 @@ export function WhatsappIntegrationTab({
           status={hasError ? 'FAILED' : config.status}
           errorMessage={hasError ? signupError : config.errorMessage}
           onConnect={handleConnect}
-          onManualSuccess={handleManualSuccess}
           connecting={isConnecting}
         />
       )}

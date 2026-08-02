@@ -191,4 +191,29 @@ export class DeliveryController {
       res.status(500).json({ error: 'Failed to delete failed queue jobs' });
     }
   }
+
+  /**
+   * POST /api/delivery/send-single — Send a single email directly to a lead
+   */
+  static async sendSingle(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { leadId, subject, body } = req.body as {
+        leadId: string;
+        subject: string;
+        body: string;
+      };
+
+      if (!leadId || !subject || !body) {
+        res.status(400).json({ error: 'leadId, subject, and body are required' });
+        return;
+      }
+
+      const result = await DeliveryService.sendSingleEmail(userId, { leadId, subject, body });
+      res.status(200).json({ success: true, data: result, message: result.message });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      res.status(400).json({ error: err.message || 'Failed to send email' });
+    }
+  }
 }

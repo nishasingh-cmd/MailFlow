@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EmailTemplateType } from '@mailflow/shared';
 import { Modal, Button, Input, Textarea, Select } from '../ui';
 import { LeadPickerTable } from './LeadPickerTable';
@@ -11,6 +11,7 @@ interface CreateCampaignModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  initialSelectedLeadIds?: string[];
 }
 
 const STEPS = ['Details', 'Select Leads', 'Template', 'Review'];
@@ -30,7 +31,12 @@ const CHANNEL_OPTIONS = [
   { value: 'EMAIL_AND_WHATSAPP', label: 'Email + WhatsApp Outreach' },
 ];
 
-export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaignModalProps) {
+export function CreateCampaignModal({
+  open,
+  onClose,
+  onCreated,
+  initialSelectedLeadIds,
+}: CreateCampaignModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -39,6 +45,12 @@ export function CreateCampaignModal({ open, onClose, onCreated }: CreateCampaign
   const [description, setDescription] = useState('');
   const [channel, setChannel] = useState<'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP'>('EMAIL');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open && initialSelectedLeadIds && initialSelectedLeadIds.length > 0) {
+      setSelectedLeadIds(initialSelectedLeadIds);
+    }
+  }, [open, initialSelectedLeadIds]);
   const [templateId, setTemplateId] = useState<EmailTemplateType | ''>('');
   const [nameError, setNameError] = useState('');
   const [submitting, setSubmitting] = useState(false);

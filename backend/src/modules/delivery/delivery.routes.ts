@@ -13,6 +13,7 @@ router.post('/campaigns/:id/pause', DeliveryController.pauseSending);
 router.post('/campaigns/:id/resume', DeliveryController.resumeSending);
 router.post('/campaigns/:id/cancel', DeliveryController.cancelSending);
 router.get('/campaigns/:id/progress', DeliveryController.getProgress);
+router.post('/send-single', DeliveryController.sendSingle);
 
 // Delivery logs & Failed Queue
 router.get('/logs', DeliveryController.getDeliveryLogs);

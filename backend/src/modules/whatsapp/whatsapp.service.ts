@@ -1,5 +1,6 @@
 import { PrismaClient, QueueJobStatus, Prisma } from '@prisma/client';
 import { WhatsappGeneratorService } from './whatsapp-generator.service';
+import { WhatsappTemplateService } from './whatsapp-template.service';
 
 const prisma = new PrismaClient();
 
@@ -45,9 +46,26 @@ export class WhatsappService {
    */
   static async enqueueMessages(
     userId: string,
-    input: { leadIds?: string[]; campaignId?: string; message?: string; sendAll?: boolean }
+    input: {
+      leadId?: string;
+      leadIds?: string[];
+      campaignId?: string;
+      templateId?: string;
+      message?: string;
+      variables?: Record<string, string>;
+      sendAll?: boolean;
+      phone?: string;
+    }
   ) {
-    let targetLeads: Array<{ id: string; name: string; phone: string | null }>;
+    let targetLeads: Array<{
+      id: string;
+      name: string;
+      email: string;
+      company: string | null;
+      phone: string | null;
+    }>;
+
+    const rawLeadIds = input.leadIds || (input.leadId ? [input.leadId] : []);
 
     if (input.campaignId) {
       const campaign = await prisma.campaign.findFirst({
@@ -59,12 +77,12 @@ export class WhatsappService {
     } else if (input.sendAll) {
       targetLeads = await prisma.lead.findMany({
         where: { userId },
-        select: { id: true, name: true, phone: true },
+        select: { id: true, name: true, email: true, company: true, phone: true },
       });
-    } else if (input.leadIds && input.leadIds.length > 0) {
+    } else if (rawLeadIds.length > 0) {
       targetLeads = await prisma.lead.findMany({
-        where: { userId, id: { in: input.leadIds } },
-        select: { id: true, name: true, phone: true },
+        where: { userId, id: { in: rawLeadIds } },
+        select: { id: true, name: true, email: true, company: true, phone: true },
       });
     } else {
       throw new Error('Please select at least one recipient lead.');
@@ -74,11 +92,27 @@ export class WhatsappService {
       throw new Error('No valid leads selected for WhatsApp outreach.');
     }
 
+    // Optionally fetch template if templateId is specified
+    let template: { id: string; body: string } | null = null;
+    if (input.templateId) {
+      const client = prisma as unknown as {
+        whatsappTemplate?: {
+          findFirst: (args: unknown) => Promise<{ id: string; body: string } | null>;
+        };
+      };
+      template =
+        (await client.whatsappTemplate?.findFirst({
+          where: { id: input.templateId, userId },
+          select: { id: true, body: true },
+        })) || null;
+    }
+
     // Process leads and generate/retrieve message per lead
     const queueItems: Array<{
       userId: string;
       campaignId?: string | null;
       leadId: string;
+      templateId?: string | null;
       phone: string;
       message: string;
       status: QueueJobStatus;
@@ -87,11 +121,9 @@ export class WhatsappService {
     }> = [];
 
     for (const lead of targetLeads) {
-      console.log(
-        `[Lead] Lead ID: ${lead.id} | Name: ${lead.name} | Phone: "${lead.phone || 'N/A'}"`
-      );
+      const activePhone = input.phone?.trim() || lead.phone?.trim();
 
-      if (!lead.phone || !lead.phone.trim()) {
+      if (!activePhone) {
         if (targetLeads.length === 1) {
           throw new Error(
             `Lead "${lead.name}" has no phone number. Please update the phone number in Lead Management.`
@@ -101,11 +133,20 @@ export class WhatsappService {
         continue;
       }
 
-      const phone = lead.phone.trim();
       let messageText: string = input.message || '';
 
-      // If message wasn't provided, generate or fetch draft
-      if (!messageText) {
+      if (template) {
+        const mergedVars: Record<string, string> = {
+          contact_name: lead.name,
+          name: lead.name,
+          company_name: lead.company || 'your company',
+          company: lead.company || 'your company',
+          email: lead.email,
+          phone: activePhone,
+          ...(input.variables || {}),
+        };
+        messageText = WhatsappTemplateService.substituteVariables(template.body, mergedVars);
+      } else if (!messageText) {
         const draft = await prisma.whatsappDraft.findFirst({
           where: { userId, leadId: lead.id },
         });
@@ -121,7 +162,8 @@ export class WhatsappService {
         userId,
         campaignId: input.campaignId || null,
         leadId: lead.id,
-        phone,
+        templateId: template?.id || null,
+        phone: activePhone,
         message: messageText,
         status: 'PENDING' as QueueJobStatus,
         attempts: 0,
@@ -356,5 +398,30 @@ export class WhatsappService {
       readRate,
       provider: config?.provider || 'MOCK',
     };
+  }
+
+  /**
+   * Get single WhatsApp message log or queue details by ID
+   */
+  static async getMessageById(userId: string, id: string) {
+    const log = await prisma.whatsappLog.findFirst({
+      where: { id, userId },
+      include: {
+        lead: { select: { name: true, email: true, phone: true, company: true } },
+        campaign: { select: { name: true } },
+      },
+    });
+
+    if (log) return log;
+
+    const queue = await prisma.whatsappQueue.findFirst({
+      where: { id, userId },
+      include: {
+        lead: { select: { name: true, email: true, phone: true, company: true } },
+        campaign: { select: { name: true } },
+      },
+    });
+
+    return queue;
   }
 }

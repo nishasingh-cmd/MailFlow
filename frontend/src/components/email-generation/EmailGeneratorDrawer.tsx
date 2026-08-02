@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, Component, type ReactNode, type Error
 import { Company, EmailDraft, EmailTemplateType, GeneratedEmailResult } from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
 import { emailGenerationService } from '../../services/email-generation.service';
+import { deliveryService } from '../../services/delivery.service';
 import { Drawer, Button, Card, Badge, Input, Textarea } from '../ui';
 import { useToast } from '../../hooks/useToast';
 import { cn } from '../../utils/cn';
@@ -106,6 +107,7 @@ function EmailGeneratorDrawerInner({
   const [template, setTemplate] = useState<EmailTemplateType>('Cold Outreach');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   // Email output state — all initialised with safe empty values
   const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
@@ -273,6 +275,40 @@ function EmailGeneratorDrawerInner({
       toast.error((err as Error)?.message ?? 'Failed to save draft');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // ── Send Email ─────────────────────────────────────────────────────────────
+  const handleSendEmail = async () => {
+    if (!leadId) return;
+    if (!subject.trim() || !body.trim()) {
+      toast.error('Please provide a subject and body before sending.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const res = await deliveryService.sendSingleEmail({
+        leadId,
+        subject,
+        body,
+      });
+      toast.success(res.message || 'Email sent successfully!');
+      onDraftSaved?.();
+      onClose();
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { error?: string; message?: string } };
+        message?: string;
+      };
+      const msg =
+        axiosErr.response?.data?.error ||
+        axiosErr.response?.data?.message ||
+        axiosErr.message ||
+        'Failed to send email';
+      toast.error(msg);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -518,15 +554,25 @@ function EmailGeneratorDrawerInner({
               </Button>
             )}
 
-            {/* BUG FIX: Button prop is `loading`, not `isLoading` */}
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               onClick={() => void handleSaveDraft()}
               loading={isSaving}
-              disabled={!subject || !body || isSaving}
+              disabled={!subject || !body || isSaving || isSending}
             >
               💾 Save Draft
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => void handleSendEmail()}
+              loading={isSending}
+              disabled={!subject || !body || isSaving || isSending}
+              className="bg-brand-600 hover:bg-brand-500 shadow-md shadow-brand-500/20"
+            >
+              🚀 Send Email
             </Button>
           </div>
         </div>
