@@ -313,6 +313,28 @@ function DisconnectedState({
           A Meta popup will open. Log in to Facebook, select your Business Manager and phone number,
           then grant permissions.
         </p>
+
+        <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs text-left space-y-1.5 max-w-sm mt-2">
+          <p className="font-semibold text-amber-200">
+            💡 If Facebook shows "JSSDK option is not toggled":
+          </p>
+          <ol className="list-decimal list-inside space-y-1 text-amber-300/90 text-[11px] font-mono">
+            <li>
+              Go to <strong>developers.facebook.com</strong> &rarr; Your App (ID:{' '}
+              <code>28291286250455039</code>)
+            </li>
+            <li>
+              Navigate to <strong>Facebook Login</strong> &rarr; <strong>Settings</strong>
+            </li>
+            <li>
+              Set <strong>Log in with JavaScript SDK</strong> to <strong>YES</strong>
+            </li>
+            <li>
+              Add your app domain (e.g. <code>http://192.168.0.110:5173</code>) under{' '}
+              <strong>Allowed Domains for JavaScript SDK</strong>
+            </li>
+          </ol>
+        </div>
       </div>
     </div>
   );

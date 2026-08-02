@@ -162,7 +162,6 @@ export class WhatsappService {
         userId,
         campaignId: input.campaignId || null,
         leadId: lead.id,
-        templateId: template?.id || null,
         phone: activePhone,
         message: messageText,
         status: 'PENDING' as QueueJobStatus,
