@@ -36,7 +36,12 @@ declare global {
       }) => void;
       login: (
         callback: (response: FacebookLoginResponse) => void,
-        opts?: { scope?: string; response_type?: string; extras?: Record<string, unknown> }
+        opts?: {
+          scope?: string;
+          response_type?: string;
+          redirect_uri?: string;
+          extras?: Record<string, unknown>;
+        }
       ) => void;
     };
     fbAsyncInit?: () => void;
@@ -112,6 +117,22 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Canonical Meta WhatsApp Embedded Signup Redirect URI
+ * Must be 100% identical when opening FB.login() and during backend code exchange.
+ */
+export function getWhatsappRedirectUri(): string {
+  const envUri = import.meta.env.VITE_WHATSAPP_REDIRECT_URI;
+  const canonicalUri = envUri || window.location.origin;
+  console.log('[getWhatsappRedirectUri] Resolved Redirect URI:', {
+    windowHref: window.location.href,
+    windowOrigin: window.location.origin,
+    viteEnvUri: envUri || '(not set)',
+    resolvedCanonicalUri: canonicalUri,
+  });
+  return canonicalUri;
+}
+
 export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) => void) {
   const [state, setState] = useState<EmbeddedSignupState>({
     status: 'idle',
@@ -156,6 +177,16 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
         );
         return;
       }
+
+      // Determine canonical redirect URI to use consistently throughout Embedded Signup flow
+      const redirectUri = getWhatsappRedirectUri();
+      console.log('[useMetaEmbeddedSignup] Step 1: Launching Meta Embedded Signup popup:', {
+        windowHref: window.location.href,
+        windowOrigin: window.location.origin,
+        redirectUri,
+        appId,
+        graphApiVersion,
+      });
 
       // 2. Load & initialise Facebook SDK
       try {
@@ -208,10 +239,21 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                     setStatus('processing');
 
                     const code = response.authResponse.code;
+                    console.log(
+                      '[useMetaEmbeddedSignup] Step 3: OAuth code received from Facebook SDK. Relaying callback to backend:',
+                      {
+                        codePrefix: code.substring(0, 10) + '...',
+                        wabaId: metaWabaId,
+                        phoneNumberId: metaPhoneId,
+                        redirectUri,
+                      }
+                    );
+
                     const result = await whatsappService.handleCallback({
                       code,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
+                      redirectUri,
                     });
 
                     setState({
@@ -248,6 +290,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             {
               scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
               response_type: 'code',
+              redirect_uri: redirectUri,
               extras: {
                 setup: {},
                 featureType: 'whatsapp_embedded_signup',

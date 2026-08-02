@@ -5,8 +5,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { execSync } from 'child_process';
+import { Server } from 'http';
 import { env } from './config/env';
-import { checkRedisConnection } from './config/redis';
+import { checkRedisConnection, closeRedisConnection } from './config/redis';
 import healthRouter from './routes/health';
 import authRouter from './modules/auth/auth.routes';
 import userRouter from './modules/users/user.routes';
@@ -74,8 +76,75 @@ app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/analytics', analyticsRouter);
 
+// ── State Guards & Server Reference ──────────────────────────────────────────
+let server: Server | null = null;
+let isBootstrapping = false;
+let isShuttingDown = false;
+
+function logPortOwner(port: number) {
+  try {
+    const isWin = process.platform === 'win32';
+    const cmd = isWin ? `netstat -ano | findstr :${port}` : `lsof -i :${port}`;
+    const output = execSync(cmd, { encoding: 'utf-8' }).trim();
+    if (output) {
+      console.error(`[server] Active process(es) bound to port ${port}:\n${output}`);
+    }
+  } catch {
+    // ignore lookup errors if no process is listening
+  }
+}
+
+// ── Graceful Shutdown Handler ────────────────────────────────────────────────
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n[server] Signal ${signal} received. Initiating graceful shutdown...`);
+
+  // 1. Stop worker background timers
+  try {
+    DeliveryWorker.stopWorker();
+    WhatsappWorker.stopWorker();
+  } catch (err) {
+    console.error('[server] Error stopping background workers:', err);
+  }
+
+  // 2. Disconnect Redis
+  try {
+    await closeRedisConnection();
+  } catch {
+    // ignore Redis disconnect errors
+  }
+
+  // 3. Close HTTP Server
+  if (server) {
+    server.close(() => {
+      console.log('[server] Express HTTP server closed successfully.');
+      process.exit(0);
+    });
+
+    // Unref timer so it does not block exit if server closes faster
+    setTimeout(() => {
+      console.warn('[server] Forcefully exiting after shutdown timeout.');
+      process.exit(0);
+    }, 1500).unref();
+  } else {
+    process.exit(0);
+  }
+}
+
+// Register process signal listeners (SIGUSR2 is emitted by ts-node-dev on restart)
+process.once('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
 // ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {
+  if (isBootstrapping) {
+    console.warn('[bootstrap] Bootstrap already in progress. Skipping duplicate execution.');
+    return;
+  }
+  isBootstrapping = true;
+
   // Verify Redis connectivity on startup (non-fatal in development)
   const redisOk = await checkRedisConnection();
   if (!redisOk && env.NODE_ENV === 'production') {
@@ -87,10 +156,20 @@ async function bootstrap() {
   DeliveryWorker.startWorker(3000);
   WhatsappWorker.startWorker(2500);
 
-  app.listen(env.PORT, () => {
+  server = app.listen(env.PORT, () => {
     console.log(`[server] MailFlow backend running on http://localhost:${env.PORT}`);
     console.log(`[server] Health check: http://localhost:${env.PORT}/api/health`);
     console.log(`[server] Environment: ${env.NODE_ENV}`);
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[server] FATAL: Port ${env.PORT} is already in use (EADDRINUSE).`);
+      logPortOwner(env.PORT);
+      process.exit(1);
+    } else {
+      console.error('[server] Unexpected HTTP server error:', err);
+    }
   });
 }
 

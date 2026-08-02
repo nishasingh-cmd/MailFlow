@@ -121,7 +121,7 @@ function buildSnapshot(wa: Record<string, unknown> | null, userId: string): What
 // (failed) attempt already consumes the code, so every subsequent attempt
 // fails too, no matter what's changed. The fix is to get it right in one
 // shot: never send redirect_uri for this flow.
-async function exchangeCodeForToken(code: string): Promise<string> {
+async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<string> {
   const appId = env.WHATSAPP_APP_ID;
   const appSecret = env.WHATSAPP_APP_SECRET;
   const graphVersion = env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
@@ -132,6 +132,9 @@ async function exchangeCodeForToken(code: string): Promise<string> {
     );
   }
 
+  // Determine canonical redirect URI to send to Meta (if provided or configured)
+  const canonicalRedirectUri = redirectUri || env.WHATSAPP_REDIRECT_URI;
+
   const url = `https://graph.facebook.com/${graphVersion}/oauth/access_token`;
   const params = new URLSearchParams({
     client_id: appId,
@@ -139,15 +142,39 @@ async function exchangeCodeForToken(code: string): Promise<string> {
     code,
   });
 
+  if (canonicalRedirectUri) {
+    params.append('redirect_uri', canonicalRedirectUri);
+  }
+
+  const fullGraphUrl = `${url}?client_id=${appId}&code=${code.substring(0, 10)}...`;
+
+  console.log('[WhatsappOnboardingService] Initiating Meta OAuth token exchange:', {
+    appId,
+    codePrefix: code.substring(0, 10) + '...',
+    receivedRedirectUri: redirectUri || '(none)',
+    envRedirectUri: env.WHATSAPP_REDIRECT_URI || '(none)',
+    canonicalRedirectUri: canonicalRedirectUri || '(omitted for JS SDK)',
+    fullGraphUrl,
+  });
+
   const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
   const resData = (await response.json()) as MetaTokenResponse;
 
+  console.log('[WhatsappOnboardingService] Raw Meta Graph API Token Exchange Response:', {
+    httpStatus: response.status,
+    ok: response.ok,
+    resData,
+  });
+
   if (!response.ok || !resData.access_token) {
     const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${response.status}).`;
-    console.error('[WhatsappOnboardingService] Token exchange failed:', {
+    console.error('[WhatsappOnboardingService] Token exchange failed from Meta:', {
       status: response.status,
       errorCode: resData?.error?.code,
       errorType: resData?.error?.type,
+      errorMessage: errMsg,
+      fullMetaResponse: resData,
+      redirectUriUsed: canonicalRedirectUri || '(none)',
     });
     throw new Error(`Meta OAuth error: ${errMsg}`);
   }

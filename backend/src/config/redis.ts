@@ -70,5 +70,16 @@ export async function checkRedisConnection(): Promise<boolean> {
   }
 }
 
+export async function closeRedisConnection(): Promise<void> {
+  if (_redis) {
+    try {
+      await _redis.quit();
+    } catch {
+      _redis.disconnect();
+    }
+    _redis = null;
+  }
+}
+
 // Export singleton for use in routes/services
 export const redis = getRedisClient();

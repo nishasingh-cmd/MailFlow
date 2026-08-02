@@ -59,9 +59,13 @@ export class WhatsappOnboardingController {
         return;
       }
 
-      console.log(
-        `[WhatsappOnboardingController] Processing callback for user ${userId} | WABA: ${wabaId || 'from_env'} | Phone: ${phoneNumberId || 'from_env'} | RedirectUri: ${redirectUri || 'default'}`
-      );
+      console.log('[WhatsappOnboardingController] Step 2: Callback API received from frontend:', {
+        userId,
+        codePrefix: code.substring(0, 10) + '...',
+        wabaId: wabaId || '(from_env)',
+        phoneNumberId: phoneNumberId || '(from_env)',
+        redirectUri: redirectUri || '(none)',
+      });
 
       const config = await WhatsappOnboardingService.handleCallback(
         userId,
