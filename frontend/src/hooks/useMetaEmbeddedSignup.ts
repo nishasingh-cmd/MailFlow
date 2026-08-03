@@ -39,6 +39,7 @@ declare global {
         opts?: {
           scope?: string;
           response_type?: string;
+          override_default_response_type?: boolean;
           redirect_uri?: string;
           extras?: Record<string, unknown>;
         }
@@ -245,7 +246,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                         codePrefix: code.substring(0, 10) + '...',
                         wabaId: metaWabaId,
                         phoneNumberId: metaPhoneId,
-                        redirectUri,
                       }
                     );
 
@@ -253,7 +253,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                       code,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
-                      redirectUri,
                     });
 
                     setState({
@@ -290,7 +289,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             {
               scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
               response_type: 'code',
-              redirect_uri: redirectUri,
+              override_default_response_type: true,
               extras: {
                 setup: {},
                 featureType: 'whatsapp_embedded_signup',
