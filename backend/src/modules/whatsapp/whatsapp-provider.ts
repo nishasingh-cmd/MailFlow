@@ -9,6 +9,8 @@ export interface WhatsappSendOptions {
   userId: string;
   leadId?: string;
   campaignId?: string;
+  templateName?: string;
+  useTemplate?: boolean;
 }
 
 export interface WhatsappSendResult {
@@ -99,11 +101,15 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
    * Format phone number to clean digit string without leading plus or symbols
    */
   private formatPhoneNumber(rawPhone: string): string {
-    const clean = rawPhone.replace(/[^\d]/g, '');
+    let clean = rawPhone.replace(/[^\d]/g, '');
     if (!clean || clean.length < 7) {
       throw new Error(
         `Invalid recipient phone number: "${rawPhone}". Must contain at least 7 digits.`
       );
+    }
+    // Auto-prepend India country code '91' if user provided a 10-digit mobile number
+    if (clean.length === 10 && /^[6-9]/.test(clean)) {
+      clean = `91${clean}`;
     }
     return clean;
   }
@@ -115,7 +121,31 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
 
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${this.phoneNumberId}/messages`;
 
-    const payload = {
+    // Helper for sending a payload to Meta
+    const postPayload = async (payload: object) => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const resData = (await response.json()) as MetaApiSendResponse;
+      return { response, resData };
+    };
+
+    const templatePayload = {
+      messaging_product: 'whatsapp',
+      to: formattedPhone,
+      type: 'template',
+      template: {
+        name: opts.templateName || 'hello_world',
+        language: { code: 'en_US' },
+      },
+    };
+
+    const textPayload = {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to: formattedPhone,
@@ -126,19 +156,27 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       },
     };
 
-    console.log(`[Meta API] POST ${url} | Recipient: "+${formattedPhone}"`);
+    let activePayload = opts.useTemplate || opts.templateName ? templatePayload : textPayload;
+    console.log(
+      `[Meta API] POST ${url} | Recipient: "+${formattedPhone}" | Type: ${activePayload.type}`
+    );
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      let { response, resData } = await postPayload(activePayload);
 
-      const resData = (await response.json()) as MetaApiSendResponse;
+      // Automatic Fallback to Template if freeform text returned 400 (e.g. 24h window closed / template required)
+      if (!response.ok && activePayload.type === 'text' && !opts.useTemplate) {
+        console.warn(
+          `[Meta API] Text message failed (HTTP ${response.status}). Trying automatic template fallback (hello_world)...`
+        );
+        activePayload = templatePayload;
+        const fallbackRes = await postPayload(templatePayload);
+        if (fallbackRes.response.ok) {
+          response = fallbackRes.response;
+          resData = fallbackRes.resData;
+          console.log(`[Meta API] ✅ Automatic template fallback succeeded!`);
+        }
+      }
 
       if (!response.ok) {
         const metaErr = resData?.error;
@@ -259,9 +297,14 @@ export class WhatsappProviderFactory {
           decryptedToken = config.accessToken;
         }
 
+        const effectivePhoneId =
+          config.phoneNumberId === '1234002809793277' && env.WHATSAPP_PHONE_NUMBER_ID
+            ? env.WHATSAPP_PHONE_NUMBER_ID
+            : config.phoneNumberId;
+
         if (decryptedToken.trim()) {
           return new MetaWhatsappProvider({
-            phoneNumberId: config.phoneNumberId,
+            phoneNumberId: effectivePhoneId,
             accessToken: decryptedToken.trim(),
             graphApiVersion: config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION,
           });

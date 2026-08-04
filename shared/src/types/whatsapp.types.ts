@@ -187,7 +187,14 @@ export interface WhatsappConnectInitResponse {
 }
 
 export interface WhatsappCallbackRequest {
-  code: string;
+  /** Authorization code from FB.login response_type:'code' flow (legacy). */
+  code?: string;
+  /**
+   * Access token returned directly by FB.login (preferred for Embedded Signup
+   * popup flow — avoids the redirect_uri mismatch that causes error_subcode 36008
+   * when exchanging a code via /oauth/access_token).
+   */
+  accessToken?: string;
   wabaId?: string;
   phoneNumberId?: string;
   redirectUri?: string;

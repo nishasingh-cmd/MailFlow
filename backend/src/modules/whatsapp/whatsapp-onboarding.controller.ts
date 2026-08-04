@@ -47,29 +47,36 @@ export class WhatsappOnboardingController {
   static async handleCallback(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { code, wabaId, phoneNumberId, redirectUri } = req.body as {
+      const { code, accessToken, wabaId, phoneNumberId, redirectUri } = req.body as {
         code?: string;
+        accessToken?: string;
         wabaId?: string;
         phoneNumberId?: string;
         redirectUri?: string;
       };
 
-      if (!code) {
-        res.status(400).json({ success: false, error: 'Authorization code is required.' });
+      if (!code && !accessToken) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            error: 'Either authorization code or access token is required.',
+          });
         return;
       }
 
       console.log('[WhatsappOnboardingController] Step 2: Callback API received from frontend:', {
         userId,
-        codePrefix: code.substring(0, 10) + '...',
+        flow: accessToken ? 'direct_token' : 'code_exchange',
+        tokenOrCodePrefix: (accessToken || code || '').substring(0, 10) + '...',
         wabaId: wabaId || '(from_env)',
         phoneNumberId: phoneNumberId || '(from_env)',
-        redirectUri: redirectUri || '(none)',
       });
 
       const config = await WhatsappOnboardingService.handleCallback(
         userId,
         code,
+        accessToken,
         wabaId,
         phoneNumberId,
         redirectUri

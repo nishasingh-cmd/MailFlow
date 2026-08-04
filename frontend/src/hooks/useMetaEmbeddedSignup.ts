@@ -119,22 +119,6 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-/**
- * Canonical Meta WhatsApp Embedded Signup Redirect URI
- * Must be 100% identical when opening FB.login() and during backend code exchange.
- */
-export function getWhatsappRedirectUri(): string {
-  const envUri = import.meta.env.VITE_WHATSAPP_REDIRECT_URI;
-  const canonicalUri = envUri || window.location.origin;
-  console.log('[getWhatsappRedirectUri] Resolved Redirect URI:', {
-    windowHref: window.location.href,
-    windowOrigin: window.location.origin,
-    viteEnvUri: envUri || '(not set)',
-    resolvedCanonicalUri: canonicalUri,
-  });
-  return canonicalUri;
-}
-
 export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) => void) {
   const [state, setState] = useState<EmbeddedSignupState>({
     status: 'idle',
@@ -182,16 +166,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
         return;
       }
 
-      // Determine canonical redirect URI to use consistently throughout Embedded Signup flow
-      const redirectUri = getWhatsappRedirectUri();
-      console.log('[useMetaEmbeddedSignup] Step 1: Launching Meta Embedded Signup popup:', {
-        windowHref: window.location.href,
-        windowOrigin: window.location.origin,
-        redirectUri,
-        appId,
-        graphApiVersion,
-      });
-
       // 2. Load & initialise Facebook SDK
       try {
         await loadFacebookSDK(appId, graphApiVersion);
@@ -225,35 +199,38 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
 
       window.addEventListener('message', messageHandler);
 
-      // 3. Open the Embedded Signup popup
+      // 3. Open the Embedded Signup popup.
+      // IMPORTANT: We do NOT use response_type:'code' here. The code exchange
+      // flow (FB.login → code → /oauth/access_token) consistently fails with
+      // error_subcode 36008 because the SDK popup uses an internal Facebook
+      // relay URL as the implicit redirect_uri — one that is not accessible to
+      // us and cannot be replicated in the token exchange request.
+      //
+      // Instead, we request the access token directly from the FB.login
+      // authResponse. The config_id ensures the user completes the full
+      // WhatsApp Embedded Signup flow and grants the correct WABA permissions.
+      // The access token returned is then sent to the backend for storage.
       try {
         await new Promise<void>((resolve, reject) => {
           window.FB.login(
             (response: FacebookLoginResponse) => {
               (async () => {
                 try {
-                  if (response.status === 'connected' && response.authResponse?.code) {
-                    // 4. Got the auth code — relay to backend for token exchange.
-                    // NOTE: no redirectUri is sent here. The Embedded Signup popup
-                    // flow via the JS SDK does not use a redirect_uri when it
-                    // generates this code, so passing one during the backend's
-                    // token exchange causes Meta to reject it with a
-                    // "redirect_uri mismatch" error — and since the code is
-                    // single-use, that failed attempt burns the code for good.
+                  if (response.status === 'connected' && response.authResponse?.accessToken) {
                     setStatus('processing');
 
-                    const code = response.authResponse.code;
+                    const accessToken = response.authResponse.accessToken;
                     console.log(
-                      '[useMetaEmbeddedSignup] Step 3: OAuth code received from Facebook SDK. Relaying callback to backend:',
+                      '[useMetaEmbeddedSignup] Step 3: Access token received from Facebook SDK. Relaying to backend:',
                       {
-                        codePrefix: code.substring(0, 10) + '...',
+                        tokenPrefix: accessToken.substring(0, 10) + '...',
                         wabaId: metaWabaId,
                         phoneNumberId: metaPhoneId,
                       }
                     );
 
                     const result = await whatsappService.handleCallback({
-                      code,
+                      accessToken,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
                     });
@@ -291,8 +268,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             },
             {
               config_id: configId,
-              response_type: 'code',
-              override_default_response_type: true,
               extras: {
                 setup: {},
                 featureType: 'whatsapp_embedded_signup',
