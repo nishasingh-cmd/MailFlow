@@ -8,6 +8,7 @@ import {
   WhatsappStats,
   WhatsappConfigData,
   WhatsappCallbackRequest,
+  WhatsappConnectInitResponse,
 } from '@mailflow/shared';
 
 interface ApiEnvelope<T> {
@@ -142,9 +143,9 @@ export const whatsappService = {
   /**
    * Get Meta App ID and SDK config for the Embedded Signup popup
    */
-  async initConnect(): Promise<{ appId: string; graphApiVersion: string }> {
+  async initConnect(): Promise<WhatsappConnectInitResponse> {
     const { data: envelope } =
-      await api.post<ApiEnvelope<{ appId: string; graphApiVersion: string }>>('/whatsapp/connect');
+      await api.post<ApiEnvelope<WhatsappConnectInitResponse>>('/whatsapp/connect');
     return envelope.data;
   },
 

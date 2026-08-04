@@ -182,7 +182,7 @@ export interface TestWhatsappConnectionResponse {
 
 export interface WhatsappConnectInitResponse {
   appId: string;
-  configId?: string;
+  configId: string;
   graphApiVersion: string;
 }
 

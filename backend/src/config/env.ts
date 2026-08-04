@@ -37,5 +37,6 @@ export const env = {
     process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? 'mailflow_verify_token',
   WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET ?? '',
   WHATSAPP_APP_ID: process.env.WHATSAPP_APP_ID ?? '',
+  WHATSAPP_CONFIG_ID: process.env.WHATSAPP_CONFIG_ID ?? '',
   WHATSAPP_REDIRECT_URI: process.env.WHATSAPP_REDIRECT_URI ?? '',
 } as const;

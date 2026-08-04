@@ -260,17 +260,14 @@ export class WhatsappOnboardingService {
    */
   static async initConnect(): Promise<{
     appId: string;
+    configId: string;
     graphApiVersion: string;
   }> {
-    const appId = env.WHATSAPP_APP_ID;
-    if (!appId) {
-      throw new Error(
-        'WhatsApp App ID is not configured. Please add WHATSAPP_APP_ID to your .env file.'
-      );
-    }
-
+    if (!env.WHATSAPP_APP_ID) throw new Error('WHATSAPP_APP_ID is not configured.');
+    if (!env.WHATSAPP_CONFIG_ID) throw new Error('WHATSAPP_CONFIG_ID is not configured.');
     return {
-      appId,
+      appId: env.WHATSAPP_APP_ID,
+      configId: env.WHATSAPP_CONFIG_ID,
       graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
     };
   }

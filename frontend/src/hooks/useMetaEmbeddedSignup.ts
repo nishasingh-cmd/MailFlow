@@ -37,6 +37,7 @@ declare global {
       login: (
         callback: (response: FacebookLoginResponse) => void,
         opts?: {
+          config_id?: string;
           scope?: string;
           response_type?: string;
           override_default_response_type?: boolean;
@@ -159,11 +160,13 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
       // 1. Get App ID from backend
       setStatus('loading_sdk');
       let appId: string;
+      let configId: string;
       let graphApiVersion: string;
 
       try {
         const sdkConfig = await whatsappService.initConnect();
         appId = sdkConfig.appId;
+        configId = sdkConfig.configId;
         graphApiVersion = sdkConfig.graphApiVersion;
       } catch (err) {
         const msg = (err as Error).message || 'Unable to retrieve WhatsApp App configuration.';
@@ -171,10 +174,10 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
         return;
       }
 
-      if (!appId) {
+      if (!appId || !configId) {
         setStatus(
           'error',
-          'WhatsApp App ID is not configured on the server. Please add WHATSAPP_APP_ID to your .env file.'
+          'WhatsApp App ID or Config ID is not configured on the server. Please add WHATSAPP_APP_ID and WHATSAPP_CONFIG_ID to your .env file.'
         );
         return;
       }
@@ -287,7 +290,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
               })();
             },
             {
-              scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
+              config_id: configId,
               response_type: 'code',
               override_default_response_type: true,
               extras: {
