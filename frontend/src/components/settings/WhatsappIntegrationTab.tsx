@@ -18,7 +18,7 @@ import { WhatsappConfigData } from '@mailflow/shared';
 import { whatsappService } from '../../services/whatsapp.service';
 import { useMetaEmbeddedSignup } from '../../hooks/useMetaEmbeddedSignup';
 import { useToast } from '../../hooks/useToast';
-import { Button, Badge, Skeleton, ConfirmModal } from '../ui';
+import { Button, Badge, Skeleton, ConfirmModal, Input } from '../ui';
 
 interface WhatsappIntegrationTabProps {
   config: WhatsappConfigData;
@@ -353,6 +353,14 @@ export function WhatsappIntegrationTab({
   const [disconnecting, setDisconnecting] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
+  // Manual token form state
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualToken, setManualToken] = useState('');
+  const [manualPhoneId, setManualPhoneId] = useState('');
+  const [manualWabaId, setManualWabaId] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+
   // Sync config when parent refreshes
   useEffect(() => {
     setConfig(initialConfig);
@@ -435,6 +443,34 @@ export function WhatsappIntegrationTab({
     launchSignup();
   };
 
+  // ── Manual Token Connect ─────────────────────────────────────────────────────
+  const handleManualConnect = async () => {
+    if (!manualToken.trim() || !manualPhoneId.trim()) {
+      setManualError('Access Token and Phone Number ID are both required.');
+      return;
+    }
+    setManualLoading(true);
+    setManualError(null);
+    try {
+      const result = await whatsappService.manualConnect({
+        accessToken: manualToken.trim(),
+        phoneNumberId: manualPhoneId.trim(),
+        wabaId: manualWabaId.trim() || undefined,
+      });
+      setConfig(result.config);
+      toast.success('✅ WhatsApp Business connected via manual token!');
+      setShowManualForm(false);
+      setManualToken('');
+      setManualPhoneId('');
+      setManualWabaId('');
+      onUpdated();
+    } catch (err) {
+      setManualError((err as Error).message || 'Failed to connect. Check your token and IDs.');
+    } finally {
+      setManualLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4 animate-fade-in">
@@ -510,6 +546,147 @@ export function WhatsappIntegrationTab({
         onConfirm={handleDisconnect}
         onCancel={() => setShowDisconnectConfirm(false)}
       />
+
+      {/* ── Manual Token Setup Panel ─────────────────────────────────────── */}
+      <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden">
+        <button
+          onClick={() => {
+            setShowManualForm((v) => !v);
+            setManualError(null);
+          }}
+          className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[var(--content-secondary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
+          id="wa-manual-token-toggle"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-base">🔑</span>
+            <span>Manual Token Setup</span>
+            <span className="text-2xs font-normal text-[var(--content-tertiary)] px-1.5 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--surface-border)]">
+              Advanced
+            </span>
+          </span>
+          <span
+            className="text-[var(--content-tertiary)] transition-transform"
+            style={{ transform: showManualForm ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            ▾
+          </span>
+        </button>
+
+        {showManualForm && (
+          <div className="px-5 pb-6 pt-1 space-y-5 border-t border-[var(--surface-border)]">
+            <div className="p-3.5 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-300/90 text-xs space-y-1.5">
+              <p className="font-semibold text-amber-200">
+                ⚠️ Use this when Embedded Signup fails with permission errors
+              </p>
+              <p className="text-amber-300/80 leading-relaxed">
+                The FB.login popup gives a User Access Token that cannot access production WhatsApp
+                Business numbers. You need a <strong>permanent System User Access Token</strong>{' '}
+                from Meta Business Manager.
+              </p>
+              <ol className="list-decimal list-inside space-y-0.5 text-amber-300/75 font-mono text-[11px] mt-2">
+                <li>
+                  Go to <strong>business.facebook.com</strong> → Settings → System Users
+                </li>
+                <li>
+                  Create a System User with <strong>Admin</strong> role
+                </li>
+                <li>
+                  Click <strong>Add Assets</strong> → Apps → select your WhatsApp app → grant Full
+                  Control
+                </li>
+                <li>
+                  Click <strong>Generate New Token</strong> → select your app
+                </li>
+                <li>
+                  Tick <code>whatsapp_business_management</code> +{' '}
+                  <code>whatsapp_business_messaging</code>
+                </li>
+                <li>Copy the token and paste below</li>
+              </ol>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--content-secondary)] mb-1.5">
+                  System User Access Token <span className="text-red-400">*</span>
+                </label>
+                <Input
+                  id="wa-manual-token-input"
+                  placeholder="EAAi... (permanent system user token)"
+                  value={manualToken}
+                  onChange={(e) => {
+                    setManualToken(e.target.value);
+                    setManualError(null);
+                  }}
+                  type="password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--content-secondary)] mb-1.5">
+                  Phone Number ID <span className="text-red-400">*</span>
+                  <span className="ml-2 text-2xs text-[var(--content-tertiary)] font-normal">
+                    found in Meta Dashboard → WhatsApp → API Setup
+                  </span>
+                </label>
+                <Input
+                  id="wa-manual-phone-id-input"
+                  placeholder="e.g. 1194987650372629"
+                  value={manualPhoneId}
+                  onChange={(e) => {
+                    setManualPhoneId(e.target.value);
+                    setManualError(null);
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--content-secondary)] mb-1.5">
+                  WhatsApp Business Account ID
+                  <span className="ml-2 text-2xs text-[var(--content-tertiary)] font-normal">
+                    optional
+                  </span>
+                </label>
+                <Input
+                  id="wa-manual-waba-id-input"
+                  placeholder="e.g. 1428341879273527"
+                  value={manualWabaId}
+                  onChange={(e) => setManualWabaId(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {manualError && (
+              <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-xs leading-relaxed">
+                <p className="font-semibold text-red-200 mb-0.5">Connection Failed</p>
+                {manualError}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                variant="primary"
+                onClick={handleManualConnect}
+                loading={manualLoading}
+                disabled={manualLoading || !manualToken.trim() || !manualPhoneId.trim()}
+                id="wa-manual-connect-btn"
+              >
+                {manualLoading ? 'Validating & Saving…' : 'Save & Connect'}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowManualForm(false);
+                  setManualError(null);
+                }}
+                disabled={manualLoading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

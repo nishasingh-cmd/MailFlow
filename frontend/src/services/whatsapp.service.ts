@@ -181,4 +181,25 @@ export const whatsappService = {
   async disconnect(): Promise<void> {
     await api.post('/whatsapp/disconnect');
   },
+
+  /**
+   * Save a permanent System User Access Token directly (bypasses FB.login).
+   * Use when the embedded signup token doesn't have WhatsApp Business API permissions.
+   */
+  async manualConnect(opts: {
+    accessToken: string;
+    phoneNumberId: string;
+    wabaId?: string;
+  }): Promise<{ config: WhatsappConfigData }> {
+    const { data: envelope } = await api.post<ApiEnvelope<{ config: WhatsappConfigData }>>(
+      '/whatsapp/manual-connect',
+      opts
+    );
+    if (!envelope.success) {
+      throw new Error(
+        (envelope as unknown as { error?: string }).error || 'Manual connect failed.'
+      );
+    }
+    return envelope.data;
+  },
 };

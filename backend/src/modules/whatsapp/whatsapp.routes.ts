@@ -17,6 +17,7 @@ router.use(authenticateUser);
 router.get('/status', WhatsappOnboardingController.getStatus);
 router.post('/connect', WhatsappOnboardingController.initConnect);
 router.post('/callback', WhatsappOnboardingController.handleCallback);
+router.post('/manual-connect', WhatsappOnboardingController.manualConnect);
 router.post('/refresh', WhatsappOnboardingController.refresh);
 router.post('/disconnect', WhatsappOnboardingController.disconnect);
 

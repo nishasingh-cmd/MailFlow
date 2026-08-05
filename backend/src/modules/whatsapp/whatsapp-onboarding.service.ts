@@ -190,38 +190,40 @@ async function fetchPhoneNumberDetails(
   const graphVersion = env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
   const url = `https://graph.facebook.com/${graphVersion}/${phoneNumberId}?fields=id,display_phone_number,verified_name,quality_rating,status`;
 
-  try {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const resData = (await response.json()) as MetaPhoneNumberResponse;
+
+  if (!response.ok || resData.error) {
+    const errCode = resData?.error?.code;
+    const errMsg = resData?.error?.message || `HTTP ${response.status}`;
+    console.error('[WhatsappOnboardingService] Phone number validation failed:', {
+      status: response.status,
+      errorCode: errCode,
+      message: errMsg,
     });
-    const resData = (await response.json()) as MetaPhoneNumberResponse;
 
-    if (!response.ok || resData.error) {
-      console.warn('[WhatsappOnboardingService] Phone number details fetch notice:', {
-        status: response.status,
-        errorCode: resData?.error?.code,
-        message: resData?.error?.message,
-      });
-      return {
-        displayPhone: '+91 82911 63086',
-        verifiedName: 'WhatsApp Business',
-        qualityRating: 'GREEN',
-      };
+    if (errCode === 190) {
+      throw new Error(
+        'Access token is invalid or expired. Please generate a new permanent token from Meta Business Manager → System Users and paste it in the Manual Token field.'
+      );
+    } else if (errCode === 100) {
+      throw new Error(
+        `The access token does not have permission to access Phone Number ID "${phoneNumberId}". ` +
+          'A User Access Token from FB.login cannot manage production WhatsApp Business numbers. ' +
+          'Please generate a permanent System User Access Token from Meta Business Manager → Settings → System Users, ' +
+          'assign whatsapp_business_management + whatsapp_business_messaging permissions, and paste it in Settings → WhatsApp → Manual Token Setup.'
+      );
     }
-
-    return {
-      displayPhone: resData.display_phone_number ?? '+91 82911 63086',
-      verifiedName: resData.verified_name ?? null,
-      qualityRating: resData.quality_rating ?? null,
-    };
-  } catch (err: unknown) {
-    console.warn('[WhatsappOnboardingService] Exception during phone number details fetch:', err);
-    return {
-      displayPhone: '+91 82911 63086',
-      verifiedName: 'WhatsApp Business',
-      qualityRating: 'GREEN',
-    };
+    throw new Error(`Meta API validation failed (code ${errCode || response.status}): ${errMsg}`);
   }
+
+  return {
+    displayPhone: resData.display_phone_number ?? null,
+    verifiedName: resData.verified_name ?? null,
+    qualityRating: resData.quality_rating ?? null,
+  };
 }
 
 // ─── Helper: fetch WABA details ───────────────────────────────────────────────
@@ -398,6 +400,94 @@ export class WhatsappOnboardingService {
 
     console.log(
       `[WhatsappOnboardingService] Connection successful. Status: CONNECTED | User: ${userId}`
+    );
+    return buildSnapshot(wa, userId);
+  }
+
+  /**
+   * POST /api/whatsapp/manual-connect
+   * Directly saves a permanent System User Access Token + Phone Number ID.
+   * Use this when the FB.login embedded signup token lacks the required
+   * whatsapp_business_management / whatsapp_business_messaging permissions.
+   *
+   * Steps to get a valid token:
+   *  1. Meta Business Manager → Settings → System Users
+   *  2. Create/select a System User with Admin role
+   *  3. Assign your WhatsApp app (whatsapp_business_management + whatsapp_business_messaging)
+   *  4. Generate Token → copy it here
+   */
+  static async manualConnect(
+    userId: string,
+    accessToken: string,
+    phoneNumberId: string,
+    wabaId?: string
+  ): Promise<WhatsappConfigSnapshot> {
+    console.log(
+      `[WhatsappOnboardingService] Manual connect initiated for user ${userId} | Phone ID: ${phoneNumberId}`
+    );
+
+    if (!accessToken?.trim()) throw new Error('Access token is required.');
+    if (!phoneNumberId?.trim()) throw new Error('Phone Number ID is required.');
+
+    // Validate token + phone ID against Meta before storing
+    const phoneDetails = await fetchPhoneNumberDetails(phoneNumberId.trim(), accessToken.trim());
+    console.log(
+      `[WhatsappOnboardingService] Manual connect validated. Phone: ${phoneDetails.displayPhone}`
+    );
+
+    let businessName: string | null = null;
+    const resolvedWabaId = wabaId?.trim() || env.WHATSAPP_BUSINESS_ACCOUNT_ID || null;
+    if (resolvedWabaId) {
+      try {
+        const wabaDetails = await fetchWabaDetails(resolvedWabaId, accessToken.trim());
+        businessName = wabaDetails.name;
+      } catch {
+        // Non-fatal: WABA name is optional
+      }
+    }
+
+    const encryptedToken = encrypt(accessToken.trim());
+    const now = new Date();
+
+    const wa = await (
+      prisma.whatsappConfig as unknown as Record<
+        string,
+        (args: unknown) => Promise<Record<string, unknown>>
+      >
+    ).upsert({
+      where: { userId },
+      create: {
+        userId,
+        provider: 'META_CLOUD',
+        businessAccountId: resolvedWabaId,
+        businessName,
+        phoneNumberId: phoneNumberId.trim(),
+        displayPhone: phoneDetails.displayPhone,
+        accessToken: encryptedToken,
+        graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
+        webhookVerifyToken: env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'mailflow_verify_token',
+        status: 'CONNECTED',
+        connectedAt: now,
+        lastTestedAt: now,
+        errorMessage: null,
+      },
+      update: {
+        provider: 'META_CLOUD',
+        businessAccountId: resolvedWabaId,
+        businessName,
+        phoneNumberId: phoneNumberId.trim(),
+        displayPhone: phoneDetails.displayPhone,
+        accessToken: encryptedToken,
+        graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
+        status: 'CONNECTED',
+        connectedAt: now,
+        lastTestedAt: now,
+        errorMessage: null,
+      },
+    });
+
+    console.log(
+      `[WhatsappOnboardingService] Manual connect successful. Status: CONNECTED | User: ${userId}`
     );
     return buildSnapshot(wa, userId);
   }

@@ -56,12 +56,10 @@ export class WhatsappOnboardingController {
       };
 
       if (!code && !accessToken) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'Either authorization code or access token is required.',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'Either authorization code or access token is required.',
+        });
         return;
       }
 
@@ -94,6 +92,60 @@ export class WhatsappOnboardingController {
       res.status(400).json({
         success: false,
         error: err.message || 'Failed to complete WhatsApp connection. Please try again.',
+      });
+    }
+  }
+
+  /**
+   * POST /api/whatsapp/manual-connect
+   * Saves a permanent System User Access Token directly (bypasses FB.login popup).
+   * Required when the embedded signup user token lacks WhatsApp API permissions.
+   */
+  static async manualConnect(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { accessToken, phoneNumberId, wabaId } = req.body as {
+        accessToken?: string;
+        phoneNumberId?: string;
+        wabaId?: string;
+      };
+
+      if (!accessToken?.trim()) {
+        res.status(400).json({ success: false, error: 'accessToken is required.' });
+        return;
+      }
+      if (!phoneNumberId?.trim()) {
+        res.status(400).json({ success: false, error: 'phoneNumberId is required.' });
+        return;
+      }
+
+      console.log('[WhatsappOnboardingController] Manual connect request:', {
+        userId,
+        phoneNumberId,
+        wabaId: wabaId || '(none)',
+        tokenPrefix: accessToken.substring(0, 10) + '...',
+      });
+
+      const config = await WhatsappOnboardingService.manualConnect(
+        userId,
+        accessToken,
+        phoneNumberId,
+        wabaId
+      );
+
+      res.status(200).json({
+        success: true,
+        message: '✅ WhatsApp Business connected successfully via manual token!',
+        data: { config },
+      });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('[WhatsappOnboardingController] manualConnect error:', err.message);
+      res.status(400).json({
+        success: false,
+        error:
+          err.message ||
+          'Failed to save WhatsApp credentials. Please check your token and phone number ID.',
       });
     }
   }
