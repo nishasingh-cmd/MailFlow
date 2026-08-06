@@ -6,14 +6,11 @@ import { WhatsappOnboardingController } from './whatsapp-onboarding.controller';
 
 const router = Router();
 
-// Public Meta Webhook Endpoints (Meta Graph API calls without JWT)
 router.get('/webhook', WhatsappWebhookController.verifyWebhook);
 router.post('/webhook', WhatsappWebhookController.receiveWebhook);
 
-// Protected App Endpoints
 router.use(authenticateUser);
 
-// ── Phase 2: Embedded Signup Onboarding ────────────────────────────────────────
 router.get('/status', WhatsappOnboardingController.getStatus);
 router.post('/connect', WhatsappOnboardingController.initConnect);
 router.post('/callback', WhatsappOnboardingController.handleCallback);
@@ -21,7 +18,6 @@ router.post('/manual-connect', WhatsappOnboardingController.manualConnect);
 router.post('/refresh', WhatsappOnboardingController.refresh);
 router.post('/disconnect', WhatsappOnboardingController.disconnect);
 
-// ── Phase 1: Message Sending & History ─────────────────────────────────────────
 router.post('/generate', WhatsappController.generate);
 router.post('/draft', WhatsappController.saveDraft);
 router.post('/send', WhatsappController.send);

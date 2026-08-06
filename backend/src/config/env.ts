@@ -1,8 +1,3 @@
-/**
- * Environment variable loader and validator.
- * All required env vars are validated at startup — the app will exit early
- * with a clear error message if any are missing.
- */
 import 'dotenv/config';
 
 function requireEnv(name: string): string {

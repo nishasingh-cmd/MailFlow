@@ -17,9 +17,6 @@ interface LeadData {
   } | null;
 }
 
-/**
- * Replace lead variables in text template
- */
 export function personalizeText(templateText: string, lead: LeadData): string {
   if (!templateText) return '';
 
@@ -49,7 +46,6 @@ export function personalizeText(templateText: string, lead: LeadData): string {
     painPoints: painPointsStr || 'industry challenges',
   };
 
-  // Replace custom fields if available
   if (lead.customFields && typeof lead.customFields === 'object') {
     Object.entries(lead.customFields).forEach(([key, val]) => {
       replacements[key] = String(val ?? '');

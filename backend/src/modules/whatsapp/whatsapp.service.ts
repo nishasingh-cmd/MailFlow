@@ -183,12 +183,6 @@ export class WhatsappService {
       )
     );
 
-    for (const job of createdJobs) {
-      console.log(
-        `[Queue] Created WhatsappQueue Record | Queue ID: ${job.id} | Lead ID: ${job.leadId} | Phone: "${job.phone}" | Status: ${job.status}`
-      );
-    }
-
     return {
       message: `${createdJobs.length} WhatsApp message(s) queued for sending.`,
       count: createdJobs.length,
@@ -320,9 +314,6 @@ export class WhatsappService {
     let reQueuedCount = 0;
     for (const job of failedJobs) {
       const activePhone = job.lead?.phone || job.phone;
-      console.log(
-        `[Retry Queue] Job ID: ${job.id} | Lead ID: ${job.leadId} | Syncing Queue Phone: "${job.phone}" -> Latest Lead Phone: "${activePhone}"`
-      );
 
       await prisma.whatsappQueue.update({
         where: { id: job.id },

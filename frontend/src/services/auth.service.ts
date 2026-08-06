@@ -50,8 +50,8 @@ export class AuthService {
   static async logout(): Promise<void> {
     try {
       await api.post('/auth/logout');
-    } catch {
-      // Ignore network errors during logout
+    } catch (err: unknown) {
+      void err;
     } finally {
       clearTokens();
     }

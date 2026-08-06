@@ -32,7 +32,6 @@ const SORT_OPTIONS = [
 export default function Campaigns() {
   const { toast } = useToast();
 
-  // Data state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -40,17 +39,14 @@ export default function Campaigns() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Filter state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'ALL'>('ALL');
   const [sort, setSort] = useState('createdAt-desc');
 
-  // Modal state
   const [createOpen, setCreateOpen] = useState(false);
   const [editCampaign, setEditCampaign] = useState<Campaign | null>(null);
   const [deleteCampaign, setDeleteCampaign] = useState<Campaign | null>(null);
 
-  // Send Modal state
   const [sendCampaign, setSendCampaign] = useState<Campaign | null>(null);
 
   const fetchCampaigns = useCallback(

@@ -1,12 +1,8 @@
 import crypto from 'crypto';
 
-// Secret key for AES-256-GCM encryption
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'mailflow_default_secret_key_32b_phrase!';
 const ALGORITHM = 'aes-256-gcm';
 
-/**
- * Encrypt a plain text string (e.g. SMTP password)
- */
 export function encryptText(text: string): string {
   if (!text) return '';
   const iv = crypto.randomBytes(12);

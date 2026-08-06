@@ -1,6 +1,3 @@
-/**
- * MailFlow — Shared Types for Phase 12: Settings & Integrations
- */
 import type { WhatsappConfigData } from './whatsapp.types';
 
 export interface UserProfileData {

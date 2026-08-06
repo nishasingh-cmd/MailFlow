@@ -220,14 +220,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                     setStatus('processing');
 
                     const accessToken = response.authResponse.accessToken;
-                    console.log(
-                      '[useMetaEmbeddedSignup] Step 3: Access token received from Facebook SDK. Relaying to backend:',
-                      {
-                        tokenPrefix: accessToken.substring(0, 10) + '...',
-                        wabaId: metaWabaId,
-                        phoneNumberId: metaPhoneId,
-                      }
-                    );
 
                     const result = await whatsappService.handleCallback({
                       accessToken,

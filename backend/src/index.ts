@@ -1,7 +1,3 @@
-/**
- * MailFlow Backend — Express entry point.
- * Phase 9: Email Delivery Engine
- */
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -26,13 +22,11 @@ import { WhatsappWorker } from './modules/whatsapp/whatsapp.worker';
 
 const app = express();
 
-// ── Security & parsing middleware ──────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Routes ─────────────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
   res.json({
     name: 'MailFlow API',
@@ -76,7 +70,6 @@ app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/analytics', analyticsRouter);
 
-// ── State Guards & Server Reference ──────────────────────────────────────────
 let server: Server | null = null;
 let isBootstrapping = false;
 let isShuttingDown = false;
@@ -94,7 +87,6 @@ function logPortOwner(port: number) {
   }
 }
 
-// ── Graceful Shutdown Handler ────────────────────────────────────────────────
 async function gracefulShutdown(signal: string) {
   if (isShuttingDown) return;
   isShuttingDown = true;
@@ -137,7 +129,6 @@ process.once('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-// ── Start server ───────────────────────────────────────────────────────────────
 async function bootstrap() {
   if (isBootstrapping) {
     console.warn('[bootstrap] Bootstrap already in progress. Skipping duplicate execution.');

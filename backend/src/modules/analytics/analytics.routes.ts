@@ -4,7 +4,6 @@ import { AnalyticsController } from './analytics.controller';
 
 const router = Router();
 
-// Protect all analytics endpoints with JWT authentication
 router.use(authenticateUser);
 
 router.get('/overview', AnalyticsController.getOverview);

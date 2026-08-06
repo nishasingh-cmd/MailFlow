@@ -165,20 +165,10 @@ function EmailGeneratorDrawerInner({
   const handleGenerate = async (selectedTpl: EmailTemplateType = template, isRegen = false) => {
     if (!leadId) return;
 
-    if (isRegen) {
-      console.log(`[EmailGenerator] Regeneration button clicked: leadId = ${leadId}`);
-    } else {
-      console.log(`[EmailGenerator] Generation button clicked: leadId = ${leadId}`);
-    }
-
     setIsGenerating(true);
     const regenSeed = Date.now();
 
     try {
-      console.log(
-        `[EmailGenerator] API request sent: template = ${selectedTpl}, regenerate = ${isRegen}, seed = ${regenSeed}`
-      );
-
       const res: GeneratedEmailResult = await emailGenerationService.generateEmail({
         leadId,
         template: selectedTpl,
@@ -191,8 +181,6 @@ function EmailGeneratorDrawerInner({
         },
       });
 
-      console.log(`[EmailGenerator] API response received: subject = "${res?.selectedSubject}"`);
-
       // Guard all fields — API may return partial data or nulls
       const subjects = Array.isArray(res?.subjectSuggestions) ? res.subjectSuggestions : [];
       const selectedSubj = res?.selectedSubject ?? subjects[0] ?? '';
@@ -202,7 +190,6 @@ function EmailGeneratorDrawerInner({
       setSubject(selectedSubj);
       setBody(emailBody);
 
-      console.log('[EmailGenerator] Previous email replaced successfully');
       toast.success(
         isRegen
           ? 'New AI email generated with fresh subjects & phrasing!'

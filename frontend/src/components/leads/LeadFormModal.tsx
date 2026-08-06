@@ -78,26 +78,20 @@ export function LeadFormModal({ isOpen, onClose, lead, onSuccess }: LeadFormModa
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    console.log('[LeadForm] Form submitted:', formData);
-
     if (!validate()) {
-      console.log('[LeadForm] Validation failed:', errors);
       return;
     }
 
     if (isLoading) return; // prevent double-submit
 
     setIsLoading(true);
-    console.log('[LeadForm] API request sending...');
 
     try {
       if (isEditing && lead) {
         await leadService.updateLead(lead.id, formData);
-        console.log('[LeadForm] Lead updated successfully');
         toast.success('Lead updated successfully.');
       } else {
         await leadService.createLead(formData);
-        console.log('[LeadForm] Lead created successfully');
         toast.success('Lead created successfully.');
       }
       onSuccess();

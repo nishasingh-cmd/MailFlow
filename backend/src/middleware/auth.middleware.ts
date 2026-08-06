@@ -7,9 +7,6 @@ export interface AuthenticatedRequest extends Request {
   file?: Express.Multer.File;
 }
 
-/**
- * Middleware to protect routes by validating JWT access token in Authorization header.
- */
 export function authenticateUser(
   req: AuthenticatedRequest,
   res: Response,

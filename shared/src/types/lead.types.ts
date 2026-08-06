@@ -1,7 +1,3 @@
-/**
- * Shared types for MailFlow — Lead Management Module (Phase 5).
- */
-
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'UNSUBSCRIBED' | 'BOUNCED';
 
 export interface Lead {
@@ -151,10 +147,6 @@ export interface PaginatedLeadsResponse {
   totalPages: number;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 6 — AI Company Research Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type ResearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface Company {
@@ -214,10 +206,6 @@ export interface LeadWithResearch extends Lead {
   companyId?: string | null;
   companyRef?: Company | null;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 7 — AI Email Generation Types
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type EmailTemplateType =
   'Cold Outreach' | 'Follow-up' | 'Partnership' | 'Product Demo' | 'Custom Template';
@@ -292,10 +280,6 @@ export interface UpdateDraftRequest {
   template?: string;
   status?: DraftStatus;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 8 — Campaign Management Types
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type CampaignStatus =
   | 'DRAFT'

@@ -1,12 +1,3 @@
-/**
- * MailFlow — AI & Web Intelligence Research Engine
- * Phase 6: AI Company Research
- *
- * Multi-provider research architecture:
- * 1. Google Gemini API (if GEMINI_API_KEY exists)
- * 2. OpenAI API (if OPENAI_API_KEY exists)
- * 3. DuckDuckGo & B2B Knowledge Engine (Zero-config web fallback)
- */
 import { env } from '../config/env';
 
 export interface CompanyIntelligence {
@@ -24,10 +15,6 @@ export interface CompanyIntelligence {
   detectedWebsite: string;
   providerUsed: string;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Prompt Builder
-// ─────────────────────────────────────────────────────────────────────────────
 
 function buildResearchPrompt(companyName: string, existingWebsite?: string | null): string {
   const websiteHint = existingWebsite ? `Known website: ${existingWebsite}` : '';
@@ -64,10 +51,6 @@ Return ONLY a valid JSON object matching this exact structure:
 Do not include markdown backticks or commentary outside the JSON object.`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Response Cleaner & Validator
-// ─────────────────────────────────────────────────────────────────────────────
-
 function parseAndCleanJSON(rawText: string, providerName: string): CompanyIntelligence {
   const cleaned = rawText
     .replace(/```json\s*/gi, '')
@@ -96,10 +79,6 @@ function parseAndCleanJSON(rawText: string, providerName: string): CompanyIntell
     throw new Error(`AI_PARSE_ERROR: Failed to parse response from ${providerName}`);
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider 1: Google Gemini API
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function callGemini(
   companyName: string,
@@ -149,10 +128,6 @@ async function callGemini(
     clearTimeout(timeoutId);
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider 2: OpenAI API
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function callOpenAI(
   companyName: string,
@@ -207,10 +182,6 @@ async function callOpenAI(
     clearTimeout(timeoutId);
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider 3: Knowledge & Web Intelligence Fallback Engine
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface KnownCompanyData {
   website: string;
@@ -383,10 +354,6 @@ function generateKnowledgeResearch(
     providerUsed: 'Web Intelligence Engine',
   };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Master Research Orchestrator with Multi-Provider Fallbacks
-// ─────────────────────────────────────────────────────────────────────────────
 
 export async function researchCompanyWithAI(
   companyName: string,

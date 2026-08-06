@@ -43,7 +43,6 @@ const SORT_OPTIONS = [
   { value: 'company-asc', label: 'Company (A-Z)' },
 ];
 
-// Lead with research status attached
 interface LeadWithStatus extends Lead {
   researchStatus?: string | null;
 }
@@ -51,10 +50,8 @@ interface LeadWithStatus extends Lead {
 export default function Leads() {
   const { toast } = useToast();
 
-  // ── Tab State ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'LEADS' | 'HISTORY' | 'RESEARCH'>('LEADS');
 
-  // ── Leads State ───────────────────────────────────────────────────────────
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -68,7 +65,6 @@ export default function Leads() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // ── Modals & Drawers State ─────────────────────────────────────────────────
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
@@ -79,11 +75,9 @@ export default function Leads() {
   >(null);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
 
-  // ── Import History State ───────────────────────────────────────────────────
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
   const [stats, setStats] = useState({
     total: 0,
     newCount: 0,
@@ -91,7 +85,6 @@ export default function Leads() {
     qualifiedCount: 0,
   });
 
-  // ── Research State ─────────────────────────────────────────────────────────
   const [researchLeads, setResearchLeads] = useState<LeadWithStatus[]>([]);
   const [researchLeadsLoading, setResearchLeadsLoading] = useState(false);
   const [researchStatuses, setResearchStatuses] = useState<Record<string, string | null>>({});

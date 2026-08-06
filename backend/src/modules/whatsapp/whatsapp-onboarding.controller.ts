@@ -63,14 +63,6 @@ export class WhatsappOnboardingController {
         return;
       }
 
-      console.log('[WhatsappOnboardingController] Step 2: Callback API received from frontend:', {
-        userId,
-        flow: accessToken ? 'direct_token' : 'code_exchange',
-        tokenOrCodePrefix: (accessToken || code || '').substring(0, 10) + '...',
-        wabaId: wabaId || '(from_env)',
-        phoneNumberId: phoneNumberId || '(from_env)',
-      });
-
       const config = await WhatsappOnboardingService.handleCallback(
         userId,
         code,
@@ -118,13 +110,6 @@ export class WhatsappOnboardingController {
         res.status(400).json({ success: false, error: 'phoneNumberId is required.' });
         return;
       }
-
-      console.log('[WhatsappOnboardingController] Manual connect request:', {
-        userId,
-        phoneNumberId,
-        wabaId: wabaId || '(none)',
-        tokenPrefix: accessToken.substring(0, 10) + '...',
-      });
 
       const config = await WhatsappOnboardingService.manualConnect(
         userId,

@@ -1,9 +1,6 @@
 import * as xlsx from 'xlsx';
 import { ColumnMapping, ParsedFilePreview } from '@mailflow/shared';
 
-/**
- * Smart column mapping keywords dictionary
- */
 const FIELD_KEYWORDS: Record<string, string[]> = {
   name: [
     'name',
@@ -31,9 +28,6 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
   industry: ['industry', 'sector', 'niche', 'vertical', 'business type'],
 };
 
-/**
- * Auto-detect column mapping based on header strings
- */
 export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {
     name: '',
@@ -48,10 +42,8 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
   const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
 
   for (const [targetField, keywords] of Object.entries(FIELD_KEYWORDS)) {
-    // 1. Exact match search
     let matchIndex = normalizedHeaders.findIndex((h) => keywords.includes(h));
 
-    // 2. Substring match fallback
     if (matchIndex === -1) {
       matchIndex = normalizedHeaders.findIndex((h) =>
         keywords.some((kw) => h.includes(kw) || kw.includes(h))
@@ -66,9 +58,6 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
   return mapping;
 }
 
-/**
- * Parse CSV or Excel file buffer into structured JSON rows & header metadata
- */
 export function parseFileBuffer(
   fileBuffer: Buffer,
   fileName: string,
@@ -87,13 +76,11 @@ export function parseFileBuffer(
     throw new Error('FILE_EMPTY: The uploaded file has no data rows.');
   }
 
-  // Extract column headers from first row keys
   const headers = Object.keys(rawJson[0]);
   if (headers.length === 0) {
     throw new Error('INVALID_FORMAT: Could not detect valid headers in the file.');
   }
 
-  // Normalize row contents to string primitives
   const sampleRows = rawJson.slice(0, 10).map((row) => {
     const cleanedRow: Record<string, string> = {};
     headers.forEach((h) => {

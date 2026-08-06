@@ -53,9 +53,6 @@ export class MockWhatsappProvider implements IWhatsappProvider {
 
   async sendMessage(opts: WhatsappSendOptions): Promise<WhatsappSendResult> {
     const delayMs = 1500 + Math.floor(Math.random() * 1500);
-    console.log(
-      `[MockWhatsappProvider] Simulating dispatch to ${opts.phone} (Latency: ${delayMs}ms)...`
-    );
 
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
@@ -65,9 +62,6 @@ export class MockWhatsappProvider implements IWhatsappProvider {
     }
 
     const mockMessageId = `wa_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    console.log(
-      `[MockWhatsappProvider] ✅ Message delivered successfully to ${opts.phone}. ID: ${mockMessageId}`
-    );
 
     return {
       success: true,
@@ -116,8 +110,6 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
 
   async sendMessage(opts: WhatsappSendOptions): Promise<WhatsappSendResult> {
     const formattedPhone = this.formatPhoneNumber(opts.phone);
-    console.log(`[Lead] Lead ID: ${opts.leadId || 'N/A'} | Input Phone: "${opts.phone}"`);
-    console.log(`[Provider] Using Provider: META_CLOUD | Recipient E.164: "+${formattedPhone}"`);
 
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${this.phoneNumberId}/messages`;
 

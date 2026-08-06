@@ -28,7 +28,6 @@ export default function WhatsappPage() {
 
   const [activeTab, setActiveTab] = useState<'history' | 'failed'>('history');
 
-  // Stats
   const [stats, setStats] = useState<WhatsappStats>({
     totalSent: 0,
     delivered: 0,
@@ -41,7 +40,6 @@ export default function WhatsappPage() {
     provider: 'MOCK',
   });
 
-  // History state
   const [logs, setLogs] = useState<WhatsappLogItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -49,23 +47,20 @@ export default function WhatsappPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Failed queue state
   const [failedJobs, setFailedJobs] = useState<WhatsappQueueItem[]>([]);
   const [failedLoading, setFailedLoading] = useState(false);
   const [selectedFailedIds, setSelectedFailedIds] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Fetch metrics
   const fetchStats = useCallback(async () => {
     try {
       const s = await whatsappService.getStats();
       setStats(s);
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      void err;
     }
   }, []);
 
-  // Fetch History Logs
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {

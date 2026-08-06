@@ -1,7 +1,3 @@
-/**
- * MailFlow — Shared Types for Phase 9: Email Delivery Engine
- */
-
 export type SmtpProviderType = 'GMAIL' | 'OUTLOOK' | 'CUSTOM';
 export type SmtpEncryption = 'TLS' | 'SSL' | 'NONE';
 export type QueueJobStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED';

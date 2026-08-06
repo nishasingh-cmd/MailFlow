@@ -16,8 +16,6 @@ export class WhatsappWebhookController {
       const token = req.query['hub.verify_token'] as string;
       const challenge = req.query['hub.challenge'] as string;
 
-      console.log('[WhatsappWebhook] Verification request received mode:', mode);
-
       if (mode !== 'subscribe' || !token) {
         res.status(403).json({ error: 'Forbidden: Invalid mode or missing verify token.' });
         return;
@@ -37,7 +35,6 @@ export class WhatsappWebhookController {
       ]);
 
       if (validTokens.has(token)) {
-        console.log('[WhatsappWebhook] ✅ Webhook verified successfully!');
         res.status(200).send(challenge);
         return;
       }
@@ -95,10 +92,6 @@ export class WhatsappWebhookController {
             const statusStr = ((st.status as string) || '').toLowerCase(); // 'sent' | 'delivered' | 'read' | 'failed'
             const timestampSec = Number(st.timestamp) || Math.floor(Date.now() / 1000);
             const statusDate = new Date(timestampSec * 1000);
-
-            console.log(
-              `[WhatsappWebhook] Real-time Status Event: ${messageId} -> ${statusStr.toUpperCase()}`
-            );
 
             // Find matching WhatsappLog by messageId
             const logEntry = await prisma.whatsappLog.findFirst({

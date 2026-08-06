@@ -123,11 +123,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  // ─── Phase 2: Embedded Signup Onboarding ─────────────────────────────────────
-
-  /**
-   * Get current WhatsApp connection status & config
-   */
   async getConnectionStatus(): Promise<{
     connected: boolean;
     config: WhatsappConfigData;

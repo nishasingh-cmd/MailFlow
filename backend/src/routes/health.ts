@@ -4,10 +4,6 @@ import type { HealthCheckResponse } from '@mailflow/shared';
 
 const router = Router();
 
-/**
- * GET /api/health
- * Basic liveness check — confirms the Express server is running.
- */
 router.get('/', (_req: Request, res: Response) => {
   const response: HealthCheckResponse = {
     status: 'ok',

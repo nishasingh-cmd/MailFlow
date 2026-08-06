@@ -1,8 +1,3 @@
-/**
- * Redis client singleton using ioredis.
- * BullMQ queues will be wired in a later phase (per the Technical Architecture Document).
- * This module establishes the connection and exports a connectivity check helper.
- */
 import Redis from 'ioredis';
 import { env } from './env';
 
@@ -44,10 +39,6 @@ export function getRedisClient(): Redis {
   return _redis;
 }
 
-/**
- * Verify Redis connectivity at startup.
- * Sends a PING and logs the result.
- */
 export async function checkRedisConnection(): Promise<boolean> {
   try {
     const client = getRedisClient();
@@ -81,5 +72,4 @@ export async function closeRedisConnection(): Promise<void> {
   }
 }
 
-// Export singleton for use in routes/services
 export const redis = getRedisClient();

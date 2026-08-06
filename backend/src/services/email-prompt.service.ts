@@ -1,10 +1,3 @@
-/**
- * MailFlow — Email Prompt Builder Service
- * Phase 7: AI Email Generation
- *
- * Constructs structured, modular, and reusable prompts combining:
- * Lead data, Company research intelligence, Sender context, and Template type.
- */
 import { EmailTemplateType, UserOutreachContext } from '@mailflow/shared';
 
 export interface PromptContext {

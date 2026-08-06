@@ -1,8 +1,3 @@
-/**
- * MailFlow — Analytics & Reporting Shared Type Definitions
- * Phase 11: Analytics & Reporting
- */
-
 export type DateRangePreset = 'today' | 'last_7_days' | 'last_30_days' | 'this_month' | 'custom';
 
 export interface AnalyticsFilterInput {
@@ -11,7 +6,7 @@ export interface AnalyticsFilterInput {
   endDate?: string;
   campaignId?: string;
   status?: string;
-  leadSource?: string; // 'ALL' | 'IMPORTED' | 'MANUAL'
+  leadSource?: string;
   industry?: string;
   search?: string;
 }
@@ -52,9 +47,9 @@ export interface CampaignPerformanceItem {
   whatsappSent: number;
   pending: number;
   failed: number;
-  openRate: number; // Percentage (0-100)
-  replyRate: number; // Percentage (0-100)
-  performanceScore: number; // Scaled metric for sorting
+  openRate: number;
+  replyRate: number;
+  performanceScore: number;
 }
 
 export interface DistributionItem {
@@ -81,7 +76,7 @@ export interface EmailAnalytics {
   sent: number;
   failed: number;
   retryCount: number;
-  successRate: number; // 0 - 100
+  successRate: number;
   avgDeliveryTimeSeconds: number;
 }
 

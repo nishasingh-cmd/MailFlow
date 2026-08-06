@@ -9,7 +9,6 @@ export const api = axios.create({
   },
 });
 
-/** Token management helpers */
 export function getAccessToken(): string | null {
   return localStorage.getItem('mailflow-token');
 }
@@ -29,7 +28,6 @@ export function clearTokens(): void {
   localStorage.removeItem('mailflow-auth');
 }
 
-// ── Request Interceptor: Attach Access Token ──────────────────────────────────
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
@@ -41,7 +39,6 @@ api.interceptors.request.use(
   (error: unknown) => Promise.reject(error)
 );
 
-// ── Response Interceptor: Automatic Refresh Token Handling ────────────────────
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;

@@ -146,20 +146,8 @@ async function exchangeCodeForToken(code: string, redirectUri?: string): Promise
 
   const params = new URLSearchParams(paramObj);
 
-  console.log('[WhatsappOnboardingService] Initiating Meta OAuth token exchange:', {
-    appId,
-    codePrefix: code.substring(0, 10) + '...',
-    redirectUri: redirectUri || '(none)',
-  });
-
   const response = await fetch(`${url}?${params.toString()}`, { method: 'GET' });
   const resData = (await response.json()) as MetaTokenResponse;
-
-  console.log('[WhatsappOnboardingService] Raw Meta Graph API Token Exchange Response:', {
-    httpStatus: response.status,
-    ok: response.ok,
-    resData,
-  });
 
   if (!response.ok || !resData.access_token) {
     const errMsg = resData?.error?.message || `Token exchange failed (HTTP ${response.status}).`;

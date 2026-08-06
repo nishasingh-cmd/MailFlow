@@ -75,12 +75,6 @@ export class WhatsappController {
         sendAll?: boolean;
       };
 
-      console.log(
-        `[API] Received WhatsApp send request | User ID: ${userId} | leadIds: ${JSON.stringify(
-          leadIds || []
-        )} | campaignId: ${campaignId || 'N/A'} | sendAll: ${!!sendAll}`
-      );
-
       const result = await WhatsappService.enqueueMessages(userId, {
         leadIds,
         campaignId,

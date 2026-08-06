@@ -1,7 +1,3 @@
-/**
- * MailFlow — Shared Types for Phase 10: WhatsApp Outreach Module & Meta Cloud API Integration
- */
-
 export type CampaignChannel = 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
 export type WhatsappMessageStatus =
   'DRAFT' | 'QUEUED' | 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'CANCELLED';

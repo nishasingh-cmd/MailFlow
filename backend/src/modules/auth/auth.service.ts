@@ -24,9 +24,6 @@ function sanitizeUser(user: {
 }
 
 export class AuthService {
-  /**
-   * Register a new user account.
-   */
   static async register(name: string, email: string, password: string): Promise<AuthResponse> {
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (existing) {
@@ -59,9 +56,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Log in an existing user.
-   */
   static async login(email: string, password: string): Promise<AuthResponse> {
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (!user) {
@@ -89,9 +83,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Refresh expired access token using a valid refresh token.
-   */
   static async refresh(token: string): Promise<TokenRefreshResponse> {
     let payload;
     try {
@@ -120,9 +111,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Log out user by clearing their stored refresh token.
-   */
   static async logout(userId: string): Promise<void> {
     await prisma.user.update({
       where: { id: userId },
@@ -130,13 +118,9 @@ export class AuthService {
     });
   }
 
-  /**
-   * Generate temporary password reset token.
-   */
   static async forgotPassword(email: string): Promise<{ message: string; resetToken?: string }> {
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (!user) {
-      // Return generic message to prevent email enumeration
       return {
         message: 'If an account with that email exists, a password reset link has been issued.',
       };
@@ -150,9 +134,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Reset user password using reset token.
-   */
   static async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     let payload;
     try {

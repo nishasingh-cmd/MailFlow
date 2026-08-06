@@ -1,10 +1,3 @@
-/**
- * MailFlow — AI Email Generator Engine
- * Phase 7: AI Email Generation
- *
- * Multi-provider execution engine (Google Gemini API, OpenAI GPT, with Intelligent Fallback).
- * Generates personalized cold outreach emails and subject line suggestions based on research.
- */
 import { env } from '../config/env';
 import { GeneratedEmailResult, GeneratedEmailSections } from '@mailflow/shared';
 import { EmailPromptService, PromptContext } from './email-prompt.service';
