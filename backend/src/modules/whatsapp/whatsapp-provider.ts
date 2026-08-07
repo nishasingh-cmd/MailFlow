@@ -11,6 +11,7 @@ export interface WhatsappSendOptions {
   campaignId?: string;
   templateName?: string;
   useTemplate?: boolean;
+  templateParams?: string[];
 }
 
 export interface WhatsappSendResult {
@@ -127,6 +128,16 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       return { response, resData };
     };
 
+    const templateComponents =
+      opts.templateParams && opts.templateParams.length > 0
+        ? [
+            {
+              type: 'body',
+              parameters: opts.templateParams.map((p) => ({ type: 'text', text: p })),
+            },
+          ]
+        : undefined;
+
     const templatePayload = {
       messaging_product: 'whatsapp',
       to: formattedPhone,
@@ -134,6 +145,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       template: {
         name: opts.templateName || 'hello_world',
         language: { code: 'en_US' },
+        ...(templateComponents && { components: templateComponents }),
       },
     };
 
