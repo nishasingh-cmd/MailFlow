@@ -148,7 +148,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       type: 'template',
       template: {
         name: opts.templateName!,
-        language: { code: 'en_US' },
+        language: { code: 'en' },
         ...(templateComponents && { components: templateComponents }),
       },
     };
