@@ -87,6 +87,9 @@ export class WhatsappWorker {
           userId: job.userId,
           leadId: job.leadId,
           campaignId: job.campaignId || undefined,
+          useTemplate: job.useTemplate || job.sendType === 'TEMPLATE',
+          templateName: job.templateName || undefined,
+          templateParams: (job.templateParams as string[]) || undefined,
         });
 
         const sentTime = new Date();

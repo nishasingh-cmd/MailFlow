@@ -34,4 +34,5 @@ export const env = {
   WHATSAPP_APP_ID: process.env.WHATSAPP_APP_ID ?? '',
   WHATSAPP_CONFIG_ID: process.env.WHATSAPP_CONFIG_ID ?? '',
   WHATSAPP_REDIRECT_URI: process.env.WHATSAPP_REDIRECT_URI ?? '',
+  WHATSAPP_DEFAULT_TEMPLATE_NAME: process.env.WHATSAPP_DEFAULT_TEMPLATE_NAME ?? 'cold_outreach',
 } as const;

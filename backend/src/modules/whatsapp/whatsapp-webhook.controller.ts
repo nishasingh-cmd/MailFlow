@@ -149,6 +149,109 @@ export class WhatsappWebhookController {
               processedCount++;
             }
           }
+
+          // Handle inbound messages (value.messages) sent from leads
+          const messages = value.messages || [];
+          if (messages.length > 0) {
+            const phoneNumberId = value.metadata?.phone_number_id;
+            const wabaId = entry.id;
+
+            let config = null;
+            if (phoneNumberId) {
+              config = await prisma.whatsappConfig.findFirst({
+                where: { phoneNumberId },
+              });
+            }
+            if (!config && wabaId) {
+              config = await prisma.whatsappConfig.findFirst({
+                where: { businessAccountId: wabaId },
+              });
+            }
+            if (!config) {
+              config = await prisma.whatsappConfig.findFirst({
+                where: { status: { in: ['CONNECTED', 'MOCK_ACTIVE'] } },
+              });
+            }
+
+            const owningUserId = config?.userId;
+
+            for (const msg of messages) {
+              const rawFrom = msg.from;
+              if (!rawFrom) continue;
+
+              const cleanFromDigits = rawFrom.replace(/[^\d]/g, '');
+              const timestampSec = Number(msg.timestamp) || Math.floor(Date.now() / 1000);
+              const inboundDate = new Date(timestampSec * 1000);
+
+              const messageText =
+                msg.text?.body ||
+                msg.button?.text ||
+                msg.interactive?.button_reply?.title ||
+                msg.type ||
+                'Inbound WhatsApp Message';
+
+              const leadWhere = owningUserId ? { userId: owningUserId } : {};
+              const candidates = await prisma.lead.findMany({
+                where: leadWhere,
+                select: { id: true, userId: true, phone: true },
+              });
+
+              let matchedLead = candidates.find((l) => {
+                if (!l.phone) return false;
+                const cleanLeadPhone = l.phone.replace(/[^\d]/g, '');
+                return (
+                  cleanLeadPhone === cleanFromDigits ||
+                  cleanLeadPhone.endsWith(cleanFromDigits) ||
+                  cleanFromDigits.endsWith(cleanLeadPhone)
+                );
+              });
+
+              if (!matchedLead && owningUserId) {
+                const allLeads = await prisma.lead.findMany({
+                  select: { id: true, userId: true, phone: true },
+                });
+                matchedLead = allLeads.find((l) => {
+                  if (!l.phone) return false;
+                  const cleanLeadPhone = l.phone.replace(/[^\d]/g, '');
+                  return (
+                    cleanLeadPhone === cleanFromDigits ||
+                    cleanLeadPhone.endsWith(cleanFromDigits) ||
+                    cleanFromDigits.endsWith(cleanLeadPhone)
+                  );
+                });
+              }
+
+              if (matchedLead) {
+                await prisma.lead.update({
+                  where: { id: matchedLead.id },
+                  data: { lastInboundMessageAt: inboundDate },
+                });
+
+                await prisma.whatsappLog.create({
+                  data: {
+                    userId: matchedLead.userId,
+                    leadId: matchedLead.id,
+                    phone: rawFrom,
+                    message: messageText,
+                    status: 'RECEIVED',
+                    direction: 'INBOUND',
+                    provider: 'META_CLOUD',
+                    messageId: msg.id || `inbound_${Date.now()}`,
+                    sentAt: inboundDate,
+                  },
+                });
+
+                console.log(
+                  `[WhatsappWebhook] ✅ Captured inbound reply from Lead ID ${matchedLead.id} (${rawFrom}). Updated lastInboundMessageAt.`
+                );
+                processedCount++;
+              } else {
+                console.warn(
+                  `[WhatsappWebhook] ⚠️ Received inbound message from ${rawFrom}, but no matching lead was found.`
+                );
+              }
+            }
+          }
         }
       }
 

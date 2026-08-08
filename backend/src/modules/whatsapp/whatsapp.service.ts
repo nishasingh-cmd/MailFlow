@@ -1,6 +1,7 @@
 import { PrismaClient, QueueJobStatus, Prisma } from '@prisma/client';
 import { WhatsappGeneratorService } from './whatsapp-generator.service';
 import { WhatsappTemplateService } from './whatsapp-template.service';
+import { env } from '../../config/env';
 
 const prisma = new PrismaClient();
 
@@ -51,6 +52,8 @@ export class WhatsappService {
       leadIds?: string[];
       campaignId?: string;
       templateId?: string;
+      templateName?: string;
+      templateParams?: string[];
       message?: string;
       variables?: Record<string, string>;
       sendAll?: boolean;
@@ -63,6 +66,7 @@ export class WhatsappService {
       email: string;
       company: string | null;
       phone: string | null;
+      lastInboundMessageAt?: Date | null;
     }>;
 
     const rawLeadIds = input.leadIds || (input.leadId ? [input.leadId] : []);
@@ -77,12 +81,26 @@ export class WhatsappService {
     } else if (input.sendAll) {
       targetLeads = await prisma.lead.findMany({
         where: { userId },
-        select: { id: true, name: true, email: true, company: true, phone: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          company: true,
+          phone: true,
+          lastInboundMessageAt: true,
+        },
       });
     } else if (rawLeadIds.length > 0) {
       targetLeads = await prisma.lead.findMany({
         where: { userId, id: { in: rawLeadIds } },
-        select: { id: true, name: true, email: true, company: true, phone: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          company: true,
+          phone: true,
+          lastInboundMessageAt: true,
+        },
       });
     } else {
       throw new Error('Please select at least one recipient lead.');
@@ -108,17 +126,7 @@ export class WhatsappService {
     }
 
     // Process leads and generate/retrieve message per lead
-    const queueItems: Array<{
-      userId: string;
-      campaignId?: string | null;
-      leadId: string;
-      templateId?: string | null;
-      phone: string;
-      message: string;
-      status: QueueJobStatus;
-      attempts: number;
-      maxRetries: number;
-    }> = [];
+    const queueItems: Prisma.WhatsappQueueUncheckedCreateInput[] = [];
 
     for (const lead of targetLeads) {
       const activePhone = input.phone?.trim() || lead.phone?.trim();
@@ -133,28 +141,57 @@ export class WhatsappService {
         continue;
       }
 
+      // Check 24-hour customer service window
+      const lastInbound = lead.lastInboundMessageAt;
+      const isWithin24h =
+        !!lastInbound && Date.now() - new Date(lastInbound).getTime() < 24 * 60 * 60 * 1000;
+
+      let sendType: 'TEMPLATE' | 'TEXT' = 'TEXT';
+      let useTemplate = false;
+      let templateName: string | null = null;
+      let templateParams: string[] | null = null;
+
+      if (!isWithin24h) {
+        sendType = 'TEMPLATE';
+        useTemplate = true;
+        templateName = input.templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';
+        if (input.templateParams) {
+          templateParams = input.templateParams;
+        } else if (templateName === 'hello_world') {
+          templateParams = [];
+        } else {
+          templateParams = [lead.name || 'there'];
+        }
+      }
+
       let messageText: string = input.message || '';
 
-      if (template) {
-        const mergedVars: Record<string, string> = {
-          contact_name: lead.name,
-          name: lead.name,
-          company_name: lead.company || 'your company',
-          company: lead.company || 'your company',
-          email: lead.email,
-          phone: activePhone,
-          ...(input.variables || {}),
-        };
-        messageText = WhatsappTemplateService.substituteVariables(template.body, mergedVars);
-      } else if (!messageText) {
-        const draft = await prisma.whatsappDraft.findFirst({
-          where: { userId, leadId: lead.id },
-        });
-        if (draft?.message) {
-          messageText = draft.message;
-        } else {
-          const generated = await WhatsappGeneratorService.generateMessage(userId, lead.id);
-          messageText = generated.message;
+      if (useTemplate) {
+        if (!messageText) {
+          messageText = `[Template Send: ${templateName}]`;
+        }
+      } else {
+        if (template) {
+          const mergedVars: Record<string, string> = {
+            contact_name: lead.name,
+            name: lead.name,
+            company_name: lead.company || 'your company',
+            company: lead.company || 'your company',
+            email: lead.email,
+            phone: activePhone,
+            ...(input.variables || {}),
+          };
+          messageText = WhatsappTemplateService.substituteVariables(template.body, mergedVars);
+        } else if (!messageText) {
+          const draft = await prisma.whatsappDraft.findFirst({
+            where: { userId, leadId: lead.id },
+          });
+          if (draft?.message) {
+            messageText = draft.message;
+          } else {
+            const generated = await WhatsappGeneratorService.generateMessage(userId, lead.id);
+            messageText = generated.message;
+          }
         }
       }
 
@@ -164,6 +201,12 @@ export class WhatsappService {
         leadId: lead.id,
         phone: activePhone,
         message: messageText,
+        sendType,
+        useTemplate,
+        templateName,
+        templateParams: templateParams
+          ? (templateParams as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
         status: 'PENDING' as QueueJobStatus,
         attempts: 0,
         maxRetries: 3,

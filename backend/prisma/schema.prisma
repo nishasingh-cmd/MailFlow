@@ -55,31 +55,32 @@ enum ResearchStatus {
 }
 
 model Lead {
-  id              String         @id @default(cuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  importHistoryId String?
-  importHistory   ImportHistory? @relation(fields: [importHistoryId], references: [id], onDelete: SetNull)
-  companyId       String?
-  companyRef      Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  name            String
-  email           String
-  company         String?
-  phone           String?
-  website         String?
-  linkedin        String?
-  industry        String?
-  status          LeadStatus     @default(NEW)
-  customFields    Json?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  emailDrafts     EmailDraft[]
-  campaignLeads   CampaignLead[]
-  emailQueues     EmailQueue[]
-  emailLogs       EmailLog[]
-  whatsappDrafts  WhatsappDraft[]
-  whatsappQueues  WhatsappQueue[]
-  whatsappLogs    WhatsappLog[]
+  id                  String         @id @default(cuid())
+  userId              String
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importHistoryId     String?
+  importHistory       ImportHistory? @relation(fields: [importHistoryId], references: [id], onDelete: SetNull)
+  companyId           String?
+  companyRef          Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name                String
+  email               String
+  company             String?
+  phone               String?
+  website             String?
+  linkedin            String?
+  industry            String?
+  status              LeadStatus     @default(NEW)
+  customFields        Json?
+  lastInboundMessageAt DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  emailDrafts         EmailDraft[]
+  campaignLeads       CampaignLead[]
+  emailQueues         EmailQueue[]
+  emailLogs           EmailLog[]
+  whatsappDrafts      WhatsappDraft[]
+  whatsappQueues      WhatsappQueue[]
+  whatsappLogs        WhatsappLog[]
 
   @@unique([userId, email])
   @@index([userId, status])
@@ -344,6 +345,10 @@ model WhatsappQueue {
   lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
   phone         String
   message       String         @db.Text
+  sendType      String         @default("TEXT") // TEMPLATE | TEXT
+  useTemplate   Boolean        @default(false)
+  templateName  String?
+  templateParams Json?
   status        QueueJobStatus @default(PENDING)
   attempts      Int            @default(0)
   maxRetries    Int            @default(3)
@@ -375,7 +380,8 @@ model WhatsappLog {
   queueId     String?
   phone       String
   message     String   @db.Text
-  status      String   // SENT | DELIVERED | READ | FAILED | CANCELLED
+  status      String   // SENT | DELIVERED | READ | FAILED | CANCELLED | RECEIVED
+  direction   String   @default("OUTBOUND") // OUTBOUND | INBOUND
   provider    String   @default("MOCK") // MOCK | TWILIO | META_CLOUD
   retryCount  Int      @default(0)
   messageId   String?

@@ -128,6 +128,10 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       return { response, resData };
     };
 
+    if (opts.useTemplate && !opts.templateName) {
+      throw new Error('Template name is required when sending a template message.');
+    }
+
     const templateComponents =
       opts.templateParams && opts.templateParams.length > 0
         ? [
@@ -143,7 +147,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       to: formattedPhone,
       type: 'template',
       template: {
-        name: opts.templateName || 'hello_world',
+        name: opts.templateName!,
         language: { code: 'en_US' },
         ...(templateComponents && { components: templateComponents }),
       },
@@ -160,27 +164,13 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       },
     };
 
-    let activePayload = opts.useTemplate || opts.templateName ? templatePayload : textPayload;
+    const activePayload = opts.useTemplate ? templatePayload : textPayload;
     console.log(
       `[Meta API] POST ${url} | Recipient: "+${formattedPhone}" | Type: ${activePayload.type}`
     );
 
     try {
-      let { response, resData } = await postPayload(activePayload);
-
-      // Automatic Fallback to Template if freeform text returned 400 (e.g. 24h window closed / template required)
-      if (!response.ok && activePayload.type === 'text' && !opts.useTemplate) {
-        console.warn(
-          `[Meta API] Text message failed (HTTP ${response.status}). Trying automatic template fallback (hello_world)...`
-        );
-        activePayload = templatePayload;
-        const fallbackRes = await postPayload(templatePayload);
-        if (fallbackRes.response.ok) {
-          response = fallbackRes.response;
-          resData = fallbackRes.resData;
-          console.log(`[Meta API] ✅ Automatic template fallback succeeded!`);
-        }
-      }
+      const { response, resData } = await postPayload(activePayload);
 
       if (!response.ok) {
         const metaErr = resData?.error;
