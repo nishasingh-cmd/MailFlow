@@ -291,14 +291,9 @@ export class WhatsappProviderFactory {
           decryptedToken = config.accessToken;
         }
 
-        const effectivePhoneId =
-          config.phoneNumberId === '1234002809793277' && env.WHATSAPP_PHONE_NUMBER_ID
-            ? env.WHATSAPP_PHONE_NUMBER_ID
-            : config.phoneNumberId;
-
         if (decryptedToken.trim()) {
           return new MetaWhatsappProvider({
-            phoneNumberId: effectivePhoneId,
+            phoneNumberId: config.phoneNumberId,
             accessToken: decryptedToken.trim(),
             graphApiVersion: config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION,
           });

@@ -351,17 +351,47 @@ export class WhatsappService {
 
     const failedJobs = await prisma.whatsappQueue.findMany({
       where,
-      include: { lead: { select: { id: true, name: true, phone: true } } },
+      include: {
+        lead: { select: { id: true, name: true, phone: true, lastInboundMessageAt: true } },
+      },
     });
 
     let reQueuedCount = 0;
     for (const job of failedJobs) {
       const activePhone = job.lead?.phone || job.phone;
 
+      // Re-check 24-hour customer service window
+      const lastInbound = job.lead?.lastInboundMessageAt;
+      const isWithin24h =
+        !!lastInbound && Date.now() - new Date(lastInbound).getTime() < 24 * 60 * 60 * 1000;
+
+      let sendType: 'TEMPLATE' | 'TEXT' = 'TEXT';
+      let useTemplate = false;
+      let templateName: string | null = null;
+      let templateParams: Prisma.InputJsonValue | typeof Prisma.JsonNull = Prisma.JsonNull;
+
+      if (isWithin24h) {
+        sendType = 'TEXT';
+        useTemplate = false;
+        templateName = null;
+        templateParams = Prisma.JsonNull;
+      } else {
+        sendType = 'TEMPLATE';
+        useTemplate = true;
+        templateName = job.templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';
+        templateParams = job.templateParams
+          ? (job.templateParams as Prisma.InputJsonValue)
+          : Prisma.JsonNull;
+      }
+
       await prisma.whatsappQueue.update({
         where: { id: job.id },
         data: {
           phone: activePhone,
+          sendType,
+          useTemplate,
+          templateName,
+          templateParams,
           status: 'PENDING',
           attempts: 0,
           errorMessage: null,
