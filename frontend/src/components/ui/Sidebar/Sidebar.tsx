@@ -106,7 +106,6 @@ export function Sidebar({
       )}
       aria-label="Main navigation"
     >
-      {/* Logo / Brand */}
       <div
         className={cn(
           'flex items-center flex-shrink-0 h-16 px-4 border-b border-[var(--surface-border)]',
@@ -156,7 +155,6 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-none">
         {sections.map((section, si) => (
           <div key={si}>
@@ -176,7 +174,6 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Footer slot */}
       {footer && (
         <div className="flex-shrink-0 border-t border-[var(--surface-border)] px-3 py-4">
           {footer}

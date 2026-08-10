@@ -50,7 +50,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
   return (
     <div className="space-y-4 bg-[var(--surface-card,#1E293B)] p-4 rounded-xl border border-[var(--border-default,rgba(255,255,255,0.08))] shadow-sm">
-      {/* Top row: Search, Refresh, Export, Auto-Refresh */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           <Input
@@ -141,7 +140,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
         </div>
       </div>
 
-      {/* Bottom row: Filter Dropdowns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-[var(--border-subtle,rgba(255,255,255,0.06))]">
         <div>
           <label className="block text-[11px] font-medium text-[var(--content-tertiary)] uppercase tracking-wider mb-1">
@@ -205,7 +203,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
         </div>
       </div>
 
-      {/* Custom Date Picker inputs when custom selected */}
       {filters.dateRange === 'custom' && (
         <div className="flex items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
           <div className="flex-1">

@@ -6,7 +6,7 @@ export interface SkeletonProps {
   variant?: SkeletonVariant;
   className?: string;
   lines?: number;
-  /** Number of table-row repetitions */
+
   rows?: number;
 }
 

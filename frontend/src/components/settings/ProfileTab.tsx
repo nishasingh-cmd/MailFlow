@@ -70,7 +70,6 @@ export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
         </p>
       </div>
 
-      {/* Avatar Section */}
       <div className="flex items-center gap-5 p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)]">
         <Avatar name={name || 'User'} src={avatar || undefined} size="xl" />
         <div className="space-y-2 flex-1">
@@ -87,7 +86,6 @@ export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
         </div>
       </div>
 
-      {/* Profile Form */}
       <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6 space-y-4 shadow-elevation-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input

@@ -18,9 +18,6 @@ interface ApiEnvelope<T> {
 }
 
 export const whatsappService = {
-  /**
-   * Generate AI WhatsApp message for lead
-   */
   async generateMessage(
     leadId: string,
     campaignObjective?: string,
@@ -33,9 +30,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Save or update WhatsApp draft
-   */
   async saveDraft(
     leadId: string,
     message: string,
@@ -49,9 +43,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Enqueue WhatsApp message dispatches (Individual, Selected, All)
-   */
   async sendMessages(opts: {
     leadIds?: string[];
     campaignId?: string;
@@ -69,9 +60,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Get paginated WhatsApp history log
-   */
   async getHistory(filters: WhatsappHistoryQuery = {}): Promise<PaginatedWhatsappHistoryResponse> {
     const { data: envelope } = await api.get<ApiEnvelope<PaginatedWhatsappHistoryResponse>>(
       '/whatsapp/history',
@@ -80,9 +68,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Get failed WhatsApp queue jobs
-   */
   async getFailedQueue(
     filters: WhatsappHistoryQuery = {}
   ): Promise<PaginatedWhatsappFailedQueueResponse> {
@@ -93,9 +78,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Retry failed WhatsApp jobs
-   */
   async retryFailedJobs(jobIds?: string[]): Promise<{ count: number; message: string }> {
     const { data: envelope } = await api.post<ApiEnvelope<{ count: number; message: string }>>(
       '/whatsapp/failed/retry',
@@ -104,9 +86,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Delete failed WhatsApp jobs
-   */
   async deleteFailedJobs(jobIds?: string[]): Promise<{ count: number; message: string }> {
     const { data: envelope } = await api.delete<ApiEnvelope<{ count: number; message: string }>>(
       '/whatsapp/failed',
@@ -115,9 +94,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Get WhatsApp statistics
-   */
   async getStats(): Promise<WhatsappStats> {
     const { data: envelope } = await api.get<ApiEnvelope<WhatsappStats>>('/whatsapp/stats');
     return envelope.data;
@@ -135,18 +111,12 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Get Meta App ID and SDK config for the Embedded Signup popup
-   */
   async initConnect(): Promise<WhatsappConnectInitResponse> {
     const { data: envelope } =
       await api.post<ApiEnvelope<WhatsappConnectInitResponse>>('/whatsapp/connect');
     return envelope.data;
   },
 
-  /**
-   * Send the OAuth code received from Meta Embedded Signup to the backend
-   */
   async handleCallback(req: WhatsappCallbackRequest): Promise<{ config: WhatsappConfigData }> {
     const { data: envelope } = await api.post<ApiEnvelope<{ config: WhatsappConfigData }>>(
       '/whatsapp/callback',
@@ -158,9 +128,6 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Refresh WhatsApp connection details from Meta (phone, WABA name, quality)
-   */
   async refresh(): Promise<{ config: WhatsappConfigData }> {
     const { data: envelope } =
       await api.post<ApiEnvelope<{ config: WhatsappConfigData }>>('/whatsapp/refresh');
@@ -170,17 +137,10 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  /**
-   * Disconnect WhatsApp Business account (preserves all history)
-   */
   async disconnect(): Promise<void> {
     await api.post('/whatsapp/disconnect');
   },
 
-  /**
-   * Save a permanent System User Access Token directly (bypasses FB.login).
-   * Use when the embedded signup token doesn't have WhatsApp Business API permissions.
-   */
   async manualConnect(opts: {
     accessToken: string;
     phoneNumberId: string;

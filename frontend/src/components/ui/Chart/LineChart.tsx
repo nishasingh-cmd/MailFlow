@@ -41,7 +41,6 @@ export function LineChart<T extends Record<string, unknown>>({
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  // Calculate Y max
   let maxY = 0;
   data.forEach((row) => {
     series.forEach((s) => {
@@ -51,7 +50,6 @@ export function LineChart<T extends Record<string, unknown>>({
   });
   maxY = maxY === 0 ? 10 : Math.ceil(maxY * 1.2);
 
-  // Points generator
   const getX = (idx: number) => {
     if (data.length <= 1) return padding.left + innerWidth / 2;
     return padding.left + (idx / (data.length - 1)) * innerWidth;
@@ -61,7 +59,6 @@ export function LineChart<T extends Record<string, unknown>>({
     return padding.top + innerHeight - (val / maxY) * innerHeight;
   };
 
-  // Generate SVG path for a series
   const createPath = (seriesKey: string) => {
     if (data.length === 0) return '';
     const points = data.map((d, i) => `${getX(i)},${getY(Number(d[seriesKey] || 0))}`);
@@ -81,7 +78,6 @@ export function LineChart<T extends Record<string, unknown>>({
 
   return (
     <div className={`relative w-full overflow-hidden ${className}`}>
-      {/* Legend Header */}
       <div className="flex items-center justify-end gap-4 mb-2 text-xs font-medium text-[var(--content-secondary)]">
         {series.map((s) => (
           <div key={s.key} className="flex items-center gap-1.5">
@@ -95,7 +91,6 @@ export function LineChart<T extends Record<string, unknown>>({
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         className="w-full h-auto overflow-visible select-none"
       >
-        {/* Y Gridlines */}
         {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
           const yVal = Math.round(maxY * ratio);
           const yPos = getY(yVal);
@@ -122,7 +117,6 @@ export function LineChart<T extends Record<string, unknown>>({
           );
         })}
 
-        {/* X Axis Labels */}
         {data.map((d, i) => (
           <text
             key={i}
@@ -135,7 +129,6 @@ export function LineChart<T extends Record<string, unknown>>({
           </text>
         ))}
 
-        {/* Area Gradient Fills */}
         {series.map((s) => (
           <defs key={`grad-${s.key}`}>
             <linearGradient id={`gradient-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -149,7 +142,6 @@ export function LineChart<T extends Record<string, unknown>>({
           <path key={`area-${s.key}`} d={createAreaPath(s.key)} fill={`url(#gradient-${s.key})`} />
         ))}
 
-        {/* Line Paths */}
         {series.map((s) => (
           <path
             key={`line-${s.key}`}
@@ -162,7 +154,6 @@ export function LineChart<T extends Record<string, unknown>>({
           />
         ))}
 
-        {/* Data Points & Hover Targets */}
         {data.map((d, i) => {
           const cx = getX(i);
           const isHovered = hoveredIdx === i;
@@ -173,7 +164,6 @@ export function LineChart<T extends Record<string, unknown>>({
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
             >
-              {/* Vertical Guide Line on Hover */}
               {isHovered && (
                 <line
                   x1={cx}
@@ -202,7 +192,6 @@ export function LineChart<T extends Record<string, unknown>>({
                 );
               })}
 
-              {/* Transparent hit target column */}
               <rect
                 x={cx - innerWidth / (data.length * 2 || 1)}
                 y={padding.top}
@@ -216,7 +205,6 @@ export function LineChart<T extends Record<string, unknown>>({
         })}
       </svg>
 
-      {/* Floating Tooltip */}
       {hoveredIdx !== null && data[hoveredIdx] && (
         <div
           className="absolute z-20 pointer-events-none bg-[var(--surface-elevated,#1E293B)] border border-[var(--border-default,rgba(255,255,255,0.1))] rounded-lg p-2.5 shadow-xl text-xs space-y-1 transform -translate-x-1/2 -translate-y-full mb-2"

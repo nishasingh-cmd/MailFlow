@@ -1,11 +1,3 @@
-/**
- * MailFlow — Email Generation Frontend Service
- * Phase 7: AI Email Generation
- *
- * NOTE: All backend email-generation endpoints return { success: boolean, data: T }.
- * Axios places the full response body in `response.data`, so we access `response.data.data`
- * to extract the actual payload.
- */
 import { api } from './api';
 import {
   EmailDraft,
@@ -16,7 +8,6 @@ import {
   UpdateDraftRequest,
 } from '@mailflow/shared';
 
-// Backend wraps responses as { success: boolean; data: T; message?: string }
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -24,9 +15,6 @@ interface ApiEnvelope<T> {
 }
 
 export const emailGenerationService = {
-  /**
-   * Generate personalized email and subject line suggestions
-   */
   async generateEmail(req: GenerateEmailRequest): Promise<GeneratedEmailResult> {
     const { data: envelope } = await api.post<ApiEnvelope<GeneratedEmailResult>>(
       '/email-generation/generate',
@@ -35,9 +23,6 @@ export const emailGenerationService = {
     return envelope.data;
   },
 
-  /**
-   * Generate 5 subject lines
-   */
   async generateSubjects(leadId: string, template?: EmailTemplateType): Promise<string[]> {
     const { data: envelope } = await api.post<ApiEnvelope<string[]>>('/email-generation/subjects', {
       leadId,
@@ -46,9 +31,6 @@ export const emailGenerationService = {
     return envelope.data ?? [];
   },
 
-  /**
-   * Regenerate email
-   */
   async regenerateEmail(req: GenerateEmailRequest): Promise<GeneratedEmailResult> {
     const { data: envelope } = await api.post<ApiEnvelope<GeneratedEmailResult>>(
       '/email-generation/regenerate',
@@ -57,9 +39,6 @@ export const emailGenerationService = {
     return envelope.data;
   },
 
-  /**
-   * Save draft to database
-   */
   async saveDraft(req: SaveDraftRequest): Promise<EmailDraft> {
     const { data: envelope } = await api.post<ApiEnvelope<EmailDraft>>(
       '/email-generation/drafts',
@@ -68,9 +47,6 @@ export const emailGenerationService = {
     return envelope.data;
   },
 
-  /**
-   * Update existing draft
-   */
   async updateDraft(draftId: string, req: UpdateDraftRequest): Promise<EmailDraft> {
     const { data: envelope } = await api.put<ApiEnvelope<EmailDraft>>(
       `/email-generation/drafts/${draftId}`,
@@ -79,9 +55,6 @@ export const emailGenerationService = {
     return envelope.data;
   },
 
-  /**
-   * Get draft by ID
-   */
   async getDraft(draftId: string): Promise<EmailDraft> {
     const { data: envelope } = await api.get<ApiEnvelope<EmailDraft>>(
       `/email-generation/drafts/${draftId}`
@@ -89,9 +62,6 @@ export const emailGenerationService = {
     return envelope.data;
   },
 
-  /**
-   * Get draft by Lead ID — returns null if no draft exists yet
-   */
   async getDraftByLead(leadId: string): Promise<EmailDraft | null> {
     try {
       const { data: envelope } = await api.get<ApiEnvelope<EmailDraft | null>>(
@@ -103,9 +73,6 @@ export const emailGenerationService = {
     }
   },
 
-  /**
-   * List all drafts
-   */
   async listDrafts(): Promise<EmailDraft[]> {
     const { data: envelope } = await api.get<ApiEnvelope<EmailDraft[]>>('/email-generation/drafts');
     return envelope.data ?? [];

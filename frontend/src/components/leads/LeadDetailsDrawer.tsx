@@ -40,7 +40,6 @@ export function LeadDetailsDrawer({
   return (
     <Drawer open={isOpen} onClose={onClose} title="Lead Profile" width="w-96">
       <div className="space-y-6">
-        {/* Lead Header Profile Card */}
         <div className="flex items-start justify-between border-b border-[var(--surface-border)] pb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-brand-500/20 text-brand-400 font-bold text-lg flex items-center justify-center">
@@ -54,7 +53,6 @@ export function LeadDetailsDrawer({
           <div>{getStatusBadge(lead.status)}</div>
         </div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2">
           {onGenerateEmail && (
             <Button
@@ -90,7 +88,6 @@ export function LeadDetailsDrawer({
           </Button>
         </div>
 
-        {/* Contact Information */}
         <Card variant="default" className="p-4 space-y-3">
           <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
             Contact Information
@@ -133,7 +130,6 @@ export function LeadDetailsDrawer({
           </div>
         </Card>
 
-        {/* Company & Industry Information */}
         <Card variant="default" className="p-4 space-y-3">
           <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
             Company & Industry
@@ -176,7 +172,6 @@ export function LeadDetailsDrawer({
           </div>
         </Card>
 
-        {/* Import Source & System Metadata */}
         <Card variant="default" className="p-4 space-y-3">
           <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
             System Metadata

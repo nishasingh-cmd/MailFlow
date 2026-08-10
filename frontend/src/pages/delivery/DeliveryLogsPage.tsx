@@ -64,7 +64,6 @@ export default function DeliveryLogsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
@@ -80,7 +79,6 @@ export default function DeliveryLogsPage() {
         </Button>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Input
           id="delivery-logs-search"
@@ -113,7 +111,6 @@ export default function DeliveryLogsPage() {
         />
       </div>
 
-      {/* Logs Table */}
       {loading ? (
         <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden">
           <table className="w-full text-sm">
@@ -251,7 +248,6 @@ export default function DeliveryLogsPage() {
         />
       )}
 
-      {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between text-xs text-[var(--content-secondary)] pt-2">
           <span>Total Logs: {total}</span>

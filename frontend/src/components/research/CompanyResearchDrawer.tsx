@@ -14,8 +14,6 @@ interface CompanyResearchDrawerProps {
   onGenerateEmail?: (leadId: string, companyName?: string) => void;
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-widest mb-2">
@@ -89,8 +87,6 @@ function OpportunityIcon() {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-
 export function CompanyResearchDrawer({
   isOpen,
   onClose,
@@ -153,7 +149,6 @@ export function CompanyResearchDrawer({
   return (
     <Drawer open={isOpen} onClose={onClose} title="Company Research" width="w-[480px]">
       <div className="space-y-5">
-        {/* ── Header: Company Identity ── */}
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-[var(--surface-border)]">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center shrink-0">
@@ -191,7 +186,6 @@ export function CompanyResearchDrawer({
           <ResearchStatusBadge status={researchStatus ?? null} className="shrink-0" />
         </div>
 
-        {/* ── Loading Skeleton ── */}
         {isLoading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -200,14 +194,12 @@ export function CompanyResearchDrawer({
           </div>
         )}
 
-        {/* ── Error State ── */}
         {error && !isLoading && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* ── Research CTA (no research yet or failed) ── */}
         {!isLoading && !hasResearch && (
           <Card variant="elevated" className="p-4 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-brand-500/10 border border-brand-500/20 mx-auto flex items-center justify-center">
@@ -260,7 +252,6 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {/* ── AI Summary ── */}
         {hasResearch && research?.summary && (
           <Card
             variant="elevated"
@@ -283,7 +274,6 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {/* ── Pain Points ── */}
         {hasResearch && (research?.painPoints as string[] | null)?.length ? (
           <Card variant="default" className="p-4 space-y-2">
             <SectionHeading>Likely Pain Points</SectionHeading>
@@ -301,7 +291,6 @@ export function CompanyResearchDrawer({
           </Card>
         ) : null}
 
-        {/* ── Opportunities ── */}
         {hasResearch && (research?.opportunities as string[] | null)?.length ? (
           <Card variant="default" className="p-4 space-y-2">
             <SectionHeading>Outreach Opportunities</SectionHeading>
@@ -319,7 +308,6 @@ export function CompanyResearchDrawer({
           </Card>
         ) : null}
 
-        {/* ── Company Details ── */}
         {hasResearch && company && (
           <Card variant="default" className="p-4 space-y-3">
             <SectionHeading>Company Details</SectionHeading>
@@ -330,7 +318,6 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {/* ── Products & Services ── */}
         {hasResearch &&
           company &&
           (company.products?.length > 0 || company.services?.length > 0) && (
@@ -350,7 +337,6 @@ export function CompanyResearchDrawer({
             </Card>
           )}
 
-        {/* ── Tech Stack ── */}
         {hasResearch && company && (company.techStack ?? []).length > 0 && (
           <Card variant="default" className="p-4 space-y-2">
             <SectionHeading>Technology Stack</SectionHeading>
@@ -358,7 +344,6 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {/* ── Action Buttons ── */}
         {hasResearch && (
           <div className="space-y-2 pt-2">
             {onGenerateEmail && leadId && (

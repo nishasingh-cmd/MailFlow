@@ -97,7 +97,6 @@ export function SecurityTab() {
             onChange={(e) => setNewPassword(e.target.value)}
           />
 
-          {/* Password Strength Meter */}
           {newPassword && (
             <div className="space-y-1 pt-1">
               <div className="flex justify-between items-center text-2xs">

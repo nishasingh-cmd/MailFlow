@@ -2,9 +2,6 @@ import { api } from './api';
 import { AnalyticsFilterInput, AnalyticsOverviewResponse, ApiResponse } from '@mailflow/shared';
 
 export class AnalyticsService {
-  /**
-   * Fetch complete analytics overview & metrics based on filter criteria
-   */
   static async getOverview(filters: AnalyticsFilterInput): Promise<AnalyticsOverviewResponse> {
     const params = new URLSearchParams();
     if (filters.dateRange) params.append('dateRange', filters.dateRange);
@@ -25,9 +22,6 @@ export class AnalyticsService {
     return response.data.data;
   }
 
-  /**
-   * Export CSV report download
-   */
   static async downloadCsvReport(filters: AnalyticsFilterInput): Promise<void> {
     const params = new URLSearchParams();
     params.append('format', 'csv');

@@ -1,25 +1,15 @@
 import { Outlet } from 'react-router-dom';
 
-/**
- * AuthLayout — split-panel layout for public auth pages (Login, Register, ForgotPassword).
- *
- * Desktop: left brand panel (40%) + right form panel (60%)
- * Mobile: single-column, form only (brand panel hidden)
- */
 export function AuthLayout() {
   return (
     <div className="min-h-screen flex bg-[var(--surface-bg)]">
-      {/* ── Left: Brand Panel ── */}
       <div className="hidden lg:flex lg:w-[44%] xl:w-[42%] relative flex-col overflow-hidden">
-        {/* Multi-layer background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d14] via-[#0f0f1a] to-[#07070d]" />
 
-        {/* Glowing orbs */}
         <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-brand-600/20 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-indigo-800/15 blur-[100px] pointer-events-none" />
         <div className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-violet-700/10 blur-[80px] pointer-events-none" />
 
-        {/* Grid pattern overlay */}
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -29,9 +19,7 @@ export function AuthLayout() {
           }}
         />
 
-        {/* Content */}
         <div className="relative z-10 flex flex-col h-full px-10 py-10">
-          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shadow-glow-brand flex-shrink-0">
               <svg
@@ -51,7 +39,6 @@ export function AuthLayout() {
             <span className="text-lg font-bold text-white tracking-tight">MailFlow</span>
           </div>
 
-          {/* Main headline */}
           <div className="mt-auto pb-8">
             <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight tracking-tight">
               Supercharge your
@@ -65,7 +52,6 @@ export function AuthLayout() {
               platform.
             </p>
 
-            {/* Feature bullets */}
             <ul className="mt-8 space-y-3">
               {[
                 { icon: '⚡', text: 'Send 10,000 emails per day with 95%+ deliverability' },
@@ -79,7 +65,6 @@ export function AuthLayout() {
               ))}
             </ul>
 
-            {/* Social proof */}
             <div className="mt-10 pt-8 border-t border-white/10">
               <div className="flex items-center gap-3">
                 <div className="flex -space-x-2">
@@ -115,9 +100,7 @@ export function AuthLayout() {
         </div>
       </div>
 
-      {/* ── Right: Form Panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-10 lg:px-14">
-        {/* Mobile logo */}
         <div className="flex lg:hidden items-center gap-2 mb-8">
           <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
             <svg
@@ -139,7 +122,6 @@ export function AuthLayout() {
           </span>
         </div>
 
-        {/* Form card */}
         <div className="w-full max-w-md">
           <Outlet />
         </div>

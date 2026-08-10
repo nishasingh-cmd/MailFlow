@@ -33,15 +33,12 @@ export function ConfirmModal({
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={!loading ? onCancel : undefined}
       />
 
-      {/* Dialog */}
       <div className="relative w-full max-w-md rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] shadow-2xl p-6 space-y-5 animate-scale-in">
-        {/* Icon */}
         <div
           className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mx-auto ${
             variant === 'danger' ? 'bg-red-500/15 text-red-400' : 'bg-brand-500/15 text-brand-400'
@@ -50,7 +47,6 @@ export function ConfirmModal({
           {variant === 'danger' ? '⚠️' : '❓'}
         </div>
 
-        {/* Title */}
         <div className="text-center space-y-2">
           <h3
             id="confirm-modal-title"
@@ -63,7 +59,6 @@ export function ConfirmModal({
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex items-center gap-3 pt-1">
           <Button variant="outline" className="flex-1" onClick={onCancel} disabled={loading}>
             {cancelLabel}

@@ -17,7 +17,6 @@ export function ResearchProgressCard({ progress, isRunning }: ResearchProgressCa
 
   return (
     <Card variant="elevated" className="p-4 space-y-4 border border-brand-500/20">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isRunning && (
@@ -44,7 +43,6 @@ export function ResearchProgressCard({ progress, isRunning }: ResearchProgressCa
         )}
       </div>
 
-      {/* Progress Bar */}
       {total > 0 && (
         <div className="space-y-1">
           <div className="h-2 rounded-full bg-[var(--surface-elevated)] overflow-hidden">
@@ -63,7 +61,6 @@ export function ResearchProgressCard({ progress, isRunning }: ResearchProgressCa
         </div>
       )}
 
-      {/* Per-lead results */}
       {progress?.results && progress.results.length > 0 && (
         <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-none">
           {progress.results.map((result, i) => (
@@ -85,7 +82,6 @@ export function ResearchProgressCard({ progress, isRunning }: ResearchProgressCa
         </div>
       )}
 
-      {/* Loading placeholder */}
       {isRunning && !progress && (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (

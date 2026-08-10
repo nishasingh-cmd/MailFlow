@@ -30,9 +30,6 @@ export interface CampaignPreview {
 }
 
 export const deliveryService = {
-  /**
-   * Get preview of personalized email for campaign
-   */
   async getPreview(campaignId: string, leadId?: string): Promise<CampaignPreview> {
     const { data: envelope } = await api.get<ApiEnvelope<CampaignPreview>>(
       `/delivery/campaigns/${campaignId}/preview`,
@@ -41,9 +38,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Start sending campaign
-   */
   async startSending(campaignId: string): Promise<CampaignProgress> {
     const { data: envelope } = await api.post<ApiEnvelope<CampaignProgress>>(
       `/delivery/campaigns/${campaignId}/send`
@@ -51,9 +45,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Pause campaign sending
-   */
   async pauseSending(campaignId: string): Promise<CampaignProgress> {
     const { data: envelope } = await api.post<ApiEnvelope<CampaignProgress>>(
       `/delivery/campaigns/${campaignId}/pause`
@@ -61,9 +52,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Resume campaign sending
-   */
   async resumeSending(campaignId: string): Promise<CampaignProgress> {
     const { data: envelope } = await api.post<ApiEnvelope<CampaignProgress>>(
       `/delivery/campaigns/${campaignId}/resume`
@@ -71,9 +59,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Cancel campaign sending
-   */
   async cancelSending(campaignId: string): Promise<CampaignProgress> {
     const { data: envelope } = await api.post<ApiEnvelope<CampaignProgress>>(
       `/delivery/campaigns/${campaignId}/cancel`
@@ -81,9 +66,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Get campaign progress
-   */
   async getProgress(campaignId: string): Promise<CampaignProgress> {
     const { data: envelope } = await api.get<ApiEnvelope<CampaignProgress>>(
       `/delivery/campaigns/${campaignId}/progress`
@@ -91,9 +73,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Get paginated delivery logs
-   */
   async getLogs(filters: DeliveryLogsQuery = {}): Promise<PaginatedDeliveryLogsResponse> {
     const { data: envelope } = await api.get<ApiEnvelope<PaginatedDeliveryLogsResponse>>(
       '/delivery/logs',
@@ -102,9 +81,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Get paginated failed queue
-   */
   async getFailedQueue(filters: FailedQueueQuery = {}): Promise<PaginatedFailedQueueResponse> {
     const { data: envelope } = await api.get<ApiEnvelope<PaginatedFailedQueueResponse>>(
       '/delivery/failed-queue',
@@ -113,9 +89,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Retry failed jobs (selected or all)
-   */
   async retryFailedJobs(jobIds?: string[]): Promise<{ count: number; message: string }> {
     const { data: envelope } = await api.post<ApiEnvelope<{ count: number; message: string }>>(
       '/delivery/failed-queue/retry',
@@ -124,9 +97,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Delete failed jobs (selected or all)
-   */
   async deleteFailedJobs(jobIds?: string[]): Promise<{ count: number; message: string }> {
     const { data: envelope } = await api.delete<ApiEnvelope<{ count: number; message: string }>>(
       '/delivery/failed-queue',
@@ -135,9 +105,6 @@ export const deliveryService = {
     return envelope.data;
   },
 
-  /**
-   * Send a single email directly to a lead
-   */
   async sendSingleEmail(input: {
     leadId: string;
     subject: string;

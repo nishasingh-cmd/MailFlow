@@ -2,14 +2,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { ROUTE_LABELS } from '../../routes/routes';
 
-/**
- * Breadcrumb — derives navigation trail from the current URL path.
- * Uses react-router-dom's useLocation() to build the crumb list dynamically.
- */
 export function Breadcrumb({ className }: { className?: string }) {
   const { pathname } = useLocation();
 
-  // Build crumbs from path segments, skipping empty strings
   const segments = pathname.split('/').filter(Boolean);
 
   if (segments.length === 0) return null;

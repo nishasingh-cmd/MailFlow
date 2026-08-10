@@ -101,7 +101,6 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
           options={AI_PROVIDERS}
         />
 
-        {/* API Key Input */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <label className="font-medium text-[var(--content-primary)]">API Key</label>
@@ -149,7 +148,6 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
           />
         </div>
 
-        {/* Temperature Slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <label className="font-medium text-[var(--content-primary)]">
@@ -173,7 +171,6 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-[var(--surface-border)]">
           <Button
             variant="outline"

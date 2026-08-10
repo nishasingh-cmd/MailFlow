@@ -91,12 +91,10 @@ export default function Leads() {
   const [isResearching, setIsResearching] = useState(false);
   const [researchProgress, setResearchProgress] = useState<ResearchProgressResponse | null>(null);
 
-  // Research drawer
   const [researchDrawerOpen, setResearchDrawerOpen] = useState(false);
   const [researchDrawerLeadId, setResearchDrawerLeadId] = useState<string | null>(null);
   const [researchDrawerCompanyName, setResearchDrawerCompanyName] = useState<string | null>(null);
 
-  // Email Generator drawer
   const [emailDrawerOpen, setEmailDrawerOpen] = useState(false);
   const [emailDrawerLeadId, setEmailDrawerLeadId] = useState<string | null>(null);
   const [emailDrawerLeadName, setEmailDrawerLeadName] = useState<string | null>(null);
@@ -113,7 +111,6 @@ export default function Leads() {
     setEmailDrawerOpen(true);
   };
 
-  // WhatsApp state
   const [waPreviewOpen, setWaPreviewOpen] = useState(false);
   const [waLeadId, setWaLeadId] = useState<string | null>(null);
   const [waLeadName, setWaLeadName] = useState<string>('');
@@ -129,7 +126,6 @@ export default function Leads() {
     setWaPreviewOpen(true);
   };
 
-  // ── Fetch Leads ────────────────────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -167,7 +163,6 @@ export default function Leads() {
     }
   }, [searchQuery, statusFilter, sortOption, page, limit, toast]);
 
-  // ── Fetch Import History ───────────────────────────────────────────────────
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true);
     try {
@@ -180,7 +175,6 @@ export default function Leads() {
     }
   }, [toast]);
 
-  // ── Fetch Research Tab Leads ───────────────────────────────────────────────
   const fetchResearchLeads = useCallback(async () => {
     setResearchLeadsLoading(true);
     try {
@@ -190,11 +184,10 @@ export default function Leads() {
         limit: 100,
         page: 1,
       });
-      // Only leads with a company name are researchable
+
       const withCompany = response.leads.filter((l) => l.company);
       setResearchLeads(withCompany);
 
-      // Fetch bulk research status
       if (withCompany.length > 0) {
         const statusList = await researchService.getBulkStatus(withCompany.map((l) => l.id));
         const statusMap: Record<string, string | null> = {};
@@ -210,7 +203,6 @@ export default function Leads() {
     }
   }, [toast]);
 
-  // ── Tab effects ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (activeTab === 'LEADS') {
       fetchLeads();
@@ -221,7 +213,6 @@ export default function Leads() {
     }
   }, [activeTab, fetchLeads, fetchHistory, fetchResearchLeads]);
 
-  // ── Selection Handlers ─────────────────────────────────────────────────────
   const handleSelectAll = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedLeadIds(leads.map((l) => l.id));
@@ -244,7 +235,6 @@ export default function Leads() {
     );
   };
 
-  // ── Bulk Delete ────────────────────────────────────────────────────────────
   const handleBulkDelete = async () => {
     if (selectedLeadIds.length === 0) return;
     if (
@@ -262,7 +252,6 @@ export default function Leads() {
     }
   };
 
-  // ── Single Lead Delete ─────────────────────────────────────────────────────
   const handleDeleteSingle = async (lead: Lead) => {
     if (!window.confirm(`Delete lead "${lead.name}" (${lead.email})?`)) return;
     try {
@@ -275,7 +264,6 @@ export default function Leads() {
     }
   };
 
-  // ── Open Lead Detail Drawer ────────────────────────────────────────────────
   const handleOpenDetail = async (lead: Lead) => {
     try {
       const fullLead = await leadService.getLead(lead.id);
@@ -287,14 +275,12 @@ export default function Leads() {
     }
   };
 
-  // ── Open Research Drawer ───────────────────────────────────────────────────
   const handleOpenResearch = (lead: Lead) => {
     setResearchDrawerLeadId(lead.id);
     setResearchDrawerCompanyName(lead.company ?? null);
     setResearchDrawerOpen(true);
   };
 
-  // ── Bulk Research ──────────────────────────────────────────────────────────
   const handleBulkResearch = async () => {
     if (selectedLeadIds.length === 0) return;
     setIsResearching(true);
@@ -331,7 +317,6 @@ export default function Leads() {
     }
   };
 
-  // ── Status Badge Helpers ───────────────────────────────────────────────────
   const getStatusBadge = (status: string) => {
     let variant: BadgeVariant = 'neutral';
     let label = status;
@@ -362,7 +347,6 @@ export default function Leads() {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  // ── Table Columns: Main Leads ──────────────────────────────────────────────
   const leadColumns: Column<Lead>[] = [
     {
       key: 'select',
@@ -486,7 +470,6 @@ export default function Leads() {
     },
   ];
 
-  // ── Table Columns: Research Tab ────────────────────────────────────────────
   const researchColumns: Column<Lead>[] = [
     {
       key: 'select',
@@ -572,10 +555,8 @@ export default function Leads() {
     },
   ];
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* ── Page Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
@@ -606,7 +587,6 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* ── Stats Overview Bar ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card variant="default" className="p-4">
           <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
@@ -637,9 +617,7 @@ export default function Leads() {
         </Card>
       </div>
 
-      {/* ── Main Workspace Card ── */}
       <Card variant="default" className="p-6 space-y-6">
-        {/* Navigation Tabs */}
         <div className="flex items-center border-b border-[var(--surface-border)] space-x-6">
           {(
             [
@@ -665,7 +643,6 @@ export default function Leads() {
           ))}
         </div>
 
-        {/* ── TAB 1: ALL LEADS ── */}
         {activeTab === 'LEADS' && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -703,7 +680,6 @@ export default function Leads() {
               </div>
             </div>
 
-            {/* Bulk Actions Banner */}
             {selectedLeadIds.length > 0 && (
               <div className="p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center justify-between text-sm animate-fade-in">
                 <span className="text-[var(--content-primary)] font-medium">
@@ -760,15 +736,12 @@ export default function Leads() {
           </div>
         )}
 
-        {/* ── TAB 2: IMPORT HISTORY ── */}
         {activeTab === 'HISTORY' && (
           <ImportHistoryTable history={importHistory} isLoading={isHistoryLoading} />
         )}
 
-        {/* ── TAB 3: AI RESEARCH ── */}
         {activeTab === 'RESEARCH' && (
           <div className="space-y-4">
-            {/* Description */}
             <div className="flex items-start gap-3 p-3 bg-brand-500/5 border border-brand-500/20 rounded-lg">
               <div className="w-8 h-8 rounded-lg bg-brand-500/15 flex items-center justify-center shrink-0">
                 <svg
@@ -796,7 +769,6 @@ export default function Leads() {
               </div>
             </div>
 
-            {/* Bulk Research Action Bar */}
             <BulkResearchBar
               selectedCount={selectedLeadIds.length}
               onResearchSelected={handleBulkResearch}
@@ -805,10 +777,8 @@ export default function Leads() {
               isResearching={isResearching}
             />
 
-            {/* Progress Card */}
             <ResearchProgressCard progress={researchProgress} isRunning={isResearching} />
 
-            {/* Research Table */}
             <Table
               columns={researchColumns}
               data={researchLeads}
@@ -820,7 +790,6 @@ export default function Leads() {
         )}
       </Card>
 
-      {/* ── Modals & Drawers ── */}
       <ImportLeadsModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}

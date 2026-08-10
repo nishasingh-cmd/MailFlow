@@ -26,7 +26,6 @@ export function CompletionSummaryModal({
       size="md"
     >
       <div className="space-y-6 py-2">
-        {/* Banner */}
         <div
           className={`p-4 rounded-xl border flex items-center gap-3 ${
             hasErrors
@@ -53,7 +52,6 @@ export function CompletionSummaryModal({
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-3 text-center">
             <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)]">
@@ -90,7 +88,6 @@ export function CompletionSummaryModal({
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--surface-border)]">
           <Button variant="outline" onClick={onViewLogs}>
             View Delivery Logs

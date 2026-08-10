@@ -40,14 +40,12 @@ export function Drawer({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div
         className={cn(
           'relative flex flex-col h-full',
@@ -59,7 +57,6 @@ export function Drawer({
             : ['mr-auto border-r', open ? 'animate-slide-right' : '']
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[var(--surface-border)] flex-shrink-0">
           {title ? (
             <h2 className="text-base font-semibold text-[var(--content-primary)]">{title}</h2>
@@ -84,12 +81,10 @@ export function Drawer({
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-[var(--content-secondary)] scrollbar-none">
           {children}
         </div>
 
-        {/* Footer */}
         {footer && (
           <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[var(--surface-border)] flex-shrink-0">
             {footer}

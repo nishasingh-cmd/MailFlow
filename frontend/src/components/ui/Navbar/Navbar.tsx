@@ -41,20 +41,15 @@ export function Navbar({
       )}
       role="banner"
     >
-      {/* Logo / Brand */}
       {logo && <div className="flex items-center flex-shrink-0">{logo}</div>}
 
-      {/* Nav items */}
       {navItems && <nav className="hidden md:flex items-center gap-1 ml-2">{navItems}</nav>}
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right side actions */}
       <div className="flex items-center gap-1">
         {rightSlot}
 
-        {/* Theme Toggle */}
         {onThemeToggle && (
           <button
             onClick={onThemeToggle}
@@ -95,7 +90,6 @@ export function Navbar({
           </button>
         )}
 
-        {/* Notifications */}
         <button
           onClick={onNotificationClick}
           className="relative p-2 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
@@ -123,7 +117,6 @@ export function Navbar({
           )}
         </button>
 
-        {/* User avatar */}
         {user && (
           <button
             onClick={onUserClick}

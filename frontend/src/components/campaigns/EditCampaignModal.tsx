@@ -41,7 +41,6 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
   const [submitting, setSubmitting] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // Load campaign detail (to get existing lead IDs)
   useEffect(() => {
     if (open && campaign) {
       setName(campaign.name);
@@ -116,7 +115,6 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
         </div>
       }
     >
-      {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-[var(--surface-border)]">
         {tabs.map((t) => (
           <button

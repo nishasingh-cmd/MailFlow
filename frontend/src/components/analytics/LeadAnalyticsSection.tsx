@@ -32,7 +32,6 @@ export const LeadAnalyticsSection: React.FC<LeadAnalyticsSectionProps> = ({ anal
       padding="md"
       className="space-y-6"
     >
-      {/* 4 Key Lead Stat Counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3.5 rounded-xl border border-[var(--border-subtle,rgba(255,255,255,0.06))] space-y-1">
           <span className="text-[11px] font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
@@ -75,7 +74,6 @@ export const LeadAnalyticsSection: React.FC<LeadAnalyticsSectionProps> = ({ anal
         </div>
       </div>
 
-      {/* Industry Breakdown & Demographics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         <div className="space-y-3">
           <h4 className="text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">

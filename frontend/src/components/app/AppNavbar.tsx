@@ -22,7 +22,6 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
       )}
       role="banner"
     >
-      {/* Left side: Mobile menu toggle button + Breadcrumb */}
       <div className="flex items-center gap-3">
         {onMobileMenuToggle && (
           <button
@@ -47,9 +46,7 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
         <Breadcrumb />
       </div>
 
-      {/* Right side: Theme toggle + Notifications + UserMenu */}
       <div className="flex items-center gap-1.5">
-        {/* Theme toggle */}
         <button
           type="button"
           onClick={toggleTheme}
@@ -89,10 +86,8 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
           )}
         </button>
 
-        {/* Notifications */}
         <NotificationDropdown />
 
-        {/* User profile menu */}
         <UserMenu />
       </div>
     </header>

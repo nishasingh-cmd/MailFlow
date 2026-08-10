@@ -1,19 +1,6 @@
-/**
- * MailFlow — Phase 2: WhatsApp Business Embedded Signup
- * useMetaEmbeddedSignup React Hook
- *
- * Manages the complete Meta Facebook Login SDK lifecycle:
- *  1. Dynamically loads connect.facebook.net/en_US/sdk.js (once per session)
- *  2. Initialises FB with the MailFlow Meta App ID
- *  3. Opens the Embedded Signup OAuth popup
- *  4. Extracts the authorization code from the response
- *  5. Relays the code to the MailFlow backend for token exchange
- */
 import { useState, useCallback, useRef } from 'react';
 import { whatsappService } from '../services/whatsapp.service';
 import { WhatsappConfigData } from '@mailflow/shared';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type EmbeddedSignupStatus =
   'idle' | 'loading_sdk' | 'ready' | 'signing_up' | 'processing' | 'connected' | 'error';
@@ -24,7 +11,6 @@ export interface EmbeddedSignupState {
   config: WhatsappConfigData | null;
 }
 
-// Minimal Facebook SDK type declarations
 declare global {
   interface Window {
     FB: {
@@ -60,21 +46,17 @@ interface FacebookLoginResponse {
   };
 }
 
-// ─── SDK Loader ───────────────────────────────────────────────────────────────
-
 let sdkLoaded = false;
 let sdkLoading = false;
 const sdkCallbacks: Array<() => void> = [];
 
 function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // If already loaded, resolve immediately
     if (sdkLoaded && window.FB) {
       resolve();
       return;
     }
 
-    // If currently loading, queue the callback
     if (sdkLoading) {
       sdkCallbacks.push(resolve);
       return;
@@ -83,7 +65,6 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
     sdkLoading = true;
     sdkCallbacks.push(resolve);
 
-    // FB async init callback — runs when SDK is ready
     window.fbAsyncInit = () => {
       window.FB.init({
         appId,
@@ -95,12 +76,10 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
       sdkLoaded = true;
       sdkLoading = false;
 
-      // Resolve all queued promises
       sdkCallbacks.forEach((cb) => cb());
       sdkCallbacks.length = 0;
     };
 
-    // Dynamically insert the SDK script
     const script = document.createElement('script');
     script.id = 'facebook-jssdk';
     script.src = 'https://connect.facebook.net/en_US/sdk.js';
@@ -117,8 +96,6 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
   });
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
 export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) => void) {
   const [state, setState] = useState<EmbeddedSignupState>({
     status: 'idle',
@@ -132,16 +109,11 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
     setState((prev) => ({ ...prev, status, error }));
   }, []);
 
-  /**
-   * Launch the Meta Embedded Signup popup.
-   * Call this from a user gesture (button click) to avoid popup blockers.
-   */
   const launch = useCallback(async () => {
     if (processingRef.current) return;
     processingRef.current = true;
 
     try {
-      // 1. Get App ID from backend
       setStatus('loading_sdk');
       let appId: string;
       let configId: string;
@@ -166,7 +138,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
         return;
       }
 
-      // 2. Load & initialise Facebook SDK
       try {
         await loadFacebookSDK(appId, graphApiVersion);
       } catch {
@@ -176,7 +147,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
 
       setStatus('signing_up');
 
-      // Variables to store WABA & Phone ID received from Meta window message
       let metaWabaId: string | undefined;
       let metaPhoneId: string | undefined;
 
@@ -199,17 +169,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
 
       window.addEventListener('message', messageHandler);
 
-      // 3. Open the Embedded Signup popup.
-      // IMPORTANT: We do NOT use response_type:'code' here. The code exchange
-      // flow (FB.login → code → /oauth/access_token) consistently fails with
-      // error_subcode 36008 because the SDK popup uses an internal Facebook
-      // relay URL as the implicit redirect_uri — one that is not accessible to
-      // us and cannot be replicated in the token exchange request.
-      //
-      // Instead, we request the access token directly from the FB.login
-      // authResponse. The config_id ensures the user completes the full
-      // WhatsApp Embedded Signup flow and grants the correct WABA permissions.
-      // The access token returned is then sent to the backend for storage.
       try {
         await new Promise<void>((resolve, reject) => {
           window.FB.login(
@@ -242,7 +201,6 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
                       )
                     );
                   } else {
-                    // User closed the popup or unknown state
                     reject(new Error('Connection cancelled. Please try again.'));
                   }
                 } catch (callbackErr: unknown) {

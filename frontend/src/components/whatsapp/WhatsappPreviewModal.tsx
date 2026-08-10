@@ -33,7 +33,6 @@ export function WhatsappPreviewModal({
   const [savingDraft, setSavingDraft] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Generate or load message on open
   useEffect(() => {
     if (open && leadId) {
       setGenerating(true);
@@ -118,7 +117,6 @@ export function WhatsappPreviewModal({
       size="lg"
     >
       <div className="space-y-5">
-        {/* Recipient info pill */}
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
           <div>
             <span className="text-[var(--content-tertiary)]">Recipient: </span>
@@ -133,7 +131,6 @@ export function WhatsappPreviewModal({
           </div>
         </div>
 
-        {/* Message Editor Container */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <label className="font-medium text-[var(--content-primary)]">WhatsApp Message</label>
@@ -180,7 +177,6 @@ export function WhatsappPreviewModal({
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-[var(--surface-border)]">
           <Button
             variant="ghost"

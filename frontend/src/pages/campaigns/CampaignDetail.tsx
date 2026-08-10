@@ -57,7 +57,6 @@ export default function CampaignDetail() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
 
-  // Live progress & summary state
   const [progress, setProgress] = useState<CampaignProgress | null>(null);
   const [summaryData, setSummaryData] = useState<CompletionSummaryData | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -86,7 +85,6 @@ export default function CampaignDetail() {
     loadCampaign();
   }, [loadCampaign]);
 
-  // Live Auto-Polling while Campaign is Queued, Sending, or Paused
   const pollProgress = useCallback(async () => {
     if (!id || !campaign) return;
     if (!['QUEUED', 'SENDING', 'PAUSED'].includes(campaign.status)) return;
@@ -95,7 +93,6 @@ export default function CampaignDetail() {
       const p = await deliveryService.getProgress(id);
       setProgress(p);
 
-      // Status change detection & notifications
       if (prevStatusRef.current && prevStatusRef.current !== p.status) {
         if (p.status === 'SENDING') {
           toast.info('🚀 Sending started...');
@@ -118,7 +115,6 @@ export default function CampaignDetail() {
       }
       prevStatusRef.current = p.status;
 
-      // Update campaign status if changed on backend
       if (p.status !== campaign.status) {
         setCampaign((c) => (c ? { ...c, status: p.status as CampaignStatus } : c));
       }
@@ -200,7 +196,6 @@ export default function CampaignDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Breadcrumb + Header */}
       <div className="space-y-4">
         <button
           onClick={() => navigate('/campaigns')}
@@ -309,7 +304,6 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* Live Sending Progress Panel */}
       {isQueueActive && progress && (
         <div className="rounded-xl border border-brand-500/30 bg-[var(--surface-card)] p-5 space-y-4 shadow-elevation-2 animate-slide-up">
           <div className="flex items-center justify-between">
@@ -331,7 +325,6 @@ export default function CampaignDetail() {
             </span>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full h-3 rounded-full bg-[var(--surface-elevated)] overflow-hidden p-0.5 border border-[var(--surface-border)]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-brand-500 to-blue-400 transition-all duration-500"
@@ -339,7 +332,6 @@ export default function CampaignDetail() {
             />
           </div>
 
-          {/* Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
               <span className="text-[var(--content-tertiary)] uppercase font-semibold">Sent</span>
@@ -369,7 +361,6 @@ export default function CampaignDetail() {
         </div>
       )}
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
           <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
@@ -398,9 +389,7 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* Main Grid: Details + Leads Table */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Campaign Info */}
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5 space-y-3">
           <h2 className="text-base font-semibold text-[var(--content-primary)] border-b border-[var(--surface-border)] pb-3">
             Campaign Information
@@ -414,7 +403,6 @@ export default function CampaignDetail() {
           <InfoRow label="Last Updated">{formatDateTime(campaign.updatedAt)}</InfoRow>
         </div>
 
-        {/* Selected Leads */}
         <div className="lg:col-span-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-[var(--content-primary)]">
@@ -476,7 +464,6 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* Modals */}
       <EditCampaignModal
         open={editOpen}
         campaign={campaign}

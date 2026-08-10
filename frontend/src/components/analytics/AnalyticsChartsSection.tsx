@@ -20,7 +20,6 @@ export const AnalyticsChartsSection: React.FC<AnalyticsChartsSectionProps> = ({ 
 
   return (
     <div className="space-y-6">
-      {/* Activity Timeline Chart (Full width) */}
       <Card
         header={
           <div className="flex items-center justify-between">
@@ -44,9 +43,7 @@ export const AnalyticsChartsSection: React.FC<AnalyticsChartsSectionProps> = ({ 
         />
       </Card>
 
-      {/* Grid of 4 Distribution Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Email Status Distribution */}
         <Card
           header={
             <h3 className="text-sm font-semibold text-[var(--content-primary)]">
@@ -58,7 +55,6 @@ export const AnalyticsChartsSection: React.FC<AnalyticsChartsSectionProps> = ({ 
           <DonutChart data={charts.emailStatusDistribution} size={160} centerLabel="Emails" />
         </Card>
 
-        {/* WhatsApp Status Distribution */}
         <Card
           header={
             <h3 className="text-sm font-semibold text-[var(--content-primary)]">
@@ -70,7 +66,6 @@ export const AnalyticsChartsSection: React.FC<AnalyticsChartsSectionProps> = ({ 
           <DonutChart data={charts.whatsappStatusDistribution} size={160} centerLabel="Messages" />
         </Card>
 
-        {/* Lead Source Distribution */}
         <Card
           header={
             <h3 className="text-sm font-semibold text-[var(--content-primary)]">
@@ -82,7 +77,6 @@ export const AnalyticsChartsSection: React.FC<AnalyticsChartsSectionProps> = ({ 
           <DonutChart data={charts.leadSourceDistribution} size={160} centerLabel="Leads" />
         </Card>
 
-        {/* Top Campaigns Comparison Bar Chart */}
         <Card
           header={
             <h3 className="text-sm font-semibold text-[var(--content-primary)]">

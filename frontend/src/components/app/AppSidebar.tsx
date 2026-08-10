@@ -4,7 +4,6 @@ import { Avatar } from '../ui/Avatar/Avatar';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
-/* Icons for sidebar navigation */
 const icons = {
   dashboard: (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -71,7 +71,6 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Tabs Navigation */}
       <div className="flex border-b border-[var(--surface-border)] gap-1 overflow-x-auto">
         {TABS.map((tab) => (
           <button
@@ -90,7 +89,6 @@ export default function Settings() {
         ))}
       </div>
 
-      {/* Tab Panels */}
       {activeTab === 'profile' && (
         <ProfileTab
           profile={data.profile}

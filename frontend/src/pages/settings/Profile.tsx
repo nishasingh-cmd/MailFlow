@@ -64,7 +64,6 @@ export default function Profile() {
 
       <Card header="Profile Details" variant="default">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Avatar Preview Section */}
           <div className="flex items-center gap-5">
             <Avatar name={name || 'User'} src={avatar || undefined} size="xl" online />
             <div className="space-y-1">

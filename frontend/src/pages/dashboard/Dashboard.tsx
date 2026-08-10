@@ -117,7 +117,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Welcome Banner ── */}
       <Card
         variant="default"
         className="relative overflow-hidden border-brand-500/20 bg-gradient-to-r from-brand-950/40 via-[var(--surface-card)] to-[var(--surface-card)] p-6 md:p-8"
@@ -174,7 +173,6 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* ── Stat Cards Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card variant="elevated" padding="md" className="space-y-3">
           <div className="flex items-center justify-between">
@@ -293,7 +291,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* ── Recent Campaigns Table ── */}
       <Card
         header={
           <div className="flex items-center justify-between">
@@ -315,7 +312,6 @@ export default function Dashboard() {
         />
       </Card>
 
-      {/* ── Additional Quick Help / Integration Section ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card padding="md" className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">

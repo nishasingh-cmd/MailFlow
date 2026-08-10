@@ -165,7 +165,6 @@ export function CreateCampaignModal({
         </div>
       }
     >
-      {/* Step indicators */}
       <div className="flex items-center gap-0 mb-6">
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center flex-1 last:flex-none">
@@ -208,7 +207,6 @@ export function CreateCampaignModal({
         ))}
       </div>
 
-      {/* Step 0: Campaign Details */}
       {step === 0 && (
         <div className="space-y-4">
           <Input
@@ -241,7 +239,6 @@ export function CreateCampaignModal({
         </div>
       )}
 
-      {/* Step 1: Select Leads */}
       {step === 1 && (
         <div className="space-y-3">
           <p className="text-sm text-[var(--content-secondary)]">
@@ -251,7 +248,6 @@ export function CreateCampaignModal({
         </div>
       )}
 
-      {/* Step 2: Template */}
       {step === 2 && (
         <div className="space-y-4">
           <p className="text-sm text-[var(--content-secondary)]">
@@ -291,7 +287,6 @@ export function CreateCampaignModal({
         </div>
       )}
 
-      {/* Step 3: Review */}
       {step === 3 && (
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-[var(--content-primary)]">Review Campaign</h3>

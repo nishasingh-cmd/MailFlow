@@ -103,12 +103,10 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         config.border
       )}
     >
-      {/* Icon */}
       <span className={cn('flex-shrink-0 p-1 rounded-lg mt-0.5', config.iconBg)} aria-hidden="true">
         {config.icon}
       </span>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[var(--content-primary)] leading-snug">
           {toast.title}
@@ -120,7 +118,6 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         )}
       </div>
 
-      {/* Close */}
       <button
         onClick={() => onRemove(toast.id)}
         className="flex-shrink-0 p-1 rounded-md text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-hover)] transition-colors"
@@ -138,7 +135,6 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         </svg>
       </button>
 
-      {/* Progress bar */}
       <div
         className={cn('absolute bottom-0 left-0 h-0.5 rounded-b-xl', config.progress)}
         style={{ animation: `progressDrain ${duration}ms linear forwards` }}

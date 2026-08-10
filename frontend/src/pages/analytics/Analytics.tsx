@@ -64,12 +64,11 @@ export default function Analytics() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // Handle auto-refresh interval when enabled
   useEffect(() => {
     if (autoRefresh) {
       autoRefreshTimerRef.current = setInterval(() => {
         fetchAnalytics(true);
-      }, 15000); // Auto refresh every 15s
+      }, 15000);
     } else if (autoRefreshTimerRef.current) {
       clearInterval(autoRefreshTimerRef.current);
     }
@@ -95,7 +94,6 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
@@ -117,7 +115,6 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* ── Filters Bar ── */}
       <AnalyticsFilters
         filters={filters}
         onChange={setFilters}
@@ -130,7 +127,6 @@ export default function Analytics() {
         onToggleAutoRefresh={() => setAutoRefresh(!autoRefresh)}
       />
 
-      {/* ── Loading Skeleton ── */}
       {loading && !data && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -146,7 +142,6 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* ── Error State ── */}
       {error && !loading && !data && (
         <Card variant="default">
           <EmptyState
@@ -160,7 +155,6 @@ export default function Analytics() {
         </Card>
       )}
 
-      {/* ── Empty State when 0 leads & 0 campaigns exist ── */}
       {!loading && data && !hasAnyData && (
         <Card variant="default">
           <EmptyState
@@ -174,22 +168,16 @@ export default function Analytics() {
         </Card>
       )}
 
-      {/* ── Main Analytics Dashboard Content ── */}
       {!loading && data && hasAnyData && (
         <div className="space-y-6">
-          {/* 1. Summary Stat Cards (10 Cards) */}
           <AnalyticsStatCards summary={data.summary} />
 
-          {/* 2. Charts Section */}
           <AnalyticsChartsSection charts={data.charts} />
 
-          {/* 3. Campaign Performance Section */}
           <CampaignPerformanceTable campaigns={data.campaignPerformance} />
 
-          {/* 4. Lead Analytics Section */}
           <LeadAnalyticsSection analytics={data.leadAnalytics} />
 
-          {/* 5. Channel Analytics Sections (Email & WhatsApp) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <EmailAnalyticsSection analytics={data.emailAnalytics} />
             <WhatsappAnalyticsSection analytics={data.whatsappAnalytics} />
@@ -197,7 +185,6 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* ── Export Report Modal ── */}
       <ExportReportModal
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}

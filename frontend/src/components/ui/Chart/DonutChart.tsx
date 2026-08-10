@@ -41,7 +41,6 @@ export const DonutChart: React.FC<DonutChartProps> = ({
 
   return (
     <div className={`flex flex-col sm:flex-row items-center gap-6 ${className}`}>
-      {/* SVG Donut */}
       <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
         <svg viewBox="0 0 200 200" className="w-full h-full transform -rotate-90 select-none">
           {data.map((item, idx) => {
@@ -71,7 +70,6 @@ export const DonutChart: React.FC<DonutChartProps> = ({
           })}
         </svg>
 
-        {/* Center Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <span className="text-xl font-bold text-[var(--content-primary)] tracking-tight">
             {displayCenterValue}
@@ -82,7 +80,6 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         </div>
       </div>
 
-      {/* Legend list */}
       <div className="flex-1 space-y-2 w-full">
         {data.map((item, idx) => {
           const color = item.color || defaultColors[idx % defaultColors.length];

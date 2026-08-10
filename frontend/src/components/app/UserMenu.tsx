@@ -75,7 +75,6 @@ export function UserMenu({ className }: { className?: string }) {
 
   return (
     <div ref={ref} className={cn('relative', className)}>
-      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
@@ -103,7 +102,6 @@ export function UserMenu({ className }: { className?: string }) {
         </svg>
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div
           className={cn(
@@ -114,7 +112,6 @@ export function UserMenu({ className }: { className?: string }) {
           role="menu"
           aria-label="User menu"
         >
-          {/* User info header */}
           <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--surface-border)]">
             <Avatar name={userName} src={userAvatar} size="md" online />
             <div className="min-w-0">
@@ -125,7 +122,6 @@ export function UserMenu({ className }: { className?: string }) {
             </div>
           </div>
 
-          {/* Menu items */}
           <ul className="py-1.5" role="none">
             {menuItems.map((item) => (
               <li key={item.id} role="none">
@@ -144,7 +140,6 @@ export function UserMenu({ className }: { className?: string }) {
             ))}
           </ul>
 
-          {/* Divider + Logout */}
           <div className="border-t border-[var(--surface-border)] py-1.5">
             <button
               type="button"

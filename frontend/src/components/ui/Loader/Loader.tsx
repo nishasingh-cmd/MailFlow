@@ -84,7 +84,6 @@ export function Loader({
   );
 }
 
-/** Full-screen centered overlay loader */
 export function PageLoader({ label = 'Loading…' }: { label?: string }) {
   return (
     <div

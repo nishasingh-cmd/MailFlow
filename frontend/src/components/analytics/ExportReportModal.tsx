@@ -28,7 +28,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
       if (selectedFormat === 'csv' || selectedFormat === 'excel') {
         await onExportCsv();
       } else if (selectedFormat === 'pdf') {
-        // Formatted Print/PDF Export window generator
         const printWin = window.open('', '_blank');
         if (printWin) {
           const html = `
@@ -134,7 +133,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
           demographics, and deliverability stats.
         </p>
 
-        {/* Format Selection Cards */}
         <div className="grid grid-cols-3 gap-3">
           <div
             onClick={() => setSelectedFormat('csv')}
@@ -173,7 +171,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
           </div>
         </div>
 
-        {/* Included Sections Preview */}
         <div className="space-y-2 bg-[var(--surface-elevated,rgba(255,255,255,0.03))] p-3.5 rounded-lg border border-[var(--border-subtle)] text-xs">
           <div className="font-semibold text-[var(--content-primary)]">Included Sections:</div>
           <div className="grid grid-cols-2 gap-1 text-[var(--content-secondary)]">

@@ -38,7 +38,6 @@ export function LeadFormModal({ isOpen, onClose, lead, onSuccess }: LeadFormModa
   const [errors, setErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Populate form when editing, reset when adding
   useEffect(() => {
     if (isOpen) {
       if (lead) {
@@ -82,7 +81,7 @@ export function LeadFormModal({ isOpen, onClose, lead, onSuccess }: LeadFormModa
       return;
     }
 
-    if (isLoading) return; // prevent double-submit
+    if (isLoading) return;
 
     setIsLoading(true);
 

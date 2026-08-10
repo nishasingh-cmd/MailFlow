@@ -66,7 +66,6 @@ export function NotificationDropdown({ className }: { className?: string }) {
 
   return (
     <div ref={ref} className={cn('relative', className)}>
-      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
@@ -98,7 +97,6 @@ export function NotificationDropdown({ className }: { className?: string }) {
         )}
       </button>
 
-      {/* Dropdown panel */}
       {open && (
         <div
           className={cn(
@@ -109,7 +107,6 @@ export function NotificationDropdown({ className }: { className?: string }) {
           role="dialog"
           aria-label="Notifications panel"
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--surface-border)]">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-[var(--content-primary)]">Notifications</h3>
@@ -142,7 +139,6 @@ export function NotificationDropdown({ className }: { className?: string }) {
             </div>
           </div>
 
-          {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-[var(--surface-border)] scrollbar-none">
             {notifications.length === 0 ? (
               <div className="py-8 px-4 text-center text-sm text-[var(--content-tertiary)]">
@@ -157,7 +153,6 @@ export function NotificationDropdown({ className }: { className?: string }) {
                     item.unread && 'bg-brand-500/5'
                   )}
                 >
-                  {/* Status Indicator */}
                   <span
                     className={cn(
                       'w-2 h-2 mt-1.5 rounded-full flex-shrink-0',

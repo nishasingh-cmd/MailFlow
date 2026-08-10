@@ -83,7 +83,6 @@ export default function WhatsappPage() {
     }
   }, [search, statusFilter, page, toast]);
 
-  // Fetch Failed Queue Jobs
   const fetchFailedQueue = useCallback(async () => {
     setFailedLoading(true);
     try {
@@ -108,7 +107,6 @@ export default function WhatsappPage() {
     }
   }, [activeTab, fetchHistory, fetchFailedQueue]);
 
-  // Handle retry
   const handleRetry = async (jobIds?: string[]) => {
     setActionLoading(true);
     try {
@@ -124,7 +122,6 @@ export default function WhatsappPage() {
     }
   };
 
-  // Handle delete
   const handleDelete = async (jobIds?: string[]) => {
     setActionLoading(true);
     try {
@@ -158,7 +155,6 @@ export default function WhatsappPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
@@ -182,7 +178,6 @@ export default function WhatsappPage() {
         </Link>
       </div>
 
-      {/* Top Statistics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
           <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
@@ -228,7 +223,6 @@ export default function WhatsappPage() {
         </div>
       </div>
 
-      {/* Tab Selector */}
       <div className="flex items-center gap-4 border-b border-[var(--surface-border)]">
         <button
           onClick={() => setActiveTab('history')}
@@ -252,10 +246,8 @@ export default function WhatsappPage() {
         </button>
       </div>
 
-      {/* TAB 1: HISTORY LOGS */}
       {activeTab === 'history' && (
         <div className="space-y-4">
-          {/* Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-[240px]">
               <Input
@@ -280,7 +272,6 @@ export default function WhatsappPage() {
             </div>
           </div>
 
-          {/* Logs Table */}
           <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden shadow-elevation-1">
             {historyLoading ? (
               <div className="p-6 space-y-3">
@@ -367,7 +358,6 @@ export default function WhatsappPage() {
               </div>
             )}
 
-            {/* Pagination Controls */}
             <div className="flex items-center justify-between p-4 border-t border-[var(--surface-border)] text-xs">
               <span className="text-[var(--content-tertiary)]">
                 Page {page} of {totalPages}
@@ -395,7 +385,6 @@ export default function WhatsappPage() {
         </div>
       )}
 
-      {/* TAB 2: FAILED QUEUE */}
       {activeTab === 'failed' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">

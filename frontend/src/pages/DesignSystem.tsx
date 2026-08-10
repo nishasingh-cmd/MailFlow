@@ -1,7 +1,3 @@
-/**
- * DesignSystem Showcase — Phase 2 only.
- * Displays all UI components for visual testing. Not an application page.
- */
 import { useState } from 'react';
 import {
   Button,
@@ -27,7 +23,6 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { useToast } from '../hooks/useToast';
 
-/* ───────── Icons ───────── */
 const icons = {
   mail: (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -82,7 +77,6 @@ const icons = {
   ),
 };
 
-/* ───────── Sample table data ───────── */
 interface Lead {
   id: number;
   name: string;
@@ -190,7 +184,6 @@ const sidebarSections: SidebarSection[] = [
   },
 ];
 
-/* ───────── Section wrapper ───────── */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-14">
@@ -203,12 +196,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-/* ───────── Main Showcase ───────── */
 export default function DesignSystem() {
   const { isDark, toggleTheme } = useTheme();
   const { toast, toasts, removeToast } = useToast();
 
-  // State
   const [inputVal, setInputVal] = useState('');
   const [textareaVal, setTextareaVal] = useState('');
   const [selectVal, setSelectVal] = useState('');
@@ -245,7 +236,6 @@ export default function DesignSystem() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--surface-bg)]">
-      {/* ── Sidebar ── */}
       <Sidebar
         sections={sidebarSections}
         activeId={sidebarActive}
@@ -278,9 +268,7 @@ export default function DesignSystem() {
         }
       />
 
-      {/* ── Main Content ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Navbar */}
         <Navbar
           logo={
             <div className="flex items-center gap-2 text-sm font-medium text-[var(--content-secondary)]">
@@ -296,7 +284,6 @@ export default function DesignSystem() {
           onNotificationClick={() => toast.info('No new notifications')}
         />
 
-        {/* Scrollable content area */}
         <main className="flex-1 overflow-y-auto px-6 py-8 max-w-5xl mx-auto w-full">
           <div className="mb-10">
             <Badge variant="brand" size="sm">
@@ -310,7 +297,6 @@ export default function DesignSystem() {
             </p>
           </div>
 
-          {/* ── Buttons ── */}
           <Section title="Buttons">
             <div className="space-y-6">
               <div>
@@ -351,7 +337,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Inputs ── */}
           <Section title="Inputs">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Input
@@ -395,7 +380,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Textarea ── */}
           <Section title="Textarea">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Textarea
@@ -416,7 +400,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Select ── */}
           <Section title="Select">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Select
@@ -449,7 +432,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Badges ── */}
           <Section title="Badges">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
@@ -477,7 +459,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Avatars ── */}
           <Section title="Avatars">
             <div className="space-y-5">
               <div className="flex items-end gap-4">
@@ -500,7 +481,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Cards ── */}
           <Section title="Cards">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card header="Default Card">
@@ -533,7 +513,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Table ── */}
           <Section title="Table">
             <div className="space-y-3">
               <div className="flex items-center gap-2 justify-end">
@@ -553,7 +532,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Loaders ── */}
           <Section title="Loaders">
             <div className="space-y-6">
               <div>
@@ -585,7 +563,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Skeleton ── */}
           <Section title="Skeletons">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -619,7 +596,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Empty State ── */}
           <Section title="Empty States">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card variant="default">
@@ -645,7 +621,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Modal ── */}
           <Section title="Modal & Drawer">
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => setModalOpen(true)}>Open Modal</Button>
@@ -670,7 +645,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* ── Toasts ── */}
           <Section title="Toast Notifications">
             <div className="flex flex-wrap gap-3">
               <Button
@@ -719,7 +693,6 @@ export default function DesignSystem() {
             </div>
           </Section>
 
-          {/* Sidebar demo section */}
           <Section title="Sidebar Navigation">
             <div className="flex gap-2 mb-3">
               {sidebarSections[0].items.map((item) => (
@@ -741,7 +714,6 @@ export default function DesignSystem() {
         </main>
       </div>
 
-      {/* ── Overlays ── */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -837,10 +809,8 @@ export default function DesignSystem() {
         </div>
       </Drawer>
 
-      {/* Toast container */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* Page loader */}
       {showPageLoader && <PageLoader label="Loading dashboard…" />}
     </div>
   );

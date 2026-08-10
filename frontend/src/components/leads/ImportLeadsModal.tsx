@@ -56,7 +56,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
     onClose();
   };
 
-  // ── STEP 1: File Selection & Upload ──
   const processSelectedFile = async (file: File) => {
     const validExtensions = ['.csv', '.xlsx', '.xls'];
     const hasValidExt = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
@@ -111,7 +110,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
     }
   };
 
-  // ── STEP 2: Mapping Validation ──
   const handleValidateMapping = async () => {
     if (!columnMapping.name || !columnMapping.email) {
       toast.error('Please map both Name and Email columns before proceeding.');
@@ -133,7 +131,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
     }
   };
 
-  // ── STEP 3: Confirm Import ──
   const handleConfirmImport = async () => {
     if (!validationResult || !selectedFile || !previewData) return;
 
@@ -176,7 +173,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
       size="xl"
     >
       <div className="space-y-6">
-        {/* Stepper Progress Bar */}
         <div className="flex items-center justify-between border-b border-[var(--surface-border)] pb-4 text-xs font-medium text-[var(--content-tertiary)]">
           <div
             className={`flex items-center gap-2 ${step === 'UPLOAD' ? 'text-brand-400 font-semibold' : ''}`}
@@ -206,7 +202,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
           </div>
         </div>
 
-        {/* ── STEP 1: FILE UPLOAD ── */}
         {step === 'UPLOAD' && (
           <div className="space-y-4">
             <div
@@ -252,7 +247,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
           </div>
         )}
 
-        {/* ── STEP 2: SMART COLUMN MAPPING ── */}
         {step === 'MAPPING' && previewData && (
           <div className="space-y-6">
             <div className="p-3 bg-[var(--surface-elevated)] rounded-lg text-xs text-[var(--content-secondary)] flex items-center justify-between">
@@ -284,7 +278,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
               })}
             </div>
 
-            {/* Sample Data Preview Table */}
             {previewData.sampleRows.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-semibold text-[var(--content-primary)]">
@@ -333,10 +326,8 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
           </div>
         )}
 
-        {/* ── STEP 3: VALIDATION & DUPLICATES ── */}
         {step === 'VALIDATION' && validationResult && (
           <div className="space-y-6">
-            {/* Stat Overview Cards */}
             <div className="grid grid-cols-4 gap-3">
               <Card variant="default" className="p-3 text-center">
                 <span className="text-xs text-[var(--content-tertiary)]">Total Rows</span>
@@ -360,7 +351,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
               </Card>
             </div>
 
-            {/* Invalid rows display if any */}
             {validationResult.invalidRows.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-semibold text-red-400">
@@ -398,7 +388,6 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
           </div>
         )}
 
-        {/* ── STEP 4: COMPLETE ── */}
         {step === 'COMPLETE' && importSummary && (
           <div className="text-center py-6 space-y-4">
             <div className="w-16 h-16 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-3xl mx-auto">

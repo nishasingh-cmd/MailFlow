@@ -52,7 +52,6 @@ export function EmptyState({
       )}
       role="status"
     >
-      {/* Icon */}
       {icon ? (
         <span className={cn('text-[var(--content-tertiary)]', sc.icon)} aria-hidden="true">
           {icon}
@@ -81,7 +80,6 @@ export function EmptyState({
         </div>
       )}
 
-      {/* Text */}
       <div className="flex flex-col gap-1.5 max-w-xs">
         <h3 className={cn('font-semibold text-[var(--content-primary)]', sc.title)}>{title}</h3>
         {description && (
@@ -91,7 +89,6 @@ export function EmptyState({
         )}
       </div>
 
-      {/* Actions */}
       {(action || secondaryAction) && (
         <div className="flex items-center gap-2 flex-wrap justify-center">
           {action && (

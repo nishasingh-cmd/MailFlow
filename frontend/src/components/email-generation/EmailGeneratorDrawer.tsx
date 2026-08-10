@@ -1,15 +1,3 @@
-/**
- * MailFlow — Email Generator Drawer
- * Phase 7: AI Email Generation
- *
- * All bugs fixed:
- * - Drawer prop: `open` (not `isOpen`)
- * - Button prop: `loading` (not `isLoading`)
- * - API response: properly unwrapped by service layer
- * - All state values guarded with null/fallback checks
- * - Error Boundary wrapper prevents full app crash
- * - All async operations wrapped in try/catch with toast feedback
- */
 import { useState, useEffect, useCallback, Component, type ReactNode, type ErrorInfo } from 'react';
 import { Company, EmailDraft, EmailTemplateType, GeneratedEmailResult } from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
@@ -18,10 +6,6 @@ import { deliveryService } from '../../services/delivery.service';
 import { Drawer, Button, Card, Badge, Input, Textarea } from '../ui';
 import { useToast } from '../../hooks/useToast';
 import { cn } from '../../utils/cn';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Error Boundary
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -70,10 +54,6 @@ class EmailDrawerErrorBoundary extends Component<
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface EmailGeneratorDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -109,19 +89,16 @@ function EmailGeneratorDrawerInner({
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Email output state — all initialised with safe empty values
   const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
 
-  // Sender context (static defaults — could later come from user profile)
   const senderName = 'Nisha Singh';
   const senderCompany = 'MailFlow';
   const senderProduct = 'Lead Outreach Platform';
 
-  // ── Load existing research + any saved draft ──────────────────────────────
   const loadData = useCallback(async () => {
     if (!leadId) return;
     setLoadingCompany(true);
@@ -151,7 +128,6 @@ function EmailGeneratorDrawerInner({
 
   useEffect(() => {
     if (isOpen && leadId) {
-      // Reset state on new open
       setSubjectSuggestions([]);
       setSubject('');
       setBody('');
@@ -161,7 +137,6 @@ function EmailGeneratorDrawerInner({
     }
   }, [isOpen, leadId, loadData]);
 
-  // ── AI Email Generation ───────────────────────────────────────────────────
   const handleGenerate = async (selectedTpl: EmailTemplateType = template, isRegen = false) => {
     if (!leadId) return;
 
@@ -181,7 +156,6 @@ function EmailGeneratorDrawerInner({
         },
       });
 
-      // Guard all fields — API may return partial data or nulls
       const subjects = Array.isArray(res?.subjectSuggestions) ? res.subjectSuggestions : [];
       const selectedSubj = res?.selectedSubject ?? subjects[0] ?? '';
       const emailBody = res?.body ?? '';
@@ -199,7 +173,6 @@ function EmailGeneratorDrawerInner({
       const msg = (err as Error)?.message ?? 'Failed to generate email';
       console.error('[EmailGenerator] Generation error:', msg);
 
-      // Requirement 8: If regeneration fails, keep previous email, show toast, never clear editor.
       if (msg.includes('RESEARCH_NOT_COMPLETED')) {
         toast.error('Please complete company research for this lead first.');
       } else if (msg.includes('LEAD_NOT_FOUND')) {
@@ -212,22 +185,19 @@ function EmailGeneratorDrawerInner({
     }
   };
 
-  // ── Template Change ────────────────────────────────────────────────────────
   const handleTemplateChange = (newTpl: EmailTemplateType) => {
     setTemplate(newTpl);
-    // Auto-regenerate only if research is complete
+
     if (leadId && company?.research?.status === 'COMPLETED') {
       void handleGenerate(newTpl);
     }
   };
 
-  // ── Subject Selection ──────────────────────────────────────────────────────
   const handleSelectSubject = (selected: string) => {
     setSubject(selected);
     toast.success('Subject line updated');
   };
 
-  // ── Save Draft ─────────────────────────────────────────────────────────────
   const handleSaveDraft = async () => {
     if (!leadId) return;
     if (!subject.trim() || !body.trim()) {
@@ -265,7 +235,6 @@ function EmailGeneratorDrawerInner({
     }
   };
 
-  // ── Send Email ─────────────────────────────────────────────────────────────
   const handleSendEmail = async () => {
     if (!leadId) return;
     if (!subject.trim() || !body.trim()) {
@@ -304,10 +273,8 @@ function EmailGeneratorDrawerInner({
   const painPoints = Array.isArray(research?.painPoints) ? (research!.painPoints as string[]) : [];
 
   return (
-    // BUG FIX: Drawer uses `open` prop, NOT `isOpen`
     <Drawer open={isOpen} onClose={onClose} title="✨ AI Email Generator" width="w-[580px]">
       <div className="space-y-6 pb-20">
-        {/* ── Loading skeleton ── */}
         {loadingCompany && (
           <div className="space-y-3 animate-pulse">
             <div className="h-16 rounded-lg bg-[var(--surface-secondary)]" />
@@ -315,7 +282,6 @@ function EmailGeneratorDrawerInner({
           </div>
         )}
 
-        {/* ── Research Not Completed Warning ── */}
         {!loadingCompany && !isResearchCompleted && (
           <Card variant="default" className="p-4 bg-amber-500/10 border-amber-500/30">
             <div className="flex items-start gap-3">
@@ -331,7 +297,6 @@ function EmailGeneratorDrawerInner({
           </Card>
         )}
 
-        {/* ── Research Context Summary Card ── */}
         {!loadingCompany && isResearchCompleted && company && (
           <Card
             variant="default"
@@ -341,7 +306,7 @@ function EmailGeneratorDrawerInner({
               <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
                 📊 Intelligence Context ({company.name})
               </h4>
-              {/* BUG FIX: Badge `size` prop exists — kept as-is */}
+
               <Badge variant="success" size="sm">
                 Research Ready
               </Badge>
@@ -371,7 +336,6 @@ function EmailGeneratorDrawerInner({
           </Card>
         )}
 
-        {/* ── Template Selector ── */}
         <div className="space-y-2">
           <label className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider block">
             Select Template
@@ -395,9 +359,7 @@ function EmailGeneratorDrawerInner({
           </div>
         </div>
 
-        {/* ── Generate Action Button ── */}
         <div className="flex items-center gap-3">
-          {/* BUG FIX: Button prop is `loading`, not `isLoading` */}
           <Button
             variant="primary"
             onClick={() => void handleGenerate(template, !!body)}
@@ -438,7 +400,6 @@ function EmailGeneratorDrawerInner({
           )}
         </div>
 
-        {/* ── Subject Line Suggestions ── */}
         {subjectSuggestions.length > 0 && (
           <Card variant="default" className="p-4 space-y-2">
             <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
@@ -467,7 +428,6 @@ function EmailGeneratorDrawerInner({
           </Card>
         )}
 
-        {/* ── Editor / Preview Panel ── */}
         {activeTab === 'edit' ? (
           <div className="space-y-4">
             <Input
@@ -519,7 +479,6 @@ function EmailGeneratorDrawerInner({
           </Card>
         )}
 
-        {/* ── Footer Actions ── */}
         <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--surface-border)]">
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
@@ -567,10 +526,6 @@ function EmailGeneratorDrawerInner({
     </Drawer>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public export — wrapped with Error Boundary
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function EmailGeneratorDrawer(props: EmailGeneratorDrawerProps) {
   return (

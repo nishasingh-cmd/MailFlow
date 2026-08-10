@@ -43,7 +43,6 @@ export function SmtpSettingsForm() {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Load existing SMTP config
   useEffect(() => {
     smtpService
       .getConfig()
@@ -166,7 +165,6 @@ export function SmtpSettingsForm() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-4">
-        {/* Preset Selector */}
         <Select
           id="smtp-provider"
           label="SMTP Provider Preset"
@@ -264,7 +262,6 @@ export function SmtpSettingsForm() {
           />
         </div>
 
-        {/* Test Result Indicator */}
         {testResult && (
           <div
             className={`rounded-lg border p-3.5 text-xs font-medium ${
@@ -278,7 +275,6 @@ export function SmtpSettingsForm() {
           </div>
         )}
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--surface-border)]">
           <Button
             type="button"

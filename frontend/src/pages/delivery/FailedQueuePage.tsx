@@ -109,7 +109,6 @@ export default function FailedQueuePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight flex items-center gap-2">
@@ -150,7 +149,6 @@ export default function FailedQueuePage() {
         </div>
       </div>
 
-      {/* Toolbar & Bulk Actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <Input
           id="failed-queue-search"
@@ -201,7 +199,6 @@ export default function FailedQueuePage() {
         )}
       </div>
 
-      {/* Jobs Table */}
       {loading ? (
         <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden">
           <table className="w-full text-sm">
@@ -375,7 +372,6 @@ export default function FailedQueuePage() {
         />
       )}
 
-      {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between text-xs text-[var(--content-secondary)] pt-2">
           <span>Failed Queue Items: {total}</span>
@@ -403,7 +399,6 @@ export default function FailedQueuePage() {
         </div>
       )}
 
-      {/* Bulk Delete Confirm Modal */}
       <Modal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}

@@ -26,7 +26,6 @@ const indicatorSizeClasses: Record<AvatarSize, string> = {
   xl: 'w-3.5 h-3.5 ring-2',
 };
 
-/** Deterministically pick a color from the user's name */
 function getInitialsColor(name: string): string {
   const colors = [
     'bg-violet-500',

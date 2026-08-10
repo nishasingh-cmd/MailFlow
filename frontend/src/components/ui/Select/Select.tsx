@@ -74,7 +74,6 @@ export function Select({
       )}
 
       <div ref={containerRef} className="relative">
-        {/* Trigger */}
         <button
           id={selectId}
           type="button"
@@ -99,7 +98,6 @@ export function Select({
             <span className="truncate">{selected ? selected.label : placeholder}</span>
           </span>
 
-          {/* Chevron */}
           <svg
             className={cn(
               'w-4 h-4 flex-shrink-0 text-[var(--content-tertiary)] transition-transform duration-150',
@@ -115,7 +113,6 @@ export function Select({
           </svg>
         </button>
 
-        {/* Dropdown */}
         {open && (
           <div
             className={cn(
@@ -126,7 +123,6 @@ export function Select({
             role="listbox"
             aria-label={label ?? 'Options'}
           >
-            {/* Search */}
             {searchable && (
               <div className="p-2 border-b border-[var(--surface-border)]">
                 <input
@@ -140,7 +136,6 @@ export function Select({
               </div>
             )}
 
-            {/* Options list */}
             <ul className="max-h-56 overflow-y-auto py-1 scrollbar-none">
               {filtered.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-[var(--content-tertiary)]">No results</li>

@@ -12,7 +12,7 @@ export interface ModalProps {
   children?: ReactNode;
   footer?: ReactNode;
   size?: ModalSize;
-  /** Prevent closing when clicking backdrop */
+
   persistent?: boolean;
   className?: string;
 }
@@ -37,7 +37,6 @@ export function Modal({
 }: ModalProps) {
   useKeyPress('Escape', onClose, open);
 
-  // Lock body scroll when open
   useEffect(() => {
     if (open) {
       const prev = document.body.style.overflow;
@@ -57,14 +56,12 @@ export function Modal({
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={persistent ? undefined : onClose}
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div
         className={cn(
           'relative w-full rounded-2xl',
@@ -76,7 +73,6 @@ export function Modal({
           className
         )}
       >
-        {/* Header */}
         {title && (
           <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[var(--surface-border)] flex-shrink-0">
             <h2 id="modal-title" className="text-base font-semibold text-[var(--content-primary)]">
@@ -101,12 +97,10 @@ export function Modal({
           </div>
         )}
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 text-sm text-[var(--content-secondary)] scrollbar-none">
           {children}
         </div>
 
-        {/* Footer */}
         {footer && (
           <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--surface-border)] flex-shrink-0">
             {footer}

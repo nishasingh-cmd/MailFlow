@@ -69,7 +69,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           {...props}
         />
 
-        {/* Password toggle */}
         {isPassword && (
           <button
             type="button"
@@ -115,7 +114,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           </button>
         )}
 
-        {/* Custom right icon (non-password) */}
         {rightIcon && !isPassword && (
           <span className="absolute right-3 flex items-center text-[var(--content-tertiary)] pointer-events-none">
             {rightIcon}
@@ -123,7 +121,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
       </div>
 
-      {/* Hint / Error */}
       {error ? (
         <p id={errorId} className="text-xs text-red-400" role="alert">
           {error}

@@ -1,8 +1,3 @@
-/**
- * Home — placeholder page for Phase 1 (Project Foundation).
- * Full page design and components will be implemented in subsequent phases
- * per the MailFlow Frontend Specification Document.
- */
 const Home = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">

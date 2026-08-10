@@ -40,7 +40,6 @@ export function LeadPickerTable({ selectedIds, onChange }: LeadPickerTableProps)
     return () => clearTimeout(t);
   }, [fetchLeads]);
 
-  // When search changes, reset to page 1
   useEffect(() => {
     setPage(1);
   }, [search]);
@@ -192,7 +191,6 @@ export function LeadPickerTable({ selectedIds, onChange }: LeadPickerTableProps)
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-[var(--content-tertiary)]">{total} total leads</p>

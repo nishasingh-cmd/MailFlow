@@ -1,18 +1,3 @@
-/**
- * MailFlow — Phase 2: WhatsApp Business Embedded Signup
- * WhatsApp Integration Settings Tab
- *
- * UI States:
- *  - MOCK_ACTIVE  — Mock provider banner + Connect button
- *  - DISCONNECTED — Empty state CTA
- *  - CONNECTING   — Progress steps (loading_sdk → signing_up → processing)
- *  - CONNECTED    — Business dashboard with Refresh + Disconnect
- *  - REFRESHING   — Skeleton overlay on dashboard
- *  - FAILED       — Error card with retry
- *  - DISCONNECTING — Confirm modal + loading state
- *
- * Security: No tokens displayed. No window.alert/confirm used.
- */
 import { useState, useEffect, useCallback } from 'react';
 import { WhatsappConfigData } from '@mailflow/shared';
 import { whatsappService } from '../../services/whatsapp.service';
@@ -25,7 +10,6 @@ interface WhatsappIntegrationTabProps {
   onUpdated: () => void;
 }
 
-// ─── Helper: format date ──────────────────────────────────────────────────────
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return 'N/A';
   return new Date(iso).toLocaleString(undefined, {
@@ -37,7 +21,6 @@ function formatDate(iso: string | null | undefined): string {
   });
 }
 
-// ─── Status Badge helper ──────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: WhatsappConfigData['status'] }) {
   if (status === 'CONNECTED')
     return (
@@ -64,7 +47,6 @@ function StatusBadge({ status }: { status: WhatsappConfigData['status'] }) {
   );
 }
 
-// ─── Progress Steps (shown during connecting) ─────────────────────────────────
 const CONNECT_STEPS = [
   { id: 'loading_sdk', label: 'Loading Facebook SDK...' },
   { id: 'signing_up', label: 'Opening Meta Signup...' },
@@ -135,7 +117,6 @@ function ConnectingProgress({ currentStep }: { currentStep: string }) {
   );
 }
 
-// ─── Connected Dashboard ──────────────────────────────────────────────────────
 function ConnectedDashboard({
   config,
   onRefresh,
@@ -160,7 +141,6 @@ function ConnectedDashboard({
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-green-500/15 flex items-center justify-center text-2xl">
@@ -181,7 +161,6 @@ function ConnectedDashboard({
         </div>
       </div>
 
-      {/* Detail Grid */}
       {refreshing ? (
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6 space-y-4">
           {rows.map((_, i) => (
@@ -203,7 +182,6 @@ function ConnectedDashboard({
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <Button
           variant="outline"
@@ -229,7 +207,6 @@ function ConnectedDashboard({
   );
 }
 
-// ─── Disconnected / Mock State ────────────────────────────────────────────────
 function DisconnectedState({
   status,
   errorMessage,
@@ -243,7 +220,6 @@ function DisconnectedState({
 }) {
   return (
     <div className="space-y-5">
-      {/* Error card */}
       {status === 'FAILED' && errorMessage && (
         <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-xs flex items-start gap-3">
           <span className="text-lg flex-shrink-0">⚠️</span>
@@ -254,7 +230,6 @@ function DisconnectedState({
         </div>
       )}
 
-      {/* Mock active banner */}
       {status === 'MOCK_ACTIVE' && (
         <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs flex items-start gap-3">
           <span className="text-lg flex-shrink-0">💡</span>
@@ -268,7 +243,6 @@ function DisconnectedState({
         </div>
       )}
 
-      {/* Main CTA card */}
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-8 flex flex-col items-center text-center gap-5">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-green-500/20 to-emerald-600/10 border border-green-500/20 flex items-center justify-center text-4xl shadow-lg">
           💬
@@ -340,7 +314,6 @@ function DisconnectedState({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export function WhatsappIntegrationTab({
   config: initialConfig,
   onUpdated,
@@ -353,7 +326,6 @@ export function WhatsappIntegrationTab({
   const [disconnecting, setDisconnecting] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
-  // Manual token form state
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [manualPhoneId, setManualPhoneId] = useState('');
@@ -361,12 +333,10 @@ export function WhatsappIntegrationTab({
   const [manualLoading, setManualLoading] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
-  // Sync config when parent refreshes
   useEffect(() => {
     setConfig(initialConfig);
   }, [initialConfig]);
 
-  // ── Meta Embedded Signup hook ───────────────────────────────────────────────
   const {
     status: signupStatus,
     error: signupError,
@@ -391,7 +361,6 @@ export function WhatsappIntegrationTab({
   const isConnected = config.status === 'CONNECTED' && !isConnecting;
   const hasError = signupStatus === 'error';
 
-  // ── Refresh ─────────────────────────────────────────────────────────────────
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -406,7 +375,6 @@ export function WhatsappIntegrationTab({
     }
   };
 
-  // ── Disconnect ───────────────────────────────────────────────────────────────
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
@@ -424,7 +392,6 @@ export function WhatsappIntegrationTab({
     }
   };
 
-  // ── Reload status from API ───────────────────────────────────────────────────
   const handleReloadStatus = async () => {
     setLoading(true);
     try {
@@ -437,13 +404,11 @@ export function WhatsappIntegrationTab({
     }
   };
 
-  // ── Connect attempt ──────────────────────────────────────────────────────────
   const handleConnect = () => {
     resetSignup();
     launchSignup();
   };
 
-  // ── Manual Token Connect ─────────────────────────────────────────────────────
   const handleManualConnect = async () => {
     if (!manualToken.trim() || !manualPhoneId.trim()) {
       setManualError('Access Token and Phone Number ID are both required.');
@@ -482,7 +447,6 @@ export function WhatsappIntegrationTab({
 
   return (
     <div className="space-y-6 max-w-2xl animate-fade-in">
-      {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-[var(--content-primary)]">
@@ -505,7 +469,6 @@ export function WhatsappIntegrationTab({
         </div>
       </div>
 
-      {/* Main content area */}
       {isConnecting ? (
         <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6">
           <ConnectingProgress currentStep={signupStatus} />
@@ -526,7 +489,6 @@ export function WhatsappIntegrationTab({
         />
       )}
 
-      {/* Disconnect Confirmation Modal */}
       <ConfirmModal
         isOpen={showDisconnectConfirm}
         title="Disconnect WhatsApp?"
@@ -547,7 +509,6 @@ export function WhatsappIntegrationTab({
         onCancel={() => setShowDisconnectConfirm(false)}
       />
 
-      {/* ── Manual Token Setup Panel ─────────────────────────────────────── */}
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] overflow-hidden">
         <button
           onClick={() => {

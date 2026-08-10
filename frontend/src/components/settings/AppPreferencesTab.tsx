@@ -107,7 +107,6 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
           rows={4}
         />
 
-        {/* Auto Save Toggle */}
         <label className="flex items-center justify-between p-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] cursor-pointer">
           <div>
             <p className="text-sm font-semibold text-[var(--content-primary)]">Auto-Save Drafts</p>
@@ -123,7 +122,6 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
           />
         </label>
 
-        {/* Action Buttons */}
         <div className="flex justify-end pt-4 border-t border-[var(--surface-border)]">
           <Button variant="primary" onClick={handleSave} loading={saving} disabled={saving}>
             Save Preferences

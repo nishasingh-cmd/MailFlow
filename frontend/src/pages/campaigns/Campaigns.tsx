@@ -104,7 +104,6 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
@@ -135,10 +134,8 @@ export default function Campaigns() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <CampaignStatsCards stats={stats} loading={loading && !stats} />
 
-      {/* Filters & Search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Input
           id="campaign-search"
@@ -180,7 +177,6 @@ export default function Campaigns() {
         </div>
       </div>
 
-      {/* Results count */}
       {!loading && !showEmpty && (
         <div className="flex items-center justify-between text-sm text-[var(--content-secondary)]">
           <span>{total === 0 ? 'No results' : `${total} campaign${total !== 1 ? 's' : ''}`}</span>
@@ -192,7 +188,6 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Campaign Table */}
       {(loading || campaigns.length > 0) && (
         <CampaignTable
           campaigns={campaigns}
@@ -204,7 +199,6 @@ export default function Campaigns() {
         />
       )}
 
-      {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button
@@ -244,7 +238,6 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Empty state — no campaigns at all */}
       {showEmpty && (
         <div className="rounded-xl border border-dashed border-[var(--surface-border)] bg-[var(--surface-card)] p-12 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto">
@@ -276,7 +269,6 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* No results for active search/filter */}
       {showNoResults && (
         <EmptyState
           title="No matching campaigns"
@@ -291,7 +283,6 @@ export default function Campaigns() {
         />
       )}
 
-      {/* Modals */}
       <CreateCampaignModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

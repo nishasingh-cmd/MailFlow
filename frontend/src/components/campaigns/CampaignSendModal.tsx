@@ -32,7 +32,6 @@ export function CampaignSendModal({
   const [starting, setStarting] = useState(false);
   const [speed, setSpeed] = useState<SendingSpeed>('NORMAL');
 
-  // Load preview when opened
   useEffect(() => {
     if (open && campaignId) {
       setLoadingPreview(true);
@@ -58,7 +57,7 @@ export function CampaignSendModal({
       await deliveryService.startSending(campaignId);
       toast.success('✅ Campaign queued successfully. Emails will begin sending shortly.');
       onStatusChanged?.();
-      onClose(); // Auto close dialog immediately per requirements
+      onClose();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
       toast.error(err.response?.data?.error || err.message || 'Failed to start campaign sending.');
@@ -88,7 +87,6 @@ export function CampaignSendModal({
           </div>
         ) : preview ? (
           <div className="space-y-4">
-            {/* Recipient & Metadata pill */}
             <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
               <div>
                 <span className="text-[var(--content-tertiary)]">Previewing for lead: </span>
@@ -107,7 +105,6 @@ export function CampaignSendModal({
               </div>
             </div>
 
-            {/* Email Content Box */}
             <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden bg-[var(--surface-card)]">
               <div className="p-4 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
                 <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)]">
@@ -122,7 +119,6 @@ export function CampaignSendModal({
               </div>
             </div>
 
-            {/* Speed Control Selector */}
             <div className="pt-2">
               <Select
                 id="sending-speed"
@@ -133,7 +129,6 @@ export function CampaignSendModal({
               />
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--surface-border)]">
               <Button variant="ghost" onClick={onClose} disabled={starting}>
                 Cancel

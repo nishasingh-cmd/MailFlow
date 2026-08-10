@@ -69,7 +69,6 @@ export const BarChart: React.FC<BarChartProps> = ({
     );
   }
 
-  // Vertical Bar Chart
   const chartWidth = 500;
   const padding = { top: 20, right: 20, bottom: 40, left: 40 };
   const innerWidth = chartWidth - padding.left - padding.right;
@@ -81,7 +80,6 @@ export const BarChart: React.FC<BarChartProps> = ({
   return (
     <div className={`relative w-full ${className}`}>
       <svg viewBox={`0 0 ${chartWidth} ${height}`} className="w-full h-auto select-none">
-        {/* Y Gridlines */}
         {[0, 0.5, 1].map((ratio, idx) => {
           const yVal = Math.round(maxVal * ratio);
           const yPos = padding.top + innerHeight - ratio * innerHeight;
@@ -107,7 +105,6 @@ export const BarChart: React.FC<BarChartProps> = ({
           );
         })}
 
-        {/* Bars */}
         {data.map((item, idx) => {
           const x = padding.left + idx * (barWidth + barGap);
           const barHeight = Math.max(4, (item.value / maxVal) * innerHeight);
@@ -132,7 +129,7 @@ export const BarChart: React.FC<BarChartProps> = ({
                 opacity={isHovered ? 1 : 0.85}
                 className="transition-all duration-200"
               />
-              {/* X Axis Label */}
+
               <text
                 x={x + barWidth / 2}
                 y={height - 12}
@@ -146,7 +143,6 @@ export const BarChart: React.FC<BarChartProps> = ({
         })}
       </svg>
 
-      {/* Floating Tooltip */}
       {hoveredIdx !== null && data[hoveredIdx] && (
         <div className="absolute top-2 right-2 bg-[var(--surface-elevated,#1E293B)] border border-[var(--border-default,rgba(255,255,255,0.1))] rounded-lg px-3 py-1.5 shadow-lg text-xs">
           <span className="font-semibold text-[var(--content-primary)]">

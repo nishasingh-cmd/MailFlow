@@ -5,7 +5,6 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
 function App() {
-  // Initialize theme hook so dark/light theme class is applied on root
   useTheme();
 
   return (
