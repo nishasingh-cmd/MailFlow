@@ -16,11 +16,13 @@ interface ApiEnvelope<T> {
 export interface CampaignPreview {
   campaignId: string;
   campaignName: string;
+  channel?: 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
   template: string;
   lead: {
     id: string;
     name: string;
     email: string;
+    phone?: string | null;
     company?: string | null;
     industry?: string | null;
   };

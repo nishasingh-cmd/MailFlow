@@ -298,6 +298,8 @@ export type CampaignStatus =
 
 export type SendingSpeed = 'FAST' | 'NORMAL' | 'SLOW';
 
+export type CampaignChannel = 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
+
 export interface CampaignLead {
   campaignId: string;
   leadId: string;
@@ -311,6 +313,7 @@ export interface Campaign {
   name: string;
   description?: string | null;
   status: CampaignStatus;
+  channel?: CampaignChannel;
   templateId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -327,6 +330,7 @@ export interface CreateCampaignRequest {
   name: string;
   campaignName?: string;
   description?: string;
+  channel?: CampaignChannel;
   leadIds?: string[];
   selectedLeadIds?: string[];
   templateId?: string;
@@ -338,6 +342,7 @@ export interface CreateCampaignRequest {
 export interface UpdateCampaignRequest {
   name?: string;
   description?: string;
+  channel?: CampaignChannel;
   leadIds?: string[];
   templateId?: string;
   status?: CampaignStatus;

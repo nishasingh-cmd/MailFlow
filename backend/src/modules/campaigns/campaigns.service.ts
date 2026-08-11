@@ -19,12 +19,18 @@ export class CampaignsService {
       validStatuses.includes(rawStatus as CampaignStatus) ? rawStatus : 'DRAFT'
     ) as CampaignStatus;
 
+    const rawChannel = String(input.channel || 'EMAIL').toUpperCase();
+    const validChannels = ['EMAIL', 'WHATSAPP', 'EMAIL_AND_WHATSAPP'];
+    const channel = (validChannels.includes(rawChannel) ? rawChannel : 'EMAIL') as
+      'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
+
     const campaign = await prisma.campaign.create({
       data: {
         userId,
         name,
         description,
         status,
+        channel,
         templateId,
         campaignLeads:
           leadIds && leadIds.length > 0
@@ -162,6 +168,7 @@ export class CampaignsService {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.status !== undefined && { status: input.status as CampaignStatus }),
+        ...(input.channel !== undefined && { channel: input.channel }),
         ...(input.templateId !== undefined && { templateId: input.templateId }),
         ...(leadUpdate && { campaignLeads: leadUpdate }),
       },

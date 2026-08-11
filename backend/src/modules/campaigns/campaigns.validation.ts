@@ -40,6 +40,7 @@ export const createCampaignSchema = z
     selectedLeadIds: z.array(z.string()).optional(),
     templateId: z.string().max(100).nullable().optional(),
     selectedTemplate: z.string().max(100).nullable().optional(),
+    channel: z.enum(['EMAIL', 'WHATSAPP', 'EMAIL_AND_WHATSAPP']).optional().default('EMAIL'),
     status: z.enum(campaignStatusValues).optional().default('DRAFT'),
     createdBy: z.string().optional(),
   })
@@ -56,6 +57,7 @@ export const updateCampaignSchema = z.object({
   selectedLeadIds: z.array(z.string()).optional(),
   templateId: z.string().max(100).nullable().optional(),
   selectedTemplate: z.string().max(100).nullable().optional(),
+  channel: z.enum(['EMAIL', 'WHATSAPP', 'EMAIL_AND_WHATSAPP']).optional(),
   status: z.enum(campaignStatusValues).optional(),
 });
 

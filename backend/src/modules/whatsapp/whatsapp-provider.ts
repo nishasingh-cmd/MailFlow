@@ -413,8 +413,6 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
   }
 }
 
-import { env } from '../../config/env';
-
 /**
  * Factory to get active WhatsApp provider for a user.
  * Passes wabaId so the provider can auto-fetch template language codes.

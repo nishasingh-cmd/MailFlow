@@ -100,6 +100,7 @@ export function CreateCampaignModal({
         name: campaignName,
         campaignName: campaignName,
         description: description.trim() || undefined,
+        channel: channel,
         leadIds: selectedLeadIds,
         selectedLeadIds: selectedLeadIds,
         templateId: templateId || undefined,
@@ -292,6 +293,16 @@ export function CreateCampaignModal({
           <h3 className="text-sm font-semibold text-[var(--content-primary)]">Review Campaign</h3>
           <div className="divide-y divide-[var(--surface-border)] rounded-lg border border-[var(--surface-border)] overflow-hidden">
             <Row label="Campaign Name" value={name} />
+            <Row
+              label="Outreach Channel"
+              value={
+                channel === 'EMAIL_AND_WHATSAPP'
+                  ? 'Email + WhatsApp'
+                  : channel === 'WHATSAPP'
+                    ? 'WhatsApp Only'
+                    : 'Email Only'
+              }
+            />
             <Row label="Description" value={description || '—'} />
             <Row
               label="Selected Leads"

@@ -1,6 +1,7 @@
 import { PrismaClient, CampaignStatus, QueueJobStatus, Prisma } from '@prisma/client';
 import { personalizeText } from '../../utils/personalization';
 import { SmtpService } from '../smtp/smtp.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 const prisma = new PrismaClient();
 
@@ -54,11 +55,13 @@ export class DeliveryService {
     return {
       campaignId: campaign.id,
       campaignName: campaign.name,
+      channel: campaign.channel || 'EMAIL',
       template: draft?.template || campaign.templateId || 'Cold Outreach',
       lead: {
         id: lead.id,
         name: lead.name,
         email: lead.email,
+        phone: lead.phone,
         company: lead.company,
         industry: lead.industry,
       },
@@ -69,23 +72,14 @@ export class DeliveryService {
   }
 
   /**
-   * Start sending campaign — validates SMTP, enqueues personalized emails with duplicate protection,
-   * sets status to QUEUED -> SENDING
+   * Start sending campaign — supports Email, WhatsApp, and Email+WhatsApp multi-channel outreach.
    */
   static async startSending(
     userId: string,
     campaignId: string,
     options?: { speed?: 'FAST' | 'NORMAL' | 'SLOW' }
   ) {
-    // 1. Verify user has SMTP credentials configured
-    const smtp = await SmtpService.getConfig(userId);
-    if (!smtp || !smtp.hasPassword) {
-      throw new Error(
-        'SMTP configuration missing. Please configure and verify your SMTP settings before launching campaigns.'
-      );
-    }
-
-    // 2. Fetch campaign and leads
+    // 1. Fetch campaign and leads
     const campaign = await prisma.campaign.findFirst({
       where: { id: campaignId, userId },
       include: {
@@ -112,7 +106,21 @@ export class DeliveryService {
       throw new Error('Cannot send campaign with 0 leads. Please add leads first.');
     }
 
-    // Update status to QUEUED
+    const channel = campaign.channel || 'EMAIL';
+    const includesEmail = channel === 'EMAIL' || channel === 'EMAIL_AND_WHATSAPP';
+    const includesWhatsapp = channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP';
+
+    // 2. Verify SMTP credentials if campaign includes Email outreach
+    if (includesEmail) {
+      const smtp = await SmtpService.getConfig(userId);
+      if (!smtp || !smtp.hasPassword) {
+        throw new Error(
+          'SMTP configuration missing. Please configure and verify your SMTP settings in Settings before launching email campaigns.'
+        );
+      }
+    }
+
+    // 3. Update status to QUEUED
     const speed = options?.speed || campaign.sendingSpeed || 'NORMAL';
     await prisma.campaign.update({
       where: { id: campaignId },
@@ -123,59 +131,69 @@ export class DeliveryService {
       },
     });
 
-    // 3. Duplicate Protection: Check existing queue jobs for this campaign
-    const existingQueueJobs = await prisma.emailQueue.findMany({
-      where: { campaignId, userId },
-      select: { leadId: true },
-    });
-    const existingLeadIds = new Set(existingQueueJobs.map((j) => j.leadId));
-
-    // Filter leads that are not queued yet
-    const newLeads = campaign.campaignLeads.filter((cl) => !existingLeadIds.has(cl.leadId));
-
-    if (newLeads.length > 0) {
-      const queueEntries = newLeads.map((cl) => {
-        const lead = cl.lead;
-        const draft = lead.emailDrafts?.[0];
-
-        const rawSubject = draft?.subject || `Outreach for ${lead.company || lead.name}`;
-        const rawBody =
-          draft?.body ||
-          `Hi {{firstName}},\n\nI noticed your work at {{company}} in {{industry}}.\n\nBest regards,\nMailFlow Team`;
-
-        const subject = personalizeText(rawSubject, lead);
-        const htmlBody = personalizeText(rawBody, lead);
-
-        return {
-          userId,
-          campaignId,
-          leadId: lead.id,
-          recipientEmail: lead.email,
-          subject,
-          htmlBody,
-          status: 'PENDING' as QueueJobStatus,
-          attempts: 0,
-          maxRetries: 3,
-        };
+    // 4. Enqueue Email queue jobs (if channel includes Email)
+    if (includesEmail) {
+      const existingQueueJobs = await prisma.emailQueue.findMany({
+        where: { campaignId, userId },
+        select: { leadId: true },
       });
+      const existingLeadIds = new Set(existingQueueJobs.map((j) => j.leadId));
 
-      await prisma.emailQueue.createMany({
-        data: queueEntries,
-        skipDuplicates: true,
+      const newLeads = campaign.campaignLeads.filter((cl) => !existingLeadIds.has(cl.leadId));
+
+      if (newLeads.length > 0) {
+        const queueEntries = newLeads.map((cl) => {
+          const lead = cl.lead;
+          const draft = lead.emailDrafts?.[0];
+
+          const rawSubject = draft?.subject || `Outreach for ${lead.company || lead.name}`;
+          const rawBody =
+            draft?.body ||
+            `Hi {{firstName}},\n\nI noticed your work at {{company}} in {{industry}}.\n\nBest regards,\nMailFlow Team`;
+
+          const subject = personalizeText(rawSubject, lead);
+          const htmlBody = personalizeText(rawBody, lead);
+
+          return {
+            userId,
+            campaignId,
+            leadId: lead.id,
+            recipientEmail: lead.email,
+            subject,
+            htmlBody,
+            status: 'PENDING' as QueueJobStatus,
+            attempts: 0,
+            maxRetries: 3,
+          };
+        });
+
+        await prisma.emailQueue.createMany({
+          data: queueEntries,
+          skipDuplicates: true,
+        });
+      }
+
+      await prisma.emailQueue.updateMany({
+        where: { campaignId, userId, status: 'CANCELLED' },
+        data: { status: 'PENDING' },
       });
     }
 
-    // Unpause or reset CANCELLED/FAILED jobs if restarting
-    await prisma.emailQueue.updateMany({
-      where: {
-        campaignId,
-        userId,
-        status: 'CANCELLED',
-      },
-      data: {
-        status: 'PENDING',
-      },
-    });
+    // 5. Enqueue WhatsApp queue jobs (if channel includes WhatsApp)
+    if (includesWhatsapp) {
+      const leadIds = campaign.campaignLeads.map((cl) => cl.leadId);
+      if (leadIds.length > 0) {
+        await WhatsappService.enqueueMessages(userId, {
+          campaignId,
+          leadIds,
+        }).catch((err) => {
+          console.error(
+            `[DeliveryService] Error enqueuing WhatsApp messages for campaign ${campaignId}:`,
+            err
+          );
+        });
+      }
+    }
 
     // Update status to SENDING
     await prisma.campaign.update({
@@ -221,17 +239,29 @@ export class DeliveryService {
 
     if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
 
-    // Cancel all PENDING / PROCESSING queue jobs
-    await prisma.emailQueue.updateMany({
-      where: {
-        campaignId,
-        userId,
-        status: { in: ['PENDING', 'PROCESSING'] },
-      },
-      data: {
-        status: 'CANCELLED' as QueueJobStatus,
-      },
-    });
+    // Cancel all PENDING / PROCESSING queue jobs in both Email and WhatsApp queues
+    await Promise.all([
+      prisma.emailQueue.updateMany({
+        where: {
+          campaignId,
+          userId,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED' as QueueJobStatus,
+        },
+      }),
+      prisma.whatsappQueue.updateMany({
+        where: {
+          campaignId,
+          userId,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+        data: {
+          status: 'CANCELLED' as QueueJobStatus,
+        },
+      }),
+    ]);
 
     // Update campaign status
     await prisma.campaign.update({
@@ -246,7 +276,7 @@ export class DeliveryService {
   }
 
   /**
-   * Get live real-time campaign progress with detailed metrics
+   * Get live real-time campaign progress with detailed metrics across Email and WhatsApp
    */
   static async getCampaignProgress(userId: string, campaignId: string) {
     const campaign = await prisma.campaign.findFirst({
@@ -255,18 +285,25 @@ export class DeliveryService {
 
     if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
 
-    const counts = await prisma.emailQueue.groupBy({
-      by: ['status'],
-      where: { campaignId, userId },
-      _count: { id: true },
-    });
+    const [emailCounts, waCounts] = await Promise.all([
+      prisma.emailQueue.groupBy({
+        by: ['status'],
+        where: { campaignId, userId },
+        _count: { id: true },
+      }),
+      prisma.whatsappQueue.groupBy({
+        by: ['status'],
+        where: { campaignId, userId },
+        _count: { id: true },
+      }),
+    ]);
 
     let total = 0;
     let sent = 0;
     let failed = 0;
     let pending = 0;
 
-    counts.forEach((c) => {
+    [...emailCounts, ...waCounts].forEach((c) => {
       const cnt = c._count.id;
       total += cnt;
       if (c.status === 'SENT') sent += cnt;

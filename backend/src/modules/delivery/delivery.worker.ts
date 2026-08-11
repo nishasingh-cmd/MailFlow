@@ -230,19 +230,35 @@ export class DeliveryWorker {
    * Check campaign queue status and transition status when completed
    */
   private static async checkCampaignCompletion(userId: string, campaignId: string) {
-    const remainingPendingOrProcessing = await prisma.emailQueue.count({
-      where: {
-        campaignId,
-        userId,
-        status: { in: ['PENDING', 'PROCESSING'] },
-      },
-    });
+    const [emailPending, waPending] = await Promise.all([
+      prisma.emailQueue.count({
+        where: {
+          campaignId,
+          userId,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+      }),
+      prisma.whatsappQueue.count({
+        where: {
+          campaignId,
+          userId,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+      }),
+    ]);
+
+    const remainingPendingOrProcessing = emailPending + waPending;
 
     if (remainingPendingOrProcessing === 0) {
-      const [failedCount, sentCount] = await Promise.all([
+      const [emailFailed, emailSent, waFailed, waSent] = await Promise.all([
         prisma.emailQueue.count({ where: { campaignId, userId, status: 'FAILED' } }),
         prisma.emailQueue.count({ where: { campaignId, userId, status: 'SENT' } }),
+        prisma.whatsappQueue.count({ where: { campaignId, userId, status: 'FAILED' } }),
+        prisma.whatsappQueue.count({ where: { campaignId, userId, status: 'SENT' } }),
       ]);
+
+      const sentCount = emailSent + waSent;
+      const failedCount = emailFailed + waFailed;
 
       let finalStatus: CampaignStatus = 'COMPLETED';
       if (sentCount > 0 && failedCount > 0) {

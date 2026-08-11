@@ -1,4 +1,4 @@
-import { PrismaClient, QueueJobStatus } from '@prisma/client';
+import { PrismaClient, QueueJobStatus, CampaignStatus } from '@prisma/client';
 import { WhatsappProviderFactory } from './whatsapp-provider';
 
 const prisma = new PrismaClient();
@@ -172,6 +172,44 @@ export class WhatsappWorker {
           `[Worker] Queue ID: ${job.id} status updated to FAILED | Log ID: ${logEntry.id} created in Delivery History & Failed Queue.`
         );
       }
+
+      if (job.campaignId) {
+        await checkCampaignCompletion(job.userId, job.campaignId);
+      }
     }
+  }
+}
+
+async function checkCampaignCompletion(userId: string, campaignId: string) {
+  const [emailPending, waPending] = await Promise.all([
+    prisma.emailQueue.count({
+      where: { campaignId, userId, status: { in: ['PENDING', 'PROCESSING'] } },
+    }),
+    prisma.whatsappQueue.count({
+      where: { campaignId, userId, status: { in: ['PENDING', 'PROCESSING'] } },
+    }),
+  ]);
+
+  if (emailPending + waPending === 0) {
+    const [emailFailed, emailSent, waFailed, waSent] = await Promise.all([
+      prisma.emailQueue.count({ where: { campaignId, userId, status: 'FAILED' } }),
+      prisma.emailQueue.count({ where: { campaignId, userId, status: 'SENT' } }),
+      prisma.whatsappQueue.count({ where: { campaignId, userId, status: 'FAILED' } }),
+      prisma.whatsappQueue.count({ where: { campaignId, userId, status: 'SENT' } }),
+    ]);
+
+    const sentCount = emailSent + waSent;
+    const failedCount = emailFailed + waFailed;
+
+    let finalStatus = 'COMPLETED';
+    if (sentCount > 0 && failedCount > 0) finalStatus = 'COMPLETED_WITH_ERRORS';
+    else if (sentCount === 0 && failedCount > 0) finalStatus = 'FAILED';
+
+    await prisma.campaign
+      .update({
+        where: { id: campaignId },
+        data: { status: finalStatus as CampaignStatus, completedAt: new Date() },
+      })
+      .catch(() => {});
   }
 }

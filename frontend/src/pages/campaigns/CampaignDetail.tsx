@@ -395,6 +395,24 @@ export default function CampaignDetail() {
             Campaign Information
           </h2>
           <InfoRow label="Campaign Name">{campaign.name}</InfoRow>
+          <InfoRow label="Outreach Channel">
+            <Badge
+              variant={
+                campaign.channel === 'WHATSAPP'
+                  ? 'success'
+                  : campaign.channel === 'EMAIL_AND_WHATSAPP'
+                    ? 'warning'
+                    : 'brand'
+              }
+              size="sm"
+            >
+              {campaign.channel === 'EMAIL_AND_WHATSAPP'
+                ? '⚡ Email + WhatsApp'
+                : campaign.channel === 'WHATSAPP'
+                  ? '📱 WhatsApp Only'
+                  : '✉️ Email Only'}
+            </Badge>
+          </InfoRow>
           <InfoRow label="Status">
             <CampaignStatusBadge status={campaign.status} size="sm" />
           </InfoRow>
