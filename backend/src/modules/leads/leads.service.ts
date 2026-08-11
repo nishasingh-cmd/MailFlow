@@ -258,6 +258,7 @@ export class LeadsService {
         industry: l.industry,
         status: l.status as LeadStatus,
         customFields: (l.customFields as Record<string, unknown>) ?? null,
+        lastInboundMessageAt: l.lastInboundMessageAt ? l.lastInboundMessageAt.toISOString() : null,
         createdAt: l.createdAt.toISOString(),
         updatedAt: l.updatedAt.toISOString(),
       })),

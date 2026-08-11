@@ -3,10 +3,24 @@ import { z } from 'zod';
 const campaignStatusValues = [
   'DRAFT',
   'READY',
+  'QUEUED',
+  'SENDING',
+  'PAUSED',
+  'SENT',
   'COMPLETED',
+  'COMPLETED_WITH_ERRORS',
+  'FAILED',
+  'CANCELLED',
   'Draft',
   'Ready',
+  'Queued',
+  'Sending',
+  'Paused',
+  'Sent',
   'Completed',
+  'Completed_With_Errors',
+  'Failed',
+  'Cancelled',
 ] as const;
 
 export const createCampaignSchema = z
@@ -47,7 +61,30 @@ export const updateCampaignSchema = z.object({
 
 export const queryCampaignsSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(['DRAFT', 'READY', 'COMPLETED', 'Draft', 'Ready', 'Completed', 'ALL']).optional(),
+  status: z
+    .enum([
+      'DRAFT',
+      'READY',
+      'QUEUED',
+      'SENDING',
+      'PAUSED',
+      'SENT',
+      'COMPLETED',
+      'COMPLETED_WITH_ERRORS',
+      'FAILED',
+      'CANCELLED',
+      'Draft',
+      'Ready',
+      'Queued',
+      'Sending',
+      'Paused',
+      'Sent',
+      'Completed',
+      'Failed',
+      'Cancelled',
+      'ALL',
+    ])
+    .optional(),
   sortBy: z.enum(['name', 'createdAt', 'updatedAt', 'leadCount']).optional().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.coerce.number().int().min(1).optional().default(1),

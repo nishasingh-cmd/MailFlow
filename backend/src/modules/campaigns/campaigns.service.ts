@@ -14,8 +14,9 @@ export class CampaignsService {
     const templateId =
       ((input.templateId || input.selectedTemplate || input.template) as string) || null;
     const rawStatus = String(input.status || 'DRAFT').toUpperCase();
+    const validStatuses = Object.values(CampaignStatus);
     const status = (
-      ['DRAFT', 'READY', 'COMPLETED'].includes(rawStatus) ? rawStatus : 'DRAFT'
+      validStatuses.includes(rawStatus as CampaignStatus) ? rawStatus : 'DRAFT'
     ) as CampaignStatus;
 
     const campaign = await prisma.campaign.create({

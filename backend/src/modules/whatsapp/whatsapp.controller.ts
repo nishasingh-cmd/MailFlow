@@ -2,6 +2,11 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { WhatsappGeneratorService } from './whatsapp-generator.service';
 import { WhatsappService } from './whatsapp.service';
+import { PrismaClient } from '@prisma/client';
+import { decrypt } from '../../utils/crypto';
+import { env } from '../../config/env';
+
+const prisma = new PrismaClient();
 
 export class WhatsappController {
   /**
@@ -198,6 +203,84 @@ export class WhatsappController {
     } catch (error: unknown) {
       console.error('[whatsapp.controller] getStats error:', error);
       res.status(500).json({ error: 'Failed to fetch WhatsApp stats' });
+    }
+  }
+
+  /**
+   * GET /api/whatsapp/templates — Fetch all templates from Meta WABA API.
+   * Returns exact template names, language codes, and status.
+   * Use this to debug #130001 "Template name does not exist in the translation" errors.
+   */
+  static async getTemplates(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+
+      const config = await prisma.whatsappConfig.findUnique({ where: { userId } });
+
+      if (!config?.accessToken || !config?.businessAccountId) {
+        res.status(400).json({
+          success: false,
+          error:
+            'WhatsApp not connected or WABA ID not configured. Please connect via Settings -> WhatsApp.',
+        });
+        return;
+      }
+
+      let token = '';
+      try {
+        token = decrypt(config.accessToken);
+      } catch {
+        token = config.accessToken;
+      }
+
+      const graphVersion = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
+      const wabaId = config.businessAccountId;
+
+      const url = `https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates?fields=name,language,status,components&limit=100`;
+
+      console.log(`[WhatsappController.getTemplates] Fetching templates for WABA: ${wabaId}`);
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = (await response.json()) as {
+        data?: Array<{
+          name: string;
+          language: string;
+          status: string;
+          components?: Array<{ type: string; text?: string; format?: string }>;
+        }>;
+        error?: { message?: string; code?: number };
+      };
+
+      console.log(`[WhatsappController.getTemplates] Meta response:`, JSON.stringify(data));
+
+      if (!response.ok || data.error) {
+        const errCode = data.error?.code;
+        let errMsg = data.error?.message || `HTTP ${response.status}`;
+        if (errCode === 190) errMsg = 'Access token expired or invalid.';
+        if (errCode === 100)
+          errMsg = `Invalid WABA ID "${wabaId}". Verify in Meta Business Manager.`;
+        res.status(400).json({ success: false, error: errMsg });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          wabaId,
+          templates: (data.data || []).map((t) => ({
+            name: t.name,
+            language: t.language,
+            status: t.status,
+            bodyText: t.components?.find((c) => c.type === 'BODY')?.text || null,
+          })),
+        },
+      });
+    } catch (error: unknown) {
+      console.error('[whatsapp.controller] getTemplates error:', error);
+      res.status(500).json({ error: 'Failed to fetch WhatsApp templates from Meta' });
     }
   }
 }

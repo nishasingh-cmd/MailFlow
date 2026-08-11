@@ -379,9 +379,13 @@ export class WhatsappService {
         sendType = 'TEMPLATE';
         useTemplate = true;
         templateName = job.templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';
-        templateParams = job.templateParams
-          ? (job.templateParams as Prisma.InputJsonValue)
-          : Prisma.JsonNull;
+        const existingParams = Array.isArray(job.templateParams)
+          ? (job.templateParams as string[])
+          : [];
+        const leadName = job.lead?.name || 'there';
+        templateParams = (
+          existingParams.length > 0 ? existingParams : [leadName]
+        ) as Prisma.InputJsonValue;
       }
 
       await prisma.whatsappQueue.update({

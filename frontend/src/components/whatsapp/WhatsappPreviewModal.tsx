@@ -10,11 +10,18 @@ interface WhatsappPreviewModalProps {
   companyName?: string;
   phone?: string;
   campaignId?: string;
+  lastInboundMessageAt?: string | null;
   onClose: () => void;
   onSent?: () => void;
 }
 
 const MAX_WA_CHARS = 1000;
+
+/** Returns true if the lead messaged us within the last 24 hours */
+function isWithin24hWindow(lastInboundMessageAt?: string | null): boolean {
+  if (!lastInboundMessageAt) return false;
+  return Date.now() - new Date(lastInboundMessageAt).getTime() < 24 * 60 * 60 * 1000;
+}
 
 export function WhatsappPreviewModal({
   open,
@@ -23,6 +30,7 @@ export function WhatsappPreviewModal({
   companyName,
   phone,
   campaignId,
+  lastInboundMessageAt,
   onClose,
   onSent,
 }: WhatsappPreviewModalProps) {
@@ -32,6 +40,8 @@ export function WhatsappPreviewModal({
   const [generating, setGenerating] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sending, setSending] = useState(false);
+
+  const canSendFreeText = isWithin24hWindow(lastInboundMessageAt);
 
   useEffect(() => {
     if (open && leadId) {
@@ -130,6 +140,37 @@ export function WhatsappPreviewModal({
             </Badge>
           </div>
         </div>
+
+        {/* 24h window info banner */}
+        {!canSendFreeText ? (
+          <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/8 text-amber-200 text-xs space-y-1.5">
+            <p className="font-semibold flex items-center gap-1.5">
+              <span>📋</span> Template Message Will Be Sent (Meta Policy)
+            </p>
+            <p className="text-amber-300/80 leading-relaxed">
+              This lead hasn't messaged you in the last 24 hours. Meta requires a pre-approved
+              template for outbound messages. Your{' '}
+              <code className="font-mono text-amber-200 bg-amber-500/15 px-1 rounded">
+                cold_outreach
+              </code>{' '}
+              template will be sent automatically — the preview below is for your reference only.
+            </p>
+            <p className="text-amber-300/70 font-mono text-[11px] bg-[var(--surface-card)] rounded p-2 border border-amber-500/20">
+              "Hi {leadName || '{{1}}'}, I came across your profile and would love to connect..."
+            </p>
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl border border-green-500/25 bg-green-500/8 text-green-300 text-xs flex items-start gap-2">
+            <span className="text-base">✅</span>
+            <div>
+              <p className="font-semibold text-green-200">24-Hour Window Active</p>
+              <p className="text-green-300/80">
+                This lead messaged you recently — you can send a free-form message directly without
+                needing a template.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">

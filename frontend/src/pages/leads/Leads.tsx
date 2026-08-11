@@ -116,6 +116,7 @@ export default function Leads() {
   const [waLeadName, setWaLeadName] = useState<string>('');
   const [waCompanyName, setWaCompanyName] = useState<string>('');
   const [waPhone, setWaPhone] = useState<string>('');
+  const [waLastInboundMessageAt, setWaLastInboundMessageAt] = useState<string | null>(null);
   const [waBatchModalOpen, setWaBatchModalOpen] = useState(false);
 
   const openWhatsappModal = (lead: Lead) => {
@@ -123,6 +124,7 @@ export default function Leads() {
     setWaLeadName(lead.name);
     setWaCompanyName(lead.company || '');
     setWaPhone(lead.phone || '');
+    setWaLastInboundMessageAt(lead.lastInboundMessageAt ?? null);
     setWaPreviewOpen(true);
   };
 
@@ -862,6 +864,7 @@ export default function Leads() {
         leadName={waLeadName}
         companyName={waCompanyName}
         phone={waPhone}
+        lastInboundMessageAt={waLastInboundMessageAt}
         onClose={() => setWaPreviewOpen(false)}
         onSent={() => fetchLeads()}
       />

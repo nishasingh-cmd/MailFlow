@@ -13,6 +13,9 @@ export interface Lead {
   industry?: string | null;
   status: LeadStatus;
   customFields?: Record<string, unknown> | null;
+  /** Timestamp of the last inbound WhatsApp message from this lead.
+   *  Used to determine the 24-hour customer service window for Meta WhatsApp API. */
+  lastInboundMessageAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

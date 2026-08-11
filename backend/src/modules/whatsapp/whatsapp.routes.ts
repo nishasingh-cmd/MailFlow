@@ -28,5 +28,6 @@ router.post('/failed/retry', WhatsappController.retryFailed);
 router.delete('/failed', WhatsappController.deleteFailed);
 
 router.get('/stats', WhatsappController.getStats);
+router.get('/templates', WhatsappController.getTemplates);
 
 export default router;
