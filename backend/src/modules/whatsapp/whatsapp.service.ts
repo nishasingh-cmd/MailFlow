@@ -151,6 +151,8 @@ export class WhatsappService {
       let templateName: string | null = null;
       let templateParams: string[] | null = null;
 
+      let messageText: string = input.message || '';
+
       if (!isWithin24h) {
         sendType = 'TEMPLATE';
         useTemplate = true;
@@ -160,11 +162,21 @@ export class WhatsappService {
         } else if (templateName === 'hello_world') {
           templateParams = [];
         } else {
-          templateParams = [lead.name || 'there'];
+          try {
+            const aiGenerated = await WhatsappGeneratorService.generateTemplateVariables(
+              userId,
+              lead.id,
+              templateName
+            );
+            templateParams = aiGenerated.templateParams;
+            if (!messageText) {
+              messageText = aiGenerated.previewText;
+            }
+          } catch {
+            templateParams = [lead.name ? lead.name.split(' ')[0] : 'there'];
+          }
         }
       }
-
-      let messageText: string = input.message || '';
 
       if (useTemplate) {
         if (!messageText) {

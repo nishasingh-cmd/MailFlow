@@ -2,6 +2,7 @@ import { PrismaClient, CampaignStatus, QueueJobStatus, Prisma } from '@prisma/cl
 import { personalizeText } from '../../utils/personalization';
 import { SmtpService } from '../smtp/smtp.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { WhatsappGeneratorService } from '../whatsapp/whatsapp-generator.service';
 
 const prisma = new PrismaClient();
 
@@ -52,10 +53,23 @@ export class DeliveryService {
     const personalizedSubject = personalizeText(rawSubject, lead);
     const personalizedBody = personalizeText(rawBody, lead);
 
+    let whatsappPreview = null;
+    const channel = campaign.channel || 'EMAIL';
+    if (channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP') {
+      try {
+        whatsappPreview = await WhatsappGeneratorService.generateTemplateVariables(userId, lead.id);
+      } catch (err) {
+        console.warn(
+          `[DeliveryService] Error generating WhatsApp preview for lead ${lead.id}:`,
+          err
+        );
+      }
+    }
+
     return {
       campaignId: campaign.id,
       campaignName: campaign.name,
-      channel: campaign.channel || 'EMAIL',
+      channel,
       template: draft?.template || campaign.templateId || 'Cold Outreach',
       lead: {
         id: lead.id,
@@ -67,6 +81,7 @@ export class DeliveryService {
       },
       subject: personalizedSubject,
       htmlBody: personalizedBody,
+      whatsappPreview,
       totalLeads: campaign.campaignLeads.length,
     };
   }

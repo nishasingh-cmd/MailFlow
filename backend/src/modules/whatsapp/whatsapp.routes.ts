@@ -19,6 +19,7 @@ router.post('/refresh', WhatsappOnboardingController.refresh);
 router.post('/disconnect', WhatsappOnboardingController.disconnect);
 
 router.post('/generate', WhatsappController.generate);
+router.post('/preview-template', WhatsappController.previewTemplate);
 router.post('/draft', WhatsappController.saveDraft);
 router.post('/send', WhatsappController.send);
 

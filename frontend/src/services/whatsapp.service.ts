@@ -30,6 +30,36 @@ export const whatsappService = {
     return envelope.data;
   },
 
+  async previewTemplate(
+    leadId: string,
+    templateName?: string
+  ): Promise<{
+    leadId: string;
+    leadName: string;
+    companyName: string;
+    phone: string;
+    templateName: string;
+    templateLang: string;
+    variables: Record<string, string>;
+    templateParams: string[];
+    previewText: string;
+  }> {
+    const { data: envelope } = await api.post<
+      ApiEnvelope<{
+        leadId: string;
+        leadName: string;
+        companyName: string;
+        phone: string;
+        templateName: string;
+        templateLang: string;
+        variables: Record<string, string>;
+        templateParams: string[];
+        previewText: string;
+      }>
+    >('/whatsapp/preview-template', { leadId, templateName });
+    return envelope.data;
+  },
+
   async saveDraft(
     leadId: string,
     message: string,

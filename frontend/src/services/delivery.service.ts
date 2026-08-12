@@ -28,6 +28,13 @@ export interface CampaignPreview {
   };
   subject: string;
   htmlBody: string;
+  whatsappPreview?: {
+    templateName: string;
+    templateLang?: string;
+    variables?: Record<string, string>;
+    templateParams?: string[];
+    previewText: string;
+  } | null;
   totalLeads: number;
 }
 

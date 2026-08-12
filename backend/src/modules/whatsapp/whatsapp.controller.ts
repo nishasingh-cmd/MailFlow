@@ -41,6 +41,37 @@ export class WhatsappController {
   }
 
   /**
+   * POST /api/whatsapp/preview-template — Generate AI personalized template variables and resolved preview text
+   */
+  static async previewTemplate(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { leadId, templateName, templateBodyText } = req.body as {
+        leadId: string;
+        templateName?: string;
+        templateBodyText?: string;
+      };
+      const userId = req.user!.userId;
+
+      if (!leadId) {
+        res.status(400).json({ error: 'Lead ID is required' });
+        return;
+      }
+
+      const generated = await WhatsappGeneratorService.generateTemplateVariables(
+        userId,
+        leadId,
+        templateName,
+        templateBodyText
+      );
+
+      res.status(200).json({ success: true, data: generated });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      res.status(400).json({ error: err.message || 'Failed to generate template preview' });
+    }
+  }
+
+  /**
    * POST /api/whatsapp/draft — Save/update WhatsApp draft
    */
   static async saveDraft(req: AuthenticatedRequest, res: Response): Promise<void> {

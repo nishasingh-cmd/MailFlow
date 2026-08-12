@@ -130,21 +130,49 @@ export function CampaignSendModal({
                 <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/8 text-emerald-200 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold flex items-center gap-1.5 text-emerald-300">
-                      <span>💬</span> WhatsApp Cloud API Dispatch
+                      <span>💬</span> AI Personalized WhatsApp Template Dispatch
                     </span>
                     <Badge variant="success" size="sm">
-                      Meta Cloud API
+                      Meta Cloud API (Lang: en)
                     </Badge>
                   </div>
                   <p className="text-emerald-300/80 leading-relaxed">
                     Outbound WhatsApp messages will be sent via Meta Cloud API using your
                     pre-approved{' '}
                     <code className="font-mono text-emerald-200 bg-emerald-500/20 px-1 rounded">
-                      cold_outreach
+                      {preview.whatsappPreview?.templateName || 'cold_outreach'}
                     </code>{' '}
-                    template for cold leads, or free-form text if within the 24-hour customer
-                    window.
+                    template. Each lead receives custom AI-extracted variables based on company
+                    research.
                   </p>
+                </div>
+
+                <div className="rounded-xl border border-emerald-500/30 overflow-hidden bg-[var(--surface-card)]">
+                  <div className="p-3.5 border-b border-emerald-500/20 bg-emerald-500/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">💬</span>
+                      <span className="text-xs font-semibold text-emerald-300">
+                        Resolved Message Preview for {preview.lead.name}
+                      </span>
+                    </div>
+                    {preview.whatsappPreview?.variables && (
+                      <div className="flex items-center gap-1.5 text-2xs font-mono text-emerald-300/90">
+                        <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                          {'{{1}}'} = {preview.whatsappPreview.variables['1']}
+                        </span>
+                        <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                          {'{{2}}'} = {preview.whatsappPreview.variables['2']}
+                        </span>
+                        <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                          {'{{3}}'} = {preview.whatsappPreview.variables['3']}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 text-sm text-[var(--content-primary)] whitespace-pre-wrap font-sans leading-relaxed bg-[var(--surface-elevated)]">
+                    {preview.whatsappPreview?.previewText ||
+                      `Hello ${preview.lead.name.split(' ')[0]},\n\nI came across ${preview.lead.company || 'your company'} and noticed your work in ${preview.lead.industry || 'your field'}.\n\nI’m reaching out from MailFlow. We help practices build a stronger digital presence and improve outreach.\n\nWould you be available for a brief conversation this week?`}
+                  </div>
                 </div>
               </div>
             ) : (
