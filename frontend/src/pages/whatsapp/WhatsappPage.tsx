@@ -326,10 +326,16 @@ export default function WhatsappPage() {
                           >
                             {log.messageId || '—'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-xs truncate">
-                            {log.message}
+                          <td
+                            className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-sm truncate"
+                            title={log.message}
+                          >
+                            <span className="line-clamp-2">{log.message}</span>
                             {log.errorReason && (
-                              <p className="text-2xs text-red-400 font-sans mt-0.5">
+                              <p
+                                className="text-2xs text-red-400 font-sans mt-0.5"
+                                title={log.errorReason}
+                              >
                                 {log.errorReason}
                               </p>
                             )}

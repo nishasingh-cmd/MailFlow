@@ -19,6 +19,7 @@ export interface WhatsappSendResult {
   success: boolean;
   messageId: string;
   provider: string;
+  finalMessage?: string;
   error?: string;
 }
 
@@ -78,6 +79,10 @@ export class MockWhatsappProvider implements IWhatsappProvider {
   async sendMessage(opts: WhatsappSendOptions): Promise<WhatsappSendResult> {
     const delayMs = 1500 + Math.floor(Math.random() * 1500);
 
+    console.log(
+      `[Mock Whatsapp] Simulating send to ${opts.phone} with ${delayMs}ms delay... (Template: ${opts.useTemplate ? opts.templateName : 'none'})`
+    );
+
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     const cleanPhone = opts.phone.replace(/[^\d+]/g, '');
@@ -87,10 +92,22 @@ export class MockWhatsappProvider implements IWhatsappProvider {
 
     const mockMessageId = `wa_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
+    let finalMessage = opts.message;
+    if (opts.useTemplate && opts.templateParams && opts.templateParams.length > 0) {
+      const defaultBody =
+        "Hi {{1}} 👋 Hope you're having a great week! I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
+      let rendered = defaultBody;
+      opts.templateParams.forEach((param, idx) => {
+        rendered = rendered.replace(new RegExp(`\\{\\{${idx + 1}\\}\\}`, 'g'), param);
+      });
+      finalMessage = rendered;
+    }
+
     return {
       success: true,
       messageId: mockMessageId,
       provider: this.name,
+      finalMessage,
     };
   }
 }
@@ -98,6 +115,7 @@ export class MockWhatsappProvider implements IWhatsappProvider {
 interface TemplateMeta {
   language: string;
   paramCount: number;
+  bodyText?: string;
 }
 
 /**
@@ -187,8 +205,10 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
 
         if (match?.language) {
           let paramCount = 0;
+          let bodyText: string | undefined;
           const bodyComp = match.components?.find((c) => c.type === 'BODY');
           if (bodyComp?.text) {
+            bodyText = bodyComp.text;
             const matches = bodyComp.text.match(/\{\{(\d+)\}\}/g);
             if (matches) {
               const indices = matches.map((m) => parseInt(m.replace(/[^\d]/g, ''), 10));
@@ -199,7 +219,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
           console.log(
             `[Meta API] Resolved template "${templateName}" -> lang: "${match.language}", status: "${match.status}", paramCount: ${paramCount}`
           );
-          const metaInfo = { language: match.language, paramCount };
+          const metaInfo = { language: match.language, paramCount, bodyText };
           templateMetaCache.set(templateName, metaInfo);
           return metaInfo;
         }
@@ -244,16 +264,18 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
     // Dynamically resolve template language code and expected parameter count from Meta WABA API
     let templateLang = 'en_US';
     let expectedParamCount = 1;
+    let templateBodyText: string | undefined;
     if (opts.useTemplate && opts.templateName) {
       const metaInfo = await this.resolveTemplateMeta(opts.templateName);
       templateLang = metaInfo.language;
       expectedParamCount = metaInfo.paramCount;
+      templateBodyText = metaInfo.bodyText;
     }
 
     // Format components to match EXACT expected parameter count in Meta template
     let templateComponents;
+    const paramsToPass: string[] = [];
     if (opts.useTemplate && expectedParamCount > 0) {
-      const paramsToPass: string[] = [];
       const userParams = opts.templateParams || [];
 
       for (let i = 0; i < expectedParamCount; i++) {
@@ -268,6 +290,20 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
       ];
     } else {
       templateComponents = undefined;
+    }
+
+    // Compute the exact rendered message delivered to the recipient
+    let finalMessage = opts.message;
+    if (opts.useTemplate && opts.templateName) {
+      if (templateBodyText) {
+        let rendered = templateBodyText;
+        paramsToPass.forEach((param, idx) => {
+          rendered = rendered.replace(new RegExp(`\\{\\{${idx + 1}\\}\\}`, 'g'), param);
+        });
+        finalMessage = rendered;
+      } else if (opts.message && !opts.message.startsWith('[Template Send:')) {
+        finalMessage = opts.message;
+      }
     }
 
     const templatePayload = {
@@ -350,6 +386,7 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
         success: true,
         messageId: metaMessageId,
         provider: this.name,
+        finalMessage,
       };
     } catch (error: unknown) {
       if (error instanceof Error) throw error;

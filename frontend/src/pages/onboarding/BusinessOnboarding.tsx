@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, Textarea, Select, Card, Badge } from '../../components/ui';
 import {
@@ -72,6 +72,40 @@ export default function BusinessOnboarding() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadExisting() {
+      try {
+        const profile = await businessProfileService.getProfile();
+        if (profile && mounted) {
+          setFormData({
+            businessName: profile.businessName || '',
+            website: profile.website || '',
+            industry: profile.industry || '',
+            location: profile.location || '',
+            companySize: profile.companySize || '',
+            businessDescription: profile.businessDescription || '',
+            productsOrServices: profile.productsOrServices || '',
+            valueProposition: profile.valueProposition || '',
+            targetAudience: profile.targetAudience || '',
+            idealCustomerProfile: profile.idealCustomerProfile || '',
+            outreachGoal:
+              Array.isArray(profile.outreachGoal) && profile.outreachGoal.length > 0
+                ? profile.outreachGoal
+                : ['Generate Leads'],
+            toneOfVoice: profile.toneOfVoice || 'Professional',
+          });
+        }
+      } catch {
+        // Non-fatal, new onboarding
+      }
+    }
+    loadExisting();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const toggleGoal = (goal: string) => {
     setFormData((prev) => {

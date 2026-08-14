@@ -8,6 +8,7 @@ router.use(authenticateUser);
 
 router.get('/', BusinessProfileController.getProfile);
 router.post('/', BusinessProfileController.createProfile);
+router.put('/', BusinessProfileController.updateProfile);
 router.patch('/', BusinessProfileController.updateProfile);
 router.get('/context', BusinessProfileController.getBusinessContext);
 

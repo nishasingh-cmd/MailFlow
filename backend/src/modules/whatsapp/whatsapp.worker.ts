@@ -59,13 +59,9 @@ export class WhatsappWorker {
       const activePhone = job.lead?.phone || job.phone;
       const attempts = job.attempts + 1;
 
-      console.log(
-        `[Worker] Processing Queue ID: ${job.id} | Lead ID: ${job.leadId} | Target Phone: "${activePhone}" | Attempt: ${attempts}/${job.maxRetries}`
-      );
-
-      // Transition status: PENDING -> PROCESSING ("Sending")
-      await prisma.whatsappQueue.update({
-        where: { id: job.id },
+      // Atomic lock status transition: PENDING -> PROCESSING ("Sending")
+      const lockResult = await prisma.whatsappQueue.updateMany({
+        where: { id: job.id, status: 'PENDING' },
         data: {
           status: 'PROCESSING' as QueueJobStatus,
           phone: activePhone,
@@ -74,7 +70,14 @@ export class WhatsappWorker {
         },
       });
 
-      console.log(`[Queue] Status Transition | Queue ID: ${job.id} | New Status: PROCESSING`);
+      if (lockResult.count === 0) {
+        // Job was already claimed or cancelled
+        continue;
+      }
+
+      console.log(
+        `[WhatsApp SEND] User: ${job.userId} | Lead: ${job.lead?.name || 'Unknown'} (${job.leadId}) | Phone: "${activePhone}" | Queue ID: ${job.id} | Attempt: ${attempts}/${job.maxRetries}`
+      );
 
       let provider;
       try {
@@ -93,6 +96,7 @@ export class WhatsappWorker {
         });
 
         const sentTime = new Date();
+        const finalSentMessage = result.finalMessage || job.message;
 
         // Transition status: PROCESSING -> SENT
         await prisma.whatsappQueue.update({
@@ -100,6 +104,7 @@ export class WhatsappWorker {
           data: {
             status: 'SENT' as QueueJobStatus,
             phone: activePhone,
+            message: finalSentMessage,
             sentAt: sentTime,
             messageId: result.messageId,
           },
@@ -113,7 +118,7 @@ export class WhatsappWorker {
             leadId: job.leadId,
             queueId: job.id,
             phone: activePhone,
-            message: job.message,
+            message: finalSentMessage,
             status: 'SENT',
             provider: result.provider,
             retryCount: attempts - 1,
@@ -123,7 +128,7 @@ export class WhatsappWorker {
         });
 
         console.log(
-          `[Worker] ✅ Queue ID: ${job.id} SENT SUCCESSFULLY | Log ID: ${logEntry.id} | Provider: ${result.provider} | Meta Message ID: ${result.messageId}`
+          `[WhatsApp RESULT] Queue ID: ${job.id} | Status: SENT | Provider: ${result.provider} | Meta Message ID: ${result.messageId} | Log ID: ${logEntry.id}`
         );
 
         // Update Lead status to CONTACTED

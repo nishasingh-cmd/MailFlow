@@ -68,9 +68,25 @@ export class WhatsappGeneratorService {
     const ctaText = customCta || 'Would you be open to a brief 5-min chat this week?';
     const campaignObjective = objective || 'introductory outreach and value proposition';
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { businessProfile: true },
+    });
+    const bp = user?.businessProfile;
+
     if (env.GEMINI_API_KEY) {
       const prompt = `You are a professional B2B outreach specialist. Write a concise, natural, and highly engaging WhatsApp message for a prospect.
 
+${
+  bp
+    ? `SENDER BUSINESS CONTEXT:
+- Sender Company: ${bp.businessName}
+- Value Proposition: ${bp.valueProposition}
+- Core Offering: ${bp.productsOrServices}
+- Preferred Tone: ${bp.toneOfVoice}
+`
+    : ''
+}
 PROSPECT DETAILS:
 - Name: ${lead.name}
 - Company: ${companyName}
@@ -106,11 +122,14 @@ Return ONLY the exact WhatsApp message text with appropriate emojis. No markdown
 
     // High-quality fallback template
     const firstName = lead.name.split(' ')[0] || 'there';
+    const senderCompany = bp?.businessName || 'our team';
+    const valueProp = bp?.valueProposition || 'operational efficiency and client acquisition';
+
     const template = `Hi ${firstName} 👋 Hope you're having a great week!
 
 I came across ${companyName} in the ${industry} space and was really impressed by your team's work.
 
-We've been helping leaders in ${industry} solve challenges around ${painPointsStr || 'operational efficiency and client acquisition'}.
+At ${senderCompany}, we've been helping leaders in ${industry} solve challenges around ${valueProp}.
 
 ${ctaText}`;
 

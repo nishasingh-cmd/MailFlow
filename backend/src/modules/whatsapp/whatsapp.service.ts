@@ -141,6 +141,23 @@ export class WhatsappService {
         continue;
       }
 
+      // Idempotency check: Skip if an active job is already PENDING or PROCESSING for this lead
+      const activeJob = await prisma.whatsappQueue.findFirst({
+        where: {
+          userId,
+          leadId: lead.id,
+          campaignId: input.campaignId || null,
+          status: { in: ['PENDING', 'PROCESSING'] },
+        },
+      });
+
+      if (activeJob) {
+        console.warn(
+          `[WhatsApp ENQUEUE] ⚠️ Lead "${lead.name}" (${lead.id}) already has an active queue job (${activeJob.id}) — skipping duplicate enqueue.`
+        );
+        continue;
+      }
+
       // Check 24-hour customer service window
       const lastInbound = lead.lastInboundMessageAt;
       const isWithin24h =
@@ -180,7 +197,23 @@ export class WhatsappService {
 
       if (useTemplate) {
         if (!messageText) {
-          messageText = `[Template Send: ${templateName}]`;
+          if (templateName === 'hello_world') {
+            messageText = 'Hello World';
+          } else {
+            const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
+            const companyName = lead.company || 'your company';
+            const defaultBody =
+              "Hi {{1}} 👋 Hope you're having a great week! I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
+            const params =
+              templateParams && templateParams.length > 0
+                ? templateParams
+                : [firstName, companyName];
+            let rendered = defaultBody;
+            params.forEach((param, idx) => {
+              rendered = rendered.replace(new RegExp(`\\{\\{${idx + 1}\\}\\}`, 'g'), param);
+            });
+            messageText = rendered;
+          }
         }
       } else {
         if (template) {
