@@ -7,6 +7,7 @@ function sanitizeUser(user: {
   name: string;
   email: string;
   avatar: string | null;
+  businessProfile?: { id: string } | null;
   createdAt: Date;
   updatedAt: Date;
 }): UserResponse {
@@ -16,6 +17,7 @@ function sanitizeUser(user: {
     name: user.name,
     email: user.email,
     avatar: user.avatar,
+    hasBusinessProfile: !!user.businessProfile,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -23,7 +25,12 @@ function sanitizeUser(user: {
 
 export class UserService {
   static async getProfile(userId: string): Promise<UserResponse> {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        businessProfile: { select: { id: true } },
+      },
+    });
     if (!user) {
       throw new Error('USER_NOT_FOUND');
     }
@@ -44,6 +51,9 @@ export class UserService {
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.avatar !== undefined && { avatar: data.avatar }),
+      },
+      include: {
+        businessProfile: { select: { id: true } },
       },
     });
 

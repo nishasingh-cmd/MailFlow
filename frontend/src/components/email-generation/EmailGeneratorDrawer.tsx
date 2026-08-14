@@ -446,32 +446,41 @@ function EmailGeneratorDrawerInner({
             />
           </div>
         ) : (
-          <Card variant="default" className="p-5 space-y-4 bg-zinc-950 border-zinc-800 rounded-xl">
-            <div className="border-b border-zinc-800 pb-3 space-y-1.5 text-xs text-zinc-400">
+          <Card
+            variant="default"
+            className="p-5 space-y-4 bg-[var(--surface-elevated)] border-[var(--surface-border)] rounded-xl shadow-elevation-1"
+          >
+            <div className="border-b border-[var(--surface-border)] pb-3 space-y-1.5 text-xs text-[var(--content-secondary)]">
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-zinc-500">From:</span>
-                <span className="text-zinc-200 font-medium">
+                <span className="w-16 font-semibold text-[var(--content-tertiary)]">From:</span>
+                <span className="text-[var(--content-primary)] font-medium">
                   {senderName} &lt;you@mailflow.app&gt;
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-zinc-500">To:</span>
-                <span className="text-zinc-200 font-medium">
+                <span className="w-16 font-semibold text-[var(--content-tertiary)]">To:</span>
+                <span className="text-[var(--content-primary)] font-medium">
                   {leadName || 'Lead'} ({companyName || 'Company'})
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-zinc-500">Subject:</span>
-                <span className="text-brand-300 font-semibold">{subject || 'No Subject'}</span>
+                <span className="w-16 font-semibold text-[var(--content-tertiary)]">Subject:</span>
+                <span className="text-brand-600 dark:text-brand-300 font-semibold">
+                  {subject || 'No Subject'}
+                </span>
               </div>
             </div>
 
-            <div className="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed min-h-[180px] font-sans">
-              {body || <span className="text-zinc-600 italic">No body content generated yet.</span>}
+            <div className="text-xs text-[var(--content-primary)] whitespace-pre-wrap leading-relaxed min-h-[180px] font-sans">
+              {body || (
+                <span className="text-[var(--content-tertiary)] italic">
+                  No body content generated yet.
+                </span>
+              )}
             </div>
 
-            <div className="border-t border-zinc-800/80 pt-3 text-xs text-zinc-500">
-              <p className="font-semibold text-zinc-400">{senderName}</p>
+            <div className="border-t border-[var(--surface-border)] pt-3 text-xs text-[var(--content-tertiary)]">
+              <p className="font-semibold text-[var(--content-secondary)]">{senderName}</p>
               <p>
                 {senderCompany} • {senderProduct}
               </p>

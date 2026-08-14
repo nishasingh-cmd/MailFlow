@@ -4,6 +4,7 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
 
   DASHBOARD: '/dashboard',
   LEADS: '/leads',
@@ -14,6 +15,7 @@ export const ROUTES = {
   WHATSAPP: '/whatsapp',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
+  ONBOARDING: '/onboarding/business',
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
@@ -27,7 +29,9 @@ export const ROUTE_LABELS: Record<string, string> = {
   whatsapp: 'WhatsApp Outreach',
   analytics: 'Analytics',
   settings: 'Settings',
+  'onboarding/business': 'Business Onboarding',
   login: 'Login',
   register: 'Register',
   'forgot-password': 'Forgot Password',
+  'reset-password': 'Reset Password',
 };

@@ -1,7 +1,9 @@
+import crypto from 'crypto';
 import { prisma } from '../../config/db';
 import { hashPassword, comparePassword } from '../../utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 import { AuthResponse, TokenRefreshResponse, UserResponse } from './auth.types';
+import { SystemMailService } from '../../services/system-mail.service';
 
 function sanitizeUser(user: {
   id: string;
@@ -9,6 +11,7 @@ function sanitizeUser(user: {
   name: string;
   email: string;
   avatar: string | null;
+  businessProfile?: { id: string } | null;
   createdAt: Date;
   updatedAt: Date;
 }): UserResponse {
@@ -18,6 +21,7 @@ function sanitizeUser(user: {
     name: user.name,
     email: user.email,
     avatar: user.avatar,
+    hasBusinessProfile: !!user.businessProfile,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -38,6 +42,9 @@ export class AuthService {
         email: email.toLowerCase(),
         password: hashedPassword,
       },
+      include: {
+        businessProfile: { select: { id: true } },
+      },
     });
 
     const payload = { userId: user.id, email: user.email };
@@ -57,7 +64,12 @@ export class AuthService {
   }
 
   static async login(email: string, password: string): Promise<AuthResponse> {
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: {
+        businessProfile: { select: { id: true } },
+      },
+    });
     if (!user) {
       throw new Error('INVALID_CREDENTIALS');
     }
@@ -118,48 +130,102 @@ export class AuthService {
     });
   }
 
-  static async forgotPassword(email: string): Promise<{ message: string; resetToken?: string }> {
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  static async forgotPassword(email: string): Promise<{ message: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
     if (!user) {
+      console.log(
+        `[Auth] Password reset requested for unregistered email: ${SystemMailService.maskEmail(normalizedEmail)}`
+      );
+      // Generic response to prevent account enumeration
       return {
-        message: 'If an account with that email exists, a password reset link has been issued.',
+        message: 'If an account exists for this email, a password reset link has been sent.',
       };
     }
 
-    const resetToken = generateAccessToken({ userId: user.id, email: user.email });
+    console.log(
+      `[Auth] Password reset requested for email: ${SystemMailService.maskEmail(normalizedEmail)}`
+    );
+
+    // 1. Generate 32-byte crypto-secure random token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60 minutes
+
+    // 2. Invalidate any previous unused tokens for this user
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    // 3. Store hashed token in database
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+    console.log('[Auth] Reset token generated');
+
+    // 4. Send real password reset email via SMTP
+    await SystemMailService.sendPasswordResetEmail(user.email, user.name, rawToken, user.id);
 
     return {
-      message: 'If an account with that email exists, a password reset link has been issued.',
-      resetToken, // Returned in dev response per Phase 4 requirements
+      message: 'If an account exists for this email, a password reset link has been sent.',
     };
   }
 
   static async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    let payload;
-    try {
-      payload = verifyRefreshToken(token);
-    } catch {
-      try {
-        payload = verifyRefreshToken(token);
-      } catch {
-        throw new Error('INVALID_RESET_TOKEN');
-      }
+    if (!token || !token.trim()) {
+      throw new Error('INVALID_RESET_TOKEN');
     }
 
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+    const resetTokenRecord = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (!resetTokenRecord || resetTokenRecord.usedAt !== null) {
+      console.warn('[Auth] Password reset failed: Token is invalid or already used');
+      throw new Error('INVALID_RESET_TOKEN');
+    }
+
+    if (new Date() > resetTokenRecord.expiresAt) {
+      console.warn('[Auth] Password reset failed: Token has expired');
+      throw new Error('TOKEN_EXPIRED');
+    }
+
+    const user = resetTokenRecord.user;
     if (!user) {
       throw new Error('USER_NOT_FOUND');
     }
 
+    // Hash the new password with bcrypt
     const hashedPassword = await hashPassword(newPassword);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        refreshToken: null, // Invalidate existing sessions
-      },
-    });
+    // Update user password and invalidate refresh tokens / sessions
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          refreshToken: null, // Force re-login
+        },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: resetTokenRecord.id },
+        data: {
+          usedAt: new Date(),
+        },
+      }),
+    ]);
+
+    console.log(
+      `[Auth] Password successfully reset for: ${SystemMailService.maskEmail(user.email)}`
+    );
 
     return { message: 'Password has been reset successfully.' };
   }

@@ -46,9 +46,10 @@ export default {
         'glow-brand': '0 0 20px rgba(99, 102, 241, 0.25)',
         'glow-success': '0 0 20px rgba(34, 197, 94, 0.2)',
         'glow-danger': '0 0 20px rgba(239, 68, 68, 0.2)',
-        'elevation-1': '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)',
-        'elevation-2': '0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)',
-        'elevation-3': '0 8px 32px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.4)',
+        'elevation-1': 'var(--shadow-elevation-1, 0 1px 3px rgba(0,0,0,0.1))',
+        'elevation-2': 'var(--shadow-elevation-2, 0 4px 12px rgba(0,0,0,0.1))',
+        'elevation-3': 'var(--shadow-elevation-3, 0 8px 32px rgba(0,0,0,0.15))',
+        dropdown: 'var(--shadow-dropdown, 0 12px 28px rgba(0,0,0,0.15))',
       },
       animation: {
         'fade-in': 'fadeIn 0.15s ease-out',

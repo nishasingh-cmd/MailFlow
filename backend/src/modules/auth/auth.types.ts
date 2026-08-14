@@ -4,6 +4,7 @@ export interface UserResponse {
   name: string;
   email: string;
   avatar: string | null;
+  hasBusinessProfile: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

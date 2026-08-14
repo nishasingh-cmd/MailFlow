@@ -95,7 +95,10 @@ export class AuthController {
         res.status(400).json({ error: err.errors?.[0]?.message ?? 'Invalid request data' });
         return;
       }
-      res.status(500).json({ error: 'Failed to process forgot password request' });
+      console.error('[auth.controller] Forgot password error:', err.message);
+      res.status(500).json({
+        error: err.message || 'Failed to process password reset request. Please try again later.',
+      });
     }
   }
 
@@ -108,6 +111,12 @@ export class AuthController {
       const err = error as { name?: string; message?: string; errors?: { message?: string }[] };
       if (err.name === 'ZodError') {
         res.status(400).json({ error: err.errors?.[0]?.message ?? 'Invalid request data' });
+        return;
+      }
+      if (err.message === 'TOKEN_EXPIRED') {
+        res.status(400).json({
+          error: 'This password reset link has expired. Please request a new one.',
+        });
         return;
       }
       if (err.message === 'INVALID_RESET_TOKEN' || err.message === 'USER_NOT_FOUND') {

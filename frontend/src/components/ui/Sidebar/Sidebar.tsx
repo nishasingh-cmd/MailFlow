@@ -49,7 +49,7 @@ function NavItem({
         'flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
         active
-          ? 'bg-brand-500/15 text-brand-400'
+          ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 font-semibold'
           : 'text-[var(--content-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--content-primary)]',
         collapsed && 'justify-center'
       )}
@@ -58,7 +58,7 @@ function NavItem({
         <span
           className={cn(
             'flex-shrink-0 w-5 h-5',
-            active ? 'text-brand-400' : 'text-[var(--content-tertiary)]'
+            active ? 'text-brand-600 dark:text-brand-400' : 'text-[var(--content-tertiary)]'
           )}
           aria-hidden="true"
         >

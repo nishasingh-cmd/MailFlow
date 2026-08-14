@@ -53,8 +53,13 @@ export class EmailGenerationService {
       );
     }
 
-    // Fetch user for default sender info
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    // Fetch user for default sender info + business profile context
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { businessProfile: true },
+    });
+
+    const bp = user?.businessProfile;
 
     const promptCtx: PromptContext = {
       leadName: lead.name,
@@ -68,13 +73,24 @@ export class EmailGenerationService {
       opportunities: (research.opportunities as string[]) || [],
       companySize: company.companySize,
       template,
-      customInstructions,
+      customInstructions: [
+        customInstructions,
+        bp
+          ? `Sender Company: ${bp.businessName}. Sender Value Proposition: ${bp.valueProposition}. Target Audience: ${bp.targetAudience}. Tone: ${bp.toneOfVoice}.`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' | '),
       regenerate: req.regenerate,
       regenSeed: req.regenSeed || Date.now(),
       userContext: {
         userName: userContext?.userName || user?.name || 'Sales Specialist',
-        userCompany: userContext?.userCompany || 'MailFlow',
-        userProductService: userContext?.userProductService || 'AI Outreach Automation Platform',
+        userCompany: userContext?.userCompany || bp?.businessName || 'MailFlow',
+        userProductService:
+          userContext?.userProductService ||
+          bp?.productsOrServices ||
+          bp?.valueProposition ||
+          'AI Outreach Automation Platform',
       },
     };
 

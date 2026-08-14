@@ -357,7 +357,7 @@ export default function Leads() {
           type="checkbox"
           checked={leads.length > 0 && selectedLeadIds.length === leads.length}
           onChange={handleSelectAll}
-          className="rounded border-zinc-600 text-brand-500 focus:ring-brand-500 bg-zinc-800"
+          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
         />
       ),
       render: (lead) => (
@@ -365,7 +365,7 @@ export default function Leads() {
           type="checkbox"
           checked={selectedLeadIds.includes(lead.id)}
           onChange={() => handleToggleSelectLead(lead.id)}
-          className="rounded border-zinc-600 text-brand-500 focus:ring-brand-500 bg-zinc-800"
+          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
         />
       ),
       width: '40px',
@@ -480,7 +480,7 @@ export default function Leads() {
           type="checkbox"
           checked={researchLeads.length > 0 && selectedLeadIds.length === researchLeads.length}
           onChange={handleResearchSelectAll}
-          className="rounded border-zinc-600 text-brand-500 focus:ring-brand-500 bg-zinc-800"
+          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
         />
       ),
       render: (lead) => (
@@ -488,7 +488,7 @@ export default function Leads() {
           type="checkbox"
           checked={selectedLeadIds.includes(lead.id)}
           onChange={() => handleToggleSelectLead(lead.id)}
-          className="rounded border-zinc-600 text-brand-500 focus:ring-brand-500 bg-zinc-800"
+          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
         />
       ),
       width: '40px',

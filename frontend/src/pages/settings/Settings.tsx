@@ -10,12 +10,22 @@ import { AiIntegrationTab } from '../../components/settings/AiIntegrationTab';
 import { WhatsappIntegrationTab } from '../../components/settings/WhatsappIntegrationTab';
 import { AppPreferencesTab } from '../../components/settings/AppPreferencesTab';
 import { IntegrationsOverviewTab } from '../../components/settings/IntegrationsOverviewTab';
+import { BusinessProfileTab } from '../../components/settings/BusinessProfileTab';
 import { cn } from '../../utils/cn';
 
-type TabKey = 'profile' | 'security' | 'email' | 'ai' | 'whatsapp' | 'preferences' | 'integrations';
+type TabKey =
+  | 'profile'
+  | 'business'
+  | 'security'
+  | 'email'
+  | 'ai'
+  | 'whatsapp'
+  | 'preferences'
+  | 'integrations';
 
 const TABS: Array<{ id: TabKey; label: string; icon: string }> = [
   { id: 'profile', label: 'Profile', icon: '👤' },
+  { id: 'business', label: 'Business Profile', icon: '🏢' },
   { id: 'security', label: 'Security', icon: '🔒' },
   { id: 'email', label: 'Email Providers', icon: '✉️' },
   { id: 'ai', label: 'AI Integration', icon: '✨' },
@@ -95,6 +105,8 @@ export default function Settings() {
           onUpdated={(updated) => setData((prev) => (prev ? { ...prev, profile: updated } : prev))}
         />
       )}
+
+      {activeTab === 'business' && <BusinessProfileTab />}
 
       {activeTab === 'security' && <SecurityTab />}
 

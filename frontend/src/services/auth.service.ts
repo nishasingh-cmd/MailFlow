@@ -6,6 +6,7 @@ export interface AuthUser {
   name: string;
   email: string;
   avatar: string | null;
+  hasBusinessProfile?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,10 +73,15 @@ export class AuthService {
     return response.data;
   }
 
-  static async resetPassword(token: string, password: string): Promise<{ message: string }> {
+  static async resetPassword(
+    token: string,
+    password: string,
+    confirmPassword?: string
+  ): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>('/auth/reset-password', {
       token,
       password,
+      confirmPassword,
     });
     return response.data;
   }

@@ -11,12 +11,12 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  success: 'bg-green-500/15 text-green-400 ring-green-500/25',
-  warning: 'bg-amber-500/15 text-amber-400 ring-amber-500/25',
-  error: 'bg-red-500/15 text-red-400 ring-red-500/25',
-  info: 'bg-blue-500/15 text-blue-400 ring-blue-500/25',
-  neutral: 'bg-zinc-500/15 text-zinc-400 ring-zinc-500/25',
-  brand: 'bg-brand-500/15 text-brand-400 ring-brand-500/25',
+  success: 'bg-green-500/15 text-green-700 dark:text-green-400 ring-green-500/25',
+  warning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-amber-500/25',
+  error: 'bg-red-500/15 text-red-700 dark:text-red-400 ring-red-500/25',
+  info: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-blue-500/25',
+  neutral: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 ring-zinc-500/25',
+  brand: 'bg-brand-500/15 text-brand-700 dark:text-brand-400 ring-brand-500/25',
 };
 
 const dotClasses: Record<BadgeVariant, string> = {

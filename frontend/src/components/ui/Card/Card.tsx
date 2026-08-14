@@ -9,6 +9,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   footer?: ReactNode;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   noBorder?: boolean;
+  overflow?: 'hidden' | 'visible' | 'auto';
 }
 
 const variantClasses: Record<CardVariant, string> = {
@@ -35,6 +36,7 @@ export function Card({
   footer,
   padding = 'md',
   noBorder = false,
+  overflow = 'visible',
   className,
   children,
   ...props
@@ -42,7 +44,12 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-xl overflow-hidden',
+        'rounded-xl',
+        overflow === 'hidden'
+          ? 'overflow-hidden'
+          : overflow === 'auto'
+            ? 'overflow-auto'
+            : 'overflow-visible',
         variantClasses[variant],
         noBorder && 'border-0',
         className
@@ -50,7 +57,7 @@ export function Card({
       {...props}
     >
       {header && (
-        <div className="px-5 py-4 border-b border-[var(--surface-border)] text-sm font-semibold text-[var(--content-primary)]">
+        <div className="px-5 py-4 border-b border-[var(--surface-border)] text-sm font-semibold text-[var(--content-primary)] rounded-t-xl">
           {header}
         </div>
       )}
@@ -58,7 +65,7 @@ export function Card({
       <div className={cn(paddingClasses[padding])}>{children}</div>
 
       {footer && (
-        <div className="px-5 py-4 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+        <div className="px-5 py-4 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] rounded-b-xl">
           {footer}
         </div>
       )}

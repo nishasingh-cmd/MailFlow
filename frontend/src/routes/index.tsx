@@ -7,6 +7,7 @@ import { ROUTES } from './routes';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 import Dashboard from '../pages/dashboard/Dashboard';
 import Leads from '../pages/leads/Leads';
@@ -17,6 +18,7 @@ import FailedQueuePage from '../pages/delivery/FailedQueuePage';
 import WhatsappPage from '../pages/whatsapp/WhatsappPage';
 import Analytics from '../pages/analytics/Analytics';
 import Settings from '../pages/settings/Settings';
+import BusinessOnboarding from '../pages/onboarding/BusinessOnboarding';
 
 export function AppRoutes() {
   return (
@@ -25,9 +27,12 @@ export function AppRoutes() {
         <Route path={ROUTES.LOGIN} element={<Login />} />
         <Route path={ROUTES.REGISTER} element={<Register />} />
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+        <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
+        <Route path={ROUTES.ONBOARDING} element={<BusinessOnboarding />} />
+
         <Route element={<DashboardLayout />}>
           <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
           <Route path={ROUTES.LEADS} element={<Leads />} />

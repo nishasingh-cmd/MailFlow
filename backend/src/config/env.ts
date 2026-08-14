@@ -35,4 +35,12 @@ export const env = {
   WHATSAPP_CONFIG_ID: process.env.WHATSAPP_CONFIG_ID ?? '',
   WHATSAPP_REDIRECT_URI: process.env.WHATSAPP_REDIRECT_URI ?? '',
   WHATSAPP_DEFAULT_TEMPLATE_NAME: process.env.WHATSAPP_DEFAULT_TEMPLATE_NAME ?? 'cold_outreach',
+  FRONTEND_URL: process.env.FRONTEND_URL ?? 'https://localhost:5173',
+  SMTP_HOST: process.env.SMTP_HOST ?? '',
+  SMTP_PORT: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
+  SMTP_USER: process.env.SMTP_USER ?? '',
+  SMTP_PASSWORD: process.env.SMTP_PASSWORD ?? '',
+  SMTP_FROM: process.env.SMTP_FROM ?? '',
+  SMTP_FROM_NAME: process.env.SMTP_FROM_NAME ?? 'MailFlow',
+  SMTP_SECURE: process.env.SMTP_SECURE === 'true',
 } as const;

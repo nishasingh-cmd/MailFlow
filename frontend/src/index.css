@@ -13,7 +13,7 @@
 
   --content-primary: #fafafa;
   --content-secondary: #a1a1aa;
-  --content-tertiary: #52525b;
+  --content-tertiary: #71717a;
   --content-inverse: #09090b;
   --content-brand: #818cf8;
 
@@ -27,26 +27,36 @@
   --scrollbar-track: #18181b;
   --scrollbar-thumb: #3f3f46;
   --scrollbar-thumb-hover: #52525b;
+
+  --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25);
+  --shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown: 0 12px 32px rgba(0, 0, 0, 0.65);
 }
 
 .light {
-  --surface-bg: #f9f9fb;
+  --surface-bg: #f8fafc;
   --surface-card: #ffffff;
-  --surface-elevated: #f2f2f7;
-  --surface-hover: #e9e9ef;
-  --surface-border: #e4e4e7;
+  --surface-elevated: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --surface-border: #e2e8f0;
 
-  --content-primary: #09090b;
-  --content-secondary: #71717a;
-  --content-tertiary: #a1a1aa;
-  --content-inverse: #fafafa;
-  --content-brand: #6366f1;
+  --content-primary: #0f172a;
+  --content-secondary: #475569;
+  --content-tertiary: #94a3b8;
+  --content-inverse: #ffffff;
+  --content-brand: #4f46e5;
 
-  --overlay-backdrop: rgba(0, 0, 0, 0.4);
+  --overlay-backdrop: rgba(15, 23, 42, 0.4);
 
-  --scrollbar-track: #f2f2f7;
-  --scrollbar-thumb: #d4d4d8;
-  --scrollbar-thumb-hover: #a1a1aa;
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+
+  --shadow-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-elevation-3: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
 @layer base {

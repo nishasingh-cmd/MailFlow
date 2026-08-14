@@ -116,8 +116,8 @@ export function Select({
         {open && (
           <div
             className={cn(
-              'absolute z-50 mt-1 w-full rounded-lg border border-[var(--surface-border)]',
-              'bg-[var(--surface-elevated)] shadow-elevation-2',
+              'absolute z-50 mt-1.5 w-full rounded-xl border border-[var(--surface-border)]',
+              'bg-[var(--surface-card)] shadow-dropdown backdrop-blur-sm',
               'animate-slide-up overflow-hidden'
             )}
             role="listbox"
@@ -150,7 +150,7 @@ export function Select({
                     className={cn(
                       'flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors',
                       option.value === value
-                        ? 'text-brand-400 bg-brand-500/10'
+                        ? 'text-brand-600 dark:text-brand-400 bg-brand-500/10 font-semibold'
                         : 'text-[var(--content-primary)] hover:bg-[var(--surface-hover)]',
                       option.disabled && 'opacity-40 cursor-not-allowed'
                     )}
@@ -158,7 +158,7 @@ export function Select({
                     {option.label}
                     {option.value === value && (
                       <svg
-                        className="w-4 h-4 text-brand-400"
+                        className="w-4 h-4 text-brand-600 dark:text-brand-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

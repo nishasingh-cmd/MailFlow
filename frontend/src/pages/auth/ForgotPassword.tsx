@@ -97,7 +97,10 @@ export default function ForgotPassword() {
               type="email"
               placeholder="name@company.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError('');
+              }}
               required
               autoComplete="email"
             />
@@ -108,9 +111,10 @@ export default function ForgotPassword() {
               size="lg"
               fullWidth
               loading={loading}
+              disabled={loading || !email.trim()}
               className="mt-2"
             >
-              Send Reset Link
+              {loading ? 'Sending Link…' : 'Send Reset Link'}
             </Button>
           </form>
 

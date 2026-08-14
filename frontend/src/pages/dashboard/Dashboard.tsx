@@ -27,6 +27,8 @@ interface DashboardData {
   recentCampaigns: RecentCampaign[];
   currentMonth: string;
   hasEmailData: boolean;
+  businessName?: string | null;
+  industry?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -185,14 +187,22 @@ export default function Dashboard() {
       {/* ── Hero banner ──────────────────────────────────────────────────── */}
       <Card
         variant="default"
-        className="relative overflow-hidden border-brand-500/20 bg-gradient-to-r from-brand-950/40 via-[var(--surface-card)] to-[var(--surface-card)] p-6 md:p-8"
+        className="relative overflow-hidden border-brand-500/20 bg-gradient-to-r from-brand-500/10 via-[var(--surface-card)] to-[var(--surface-card)] dark:from-brand-950/40 p-6 md:p-8"
       >
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="brand" size="sm">
-                Active Workspace
+                {data?.businessName || 'Active Workspace'}
               </Badge>
+              {data?.industry && (
+                <>
+                  <span className="text-xs text-[var(--content-tertiary)]">•</span>
+                  <span className="text-xs text-[var(--content-secondary)] font-medium">
+                    {data.industry}
+                  </span>
+                </>
+              )}
               <span className="text-xs text-[var(--content-tertiary)]">•</span>
               <span className="text-xs text-[var(--content-tertiary)]">{currentMonth}</span>
             </div>

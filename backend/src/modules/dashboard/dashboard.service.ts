@@ -21,6 +21,8 @@ export interface DashboardData {
   recentCampaigns: DashboardRecentCampaign[];
   currentMonth: string;
   hasEmailData: boolean;
+  businessName?: string | null;
+  industry?: string | null;
 }
 
 /**
@@ -37,51 +39,63 @@ export interface DashboardData {
 export class DashboardService {
   static async getDashboardData(userId: string): Promise<DashboardData> {
     // Run all queries in parallel — scoped strictly to this user
-    const [totalLeads, activeCampaigns, emailsSentCount, emailsFailedCount, recentCampaignsRaw] =
-      await Promise.all([
-        // 1. Total leads — all leads for this user, no date restriction
-        prisma.lead.count({
-          where: { userId },
-        }),
+    const [
+      totalLeads,
+      activeCampaigns,
+      emailsSentCount,
+      emailsFailedCount,
+      recentCampaignsRaw,
+      businessProfile,
+    ] = await Promise.all([
+      // 1. Total leads — all leads for this user, no date restriction
+      prisma.lead.count({
+        where: { userId },
+      }),
 
-        // 2. Active campaigns — campaigns currently in-flight (not draft, not done)
-        prisma.campaign.count({
-          where: {
-            userId,
-            status: { in: ['QUEUED', 'SENDING', 'PAUSED', 'READY'] },
+      // 2. Active campaigns — campaigns currently in-flight (not draft, not done)
+      prisma.campaign.count({
+        where: {
+          userId,
+          status: { in: ['QUEUED', 'SENDING', 'PAUSED', 'READY'] },
+        },
+      }),
+
+      // 3. Emails sent — from EmailLog, status=SENT, strictly email (not WhatsApp)
+      prisma.emailLog.count({
+        where: { userId, status: 'SENT' },
+      }),
+
+      // 4. Emails failed — same source, status=FAILED
+      prisma.emailLog.count({
+        where: { userId, status: 'FAILED' },
+      }),
+
+      // 5. Recent campaigns — latest 5, with counts of email logs
+      prisma.campaign.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          channel: true,
+          createdAt: true,
+          _count: {
+            select: { campaignLeads: true },
           },
-        }),
-
-        // 3. Emails sent — from EmailLog, status=SENT, strictly email (not WhatsApp)
-        prisma.emailLog.count({
-          where: { userId, status: 'SENT' },
-        }),
-
-        // 4. Emails failed — same source, status=FAILED
-        prisma.emailLog.count({
-          where: { userId, status: 'FAILED' },
-        }),
-
-        // 5. Recent campaigns — latest 5, with counts of email logs
-        prisma.campaign.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-          select: {
-            id: true,
-            name: true,
-            status: true,
-            channel: true,
-            createdAt: true,
-            _count: {
-              select: { campaignLeads: true },
-            },
-            emailLogs: {
-              select: { status: true },
-            },
+          emailLogs: {
+            select: { status: true },
           },
-        }),
-      ]);
+        },
+      }),
+
+      // 6. Business profile for identity display
+      prisma.businessProfile.findUnique({
+        where: { userId },
+        select: { businessName: true, industry: true },
+      }),
+    ]);
 
     // Email success rate: 0 when no data, never fabricated
     const totalEmailAttempts = emailsSentCount + emailsFailedCount;
@@ -118,6 +132,8 @@ export class DashboardService {
       recentCampaigns,
       currentMonth,
       hasEmailData: totalEmailAttempts > 0,
+      businessName: businessProfile?.businessName || null,
+      industry: businessProfile?.industry || null,
     };
   }
 }
