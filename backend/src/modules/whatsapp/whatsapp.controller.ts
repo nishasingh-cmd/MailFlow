@@ -104,11 +104,13 @@ export class WhatsappController {
   static async send(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { leadIds, campaignId, message, sendAll } = req.body as {
+      const { leadIds, campaignId, message, sendAll, templateName, templateParams } = req.body as {
         leadIds?: string[];
         campaignId?: string;
         message?: string;
         sendAll?: boolean;
+        templateName?: string;
+        templateParams?: string[];
       };
 
       const result = await WhatsappService.enqueueMessages(userId, {
@@ -116,6 +118,8 @@ export class WhatsappController {
         campaignId,
         message,
         sendAll,
+        templateName,
+        templateParams,
       });
 
       if (!result || result.count === 0) {

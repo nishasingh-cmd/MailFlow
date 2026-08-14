@@ -37,7 +37,7 @@ export class WhatsappGeneratorService {
   }
 
   /**
-   * Generate personalized AI WhatsApp message for a lead
+   * Generate personalized AI WhatsApp message for a lead (used when within 24-hour free-text window)
    */
   static async generateMessage(
     userId: string,
@@ -127,8 +127,10 @@ ${ctaText}`;
   }
 
   /**
-   * Generate AI-personalized template variable values ({{1}}, {{2}}, {{3}}) for approved Meta WhatsApp templates.
-   * Maps variables into approved template structure without modifying template body text.
+   * Generate AI-personalized template variable values ({{1}}, {{2}}, ...) for an approved Meta WhatsApp template.
+   *
+   * KEY FIX: This now fetches the ACTUAL approved template body from Meta Graph API so the
+   * preview text matches byte-for-byte what the recipient will receive on WhatsApp.
    */
   static async generateTemplateVariables(
     userId: string,
@@ -149,15 +151,93 @@ ${ctaText}`;
 
     const activeTemplateName =
       templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';
-    const activeTemplateText =
+
+    // Sensible defaults before we attempt to fetch from Meta
+    let resolvedBodyText =
       templateBodyText ||
-      'Hello {{1}},\n\nI came across {{2}} and noticed your work in {{3}}.\n\nI’m reaching out from MailFlow. We help healthcare practices build a stronger digital presence and improve patient outreach.\n\nWould you be available for a brief conversation this week?';
+      "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
+    let resolvedLang = 'en';
+    let expectedParamCount = 2;
+
+    // ─── Fetch the real approved template body + language from Meta Graph API ───
+    if (!templateBodyText) {
+      const config =
+        (await prisma.whatsappConfig.findFirst({
+          where: { userId, provider: 'META_CLOUD', status: 'CONNECTED' },
+        })) || (await prisma.whatsappConfig.findFirst({ where: { userId } }));
+
+      if (config?.accessToken && config?.businessAccountId) {
+        try {
+          const { decrypt } = await import('../../utils/crypto');
+          let token = config.accessToken;
+          try {
+            token = decrypt(config.accessToken);
+          } catch {
+            /* use raw if decryption fails */
+          }
+
+          const version = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
+          const url =
+            `https://graph.facebook.com/${version}/${config.businessAccountId}/message_templates` +
+            `?name=${encodeURIComponent(activeTemplateName)}&fields=name,language,status,components&limit=10`;
+
+          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const json = (await res.json()) as {
+              data?: Array<{
+                name: string;
+                language: string;
+                status: string;
+                components?: Array<{ type: string; text?: string }>;
+              }>;
+            };
+
+            const match =
+              json?.data?.find((t) => t.name === activeTemplateName && t.status === 'APPROVED') ||
+              json?.data?.find((t) => t.name === activeTemplateName) ||
+              json?.data?.[0];
+
+            if (match) {
+              if (match.language) resolvedLang = match.language;
+              const bodyComp = match.components?.find((c) => c.type === 'BODY');
+              if (bodyComp?.text) {
+                resolvedBodyText = bodyComp.text;
+                const paramMatches = bodyComp.text.match(/\{\{(\d+)\}\}/g);
+                if (paramMatches) {
+                  expectedParamCount = Math.max(
+                    ...paramMatches.map((m) => parseInt(m.replace(/[^\d]/g, ''), 10)),
+                    0
+                  );
+                }
+              }
+              console.log(
+                `[WhatsappGenerator] Template "${activeTemplateName}" resolved from Meta:` +
+                  ` lang=${resolvedLang}, paramCount=${expectedParamCount}, body="${resolvedBodyText.substring(0, 80)}..."`
+              );
+            }
+          }
+        } catch (err) {
+          console.warn('[WhatsappGeneratorService] Meta template fetch error:', err);
+        }
+      }
+    } else {
+      // Caller provided body text — count its params
+      const paramMatches = templateBodyText.match(/\{\{(\d+)\}\}/g);
+      if (paramMatches) {
+        expectedParamCount = Math.max(
+          ...paramMatches.map((m) => parseInt(m.replace(/[^\d]/g, ''), 10)),
+          0
+        );
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
     const companyName = lead.company || lead.companyRef?.name || 'your company';
     const specialtyOrIndustry = lead.industry || lead.companyRef?.industry || 'your field';
     const phone = lead.phone || '—';
 
+    // Default variable values — AI will improve these if Gemini is configured
     let variables: Record<string, string> = {
       '1': firstName,
       '2': companyName,
@@ -180,7 +260,7 @@ PROSPECT DATA:
 - Research Highlights / Pain Points: ${painPointsStr || 'Workflow efficiency & patient outreach'}
 
 TEMPLATE STRUCTURE:
-"${activeTemplateText}"
+"${resolvedBodyText}"
 
 INSTRUCTIONS:
 1. Provide values for template placeholders {{1}}, {{2}}, {{3}}.
@@ -218,15 +298,16 @@ INSTRUCTIONS:
       }
     }
 
-    // Convert variables object into ordered parameter array [param1, param2, param3]
-    const templateParams: string[] = [
-      variables['1'] || firstName,
-      variables['2'] || companyName,
-      variables['3'] || specialtyOrIndustry,
-    ];
+    // Build exact template params array — length matches the number of {{N}} placeholders
+    const templateParams: string[] = [];
+    for (let i = 1; i <= Math.max(expectedParamCount, 1); i++) {
+      templateParams.push(
+        variables[String(i)] || (i === 1 ? firstName : i === 2 ? companyName : specialtyOrIndustry)
+      );
+    }
 
-    // Build resolved preview text by substituting variables into template structure
-    let previewText = activeTemplateText;
+    // Build rendered preview text by substituting variables into the real template body
+    let previewText = resolvedBodyText;
     Object.entries(variables).forEach(([key, val]) => {
       const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
       previewText = previewText.replace(regex, val);
@@ -238,7 +319,7 @@ INSTRUCTIONS:
       companyName,
       phone,
       templateName: activeTemplateName,
-      templateLang: 'en',
+      templateLang: resolvedLang,
       variables,
       templateParams,
       previewText,

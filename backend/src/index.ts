@@ -17,6 +17,7 @@ import deliveryRouter from './modules/delivery/delivery.routes';
 import whatsappRouter from './modules/whatsapp/whatsapp.routes';
 import settingsRouter from './modules/settings/settings.routes';
 import analyticsRouter from './modules/analytics/analytics.routes';
+import dashboardRouter from './modules/dashboard/dashboard.routes';
 import { DeliveryWorker } from './modules/delivery/delivery.worker';
 import { WhatsappWorker } from './modules/whatsapp/whatsapp.worker';
 
@@ -69,6 +70,7 @@ app.use('/api/delivery', deliveryRouter);
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 let server: Server | null = null;
 let isBootstrapping = false;

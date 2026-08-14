@@ -78,6 +78,8 @@ export const whatsappService = {
     campaignId?: string;
     message?: string;
     sendAll?: boolean;
+    templateName?: string;
+    templateParams?: string[];
   }): Promise<{ count: number; message: string }> {
     const { data: envelope } = await api.post<
       ApiEnvelope<{ count: number; message: string }> & { error?: string }
