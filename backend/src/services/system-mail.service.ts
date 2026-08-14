@@ -48,46 +48,59 @@ export class SystemMailService {
       };
     }
 
-    // 2. Try user-specific or latest active SmtpConfig from database
-    let smtpConfig = null;
+    // 2. Query all database SMTP configs to find a working active transport
+    const configs = await prisma.smtpConfig.findMany({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // If userId provided, put user's config first in list
     if (userId) {
-      smtpConfig = await prisma.smtpConfig.findUnique({ where: { userId } });
+      const userIndex = configs.findIndex((c) => c.userId === userId);
+      if (userIndex > 0) {
+        const userConfig = configs.splice(userIndex, 1)[0];
+        configs.unshift(userConfig);
+      }
     }
 
-    if (!smtpConfig) {
-      // Fallback to any active SMTP configuration in the workspace
-      smtpConfig = await prisma.smtpConfig.findFirst({
-        orderBy: { updatedAt: 'desc' },
-      });
-    }
+    for (const smtpConfig of configs) {
+      if (!smtpConfig.password) continue;
+      try {
+        const decryptedPassword = decryptText(smtpConfig.password);
+        const isSecure = smtpConfig.encryption === 'SSL' || smtpConfig.port === 465;
+        const transporter = nodemailer.createTransport({
+          host: smtpConfig.host,
+          port: smtpConfig.port,
+          secure: isSecure,
+          auth: {
+            user: smtpConfig.username,
+            pass: decryptedPassword,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 8000,
+          socketTimeout: 10000,
+        });
 
-    if (smtpConfig && smtpConfig.password) {
-      const decryptedPassword = decryptText(smtpConfig.password);
-      const isSecure = smtpConfig.encryption === 'SSL' || smtpConfig.port === 465;
-      const transporter = nodemailer.createTransport({
-        host: smtpConfig.host,
-        port: smtpConfig.port,
-        secure: isSecure,
-        auth: {
-          user: smtpConfig.username,
-          pass: decryptedPassword,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-        connectionTimeout: 10000,
-        socketTimeout: 15000,
-      });
+        // Verify transporter credentials
+        await transporter.verify();
 
-      return {
-        transporter,
-        fromName: smtpConfig.fromName || 'MailFlow',
-        fromEmail: smtpConfig.fromEmail || smtpConfig.username,
-      };
+        return {
+          transporter,
+          fromName: smtpConfig.fromName || 'MailFlow',
+          fromEmail: smtpConfig.fromEmail || smtpConfig.username,
+        };
+      } catch (err: unknown) {
+        const verifyErr = err as Error;
+        console.warn(
+          `[SystemMail] SmtpConfig ${smtpConfig.id} (${smtpConfig.username}) verification failed: ${verifyErr.message}. Trying next available configuration...`
+        );
+        continue;
+      }
     }
 
     throw new Error(
-      'SMTP email delivery is not configured. Please configure SMTP settings in backend environment or Settings -> Email Providers.'
+      'SMTP email delivery is not configured or working. Please configure SMTP settings in backend environment or Settings -> Email Providers.'
     );
   }
 
@@ -110,57 +123,114 @@ export class SystemMailService {
       const { transporter, fromName, fromEmail } = await this.getTransporter(userId);
 
       const htmlContent = `
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reset your MailFlow password</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c0d12; color: #f4f4f5; margin: 0; padding: 0; }
-    .container { max-width: 540px; margin: 40px auto; background-color: #14151f; border: 1px solid #27273a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    .header { padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #1f202e; }
-    .logo-badge { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 12px; margin-bottom: 12px; }
-    .brand-name { font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
-    .content { padding: 32px; color: #d4d4d8; font-size: 15px; line-height: 1.6; }
-    .greeting { font-size: 17px; font-weight: 600; color: #ffffff; margin-bottom: 16px; }
-    .btn-container { text-align: center; margin: 32px 0; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 36px; border-radius: 10px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); }
-    .expiry-note { font-size: 13px; color: #a1a1aa; background-color: #1c1d2b; padding: 12px 16px; border-radius: 8px; border: 1px solid #28293d; margin-top: 24px; }
-    .footer { padding: 24px 32px; border-top: 1px solid #1f202e; text-align: center; font-size: 12px; color: #71717a; }
-    .url-fallback { word-break: break-all; color: #818cf8; font-size: 12px; }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo-badge">
-        <span style="font-size: 22px; color: #ffffff;">✉️</span>
-      </div>
-      <div class="brand-name">MailFlow</div>
-    </div>
-    <div class="content">
-      <div class="greeting">Hi ${displayName},</div>
-      <p>We received a request to reset your MailFlow password.</p>
-      <p>Click the button below to create a new secure password:</p>
-      
-      <div class="btn-container">
-        <a href="${resetUrl}" class="btn" target="_blank">Reset Password</a>
-      </div>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
+          
+          <!-- Header / Brand Banner -->
+          <tr>
+            <td align="center" style="padding: 36px 32px 28px 32px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="display: inline-block; width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 12px; text-align: center; line-height: 48px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                      <span style="font-size: 24px; line-height: 48px; color: #ffffff;">✉️</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 12px;">
+                    <span style="font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">MailFlow</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <div class="expiry-note">
-        ⏱️ <strong>Note:</strong> This link expires in <strong>60 minutes</strong> and can only be used once. If you did not request a password reset, you can safely ignore this email.
-      </div>
+          <!-- Email Content Body -->
+          <tr>
+            <td style="padding: 32px 36px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">
+                Hi ${displayName},
+              </h2>
+              
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.65; color: #334155;">
+                We received a request to reset the password for your MailFlow account. Click the button below to choose a new password:
+              </p>
 
-      <p style="margin-top: 24px; font-size: 13px; color: #71717a;">
-        If the button above does not work, copy and paste this link into your browser:<br>
-        <span class="url-fallback">${resetUrl}</span>
-      </p>
-    </div>
-    <div class="footer">
-      &copy; ${new Date().getFullYear()} MailFlow — AI-Powered Outreach Infrastructure. All rights reserved.
-    </div>
-  </div>
+              <!-- CTA Button -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;">
+                <tr>
+                  <td align="center">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resetUrl}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="20%" stroke="f" fillcolor="#4f46e5">
+                    <w:anchorlock/>
+                    <center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">Reset Password</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <a href="${resetUrl}" target="_blank" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); background-color: #4f46e5; border-radius: 10px; color: #ffffff !important; display: inline-block; font-size: 15px; font-weight: 600; line-height: 48px; text-align: center; text-decoration: none; width: 220px; -webkit-text-size-adjust: none; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security / Expiration Notice Box -->
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin: 24px 0 16px 0;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td width="24" valign="top" style="font-size: 16px; line-height: 1.4;">⏱️</td>
+                    <td style="padding-left: 8px; font-size: 13px; line-height: 1.5; color: #64748b;">
+                      <strong style="color: #334155;">Security Notice:</strong> This link is valid for <strong style="color: #334155;">60 minutes</strong> and can only be used once. If you did not request this password reset, no action is needed and your account remains secure.
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- URL Fallback -->
+              <p style="margin: 24px 0 0 0; font-size: 13px; line-height: 1.5; color: #94a3b8; word-break: break-all;">
+                Having trouble clicking the button? Copy and paste this URL into your web browser:<br />
+                <a href="${resetUrl}" target="_blank" style="color: #6366f1; text-decoration: underline; font-size: 12px;">${resetUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Card Footer -->
+          <tr>
+            <td align="center" style="padding: 24px 32px 32px 32px; background-color: #fafafa; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">
+                MailFlow &bull; AI-Powered Outreach Infrastructure
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                &copy; ${new Date().getFullYear()} MailFlow. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        
+        <!-- Outside Footer Note -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin-top: 16px;">
+          <tr>
+            <td align="center" style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
+              This is an automated system email sent to ${recipientEmail}. Please do not reply directly to this message.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
       `.trim();

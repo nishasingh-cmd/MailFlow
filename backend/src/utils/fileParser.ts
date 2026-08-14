@@ -2,30 +2,106 @@ import * as xlsx from 'xlsx';
 import { ColumnMapping, ParsedFilePreview } from '@mailflow/shared';
 
 const FIELD_KEYWORDS: Record<string, string[]> = {
+  email: [
+    'email',
+    'email address',
+    'email_address',
+    'e-mail',
+    'mail',
+    'emailaddress',
+    'contact email',
+    'contact_email',
+  ],
   name: [
     'name',
     'full name',
     'fullname',
     'contact name',
-    'contact',
+    'contact_name',
     'first name',
+    'firstname',
     'person name',
     'lead name',
+    'lead_name',
+    'client name',
   ],
-  email: ['email', 'email address', 'e-mail', 'mail', 'emailaddress', 'contact email'],
+  phone: [
+    'contacts',
+    'contact',
+    'contact number',
+    'contact_number',
+    'contact no',
+    'contact_no',
+    'contact no.',
+    'contact numbers',
+    'phone',
+    'phone number',
+    'phone_number',
+    'phonenumber',
+    'phone no',
+    'phone_no',
+    'phone no.',
+    'phones',
+    'mobile',
+    'mobile number',
+    'mobile_number',
+    'mobilenumber',
+    'mobile no',
+    'mobile_no',
+    'mobile no.',
+    'mobiles',
+    'whatsapp',
+    'whatsapp number',
+    'whatsapp_number',
+    'whatsapp no',
+    'whatsapp_no',
+    'wa',
+    'wa number',
+    'wa_number',
+    'telephone',
+    'telephone number',
+    'telephone_number',
+    'telephone no',
+    'tel',
+    'cell',
+    'cellphone',
+    'cell number',
+    'cell no',
+    'ph',
+    'ph no',
+    'ph_no',
+  ],
   company: [
     'company',
     'company name',
+    'company_name',
     'organization',
     'org',
     'business',
-    'company_name',
+    'business name',
+    'business_name',
     'account',
+    'client company',
   ],
-  phone: ['phone', 'phone number', 'mobile', 'telephone', 'cell', 'contact number', 'phone_number'],
-  website: ['website', 'url', 'domain', 'web', 'site', 'company website', 'link'],
-  linkedin: ['linkedin', 'linkedin url', 'profile', 'linkedin profile', 'linkedin_url'],
-  industry: ['industry', 'sector', 'niche', 'vertical', 'business type'],
+  website: [
+    'website',
+    'url',
+    'domain',
+    'web',
+    'site',
+    'company website',
+    'company_website',
+    'link',
+  ],
+  linkedin: [
+    'linkedin',
+    'linkedin url',
+    'profile',
+    'linkedin profile',
+    'linkedin_url',
+    'linkedin_profile',
+  ],
+  industry: ['industry', 'sector', 'niche', 'vertical', 'business type', 'business_type'],
 };
 
 export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
@@ -39,19 +115,41 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
     industry: '',
   };
 
-  const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
+  const normalizedHeaders = headers.map((h) =>
+    h.trim().toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ')
+  );
 
+  const usedHeaderIndices = new Set<number>();
+
+  // Pass 1: Exact matches
   for (const [targetField, keywords] of Object.entries(FIELD_KEYWORDS)) {
-    let matchIndex = normalizedHeaders.findIndex((h) => keywords.includes(h));
-
-    if (matchIndex === -1) {
-      matchIndex = normalizedHeaders.findIndex((h) =>
-        keywords.some((kw) => h.includes(kw) || kw.includes(h))
-      );
-    }
+    const matchIndex = normalizedHeaders.findIndex(
+      (h, idx) =>
+        !usedHeaderIndices.has(idx) && keywords.some((kw) => kw.replace(/[_-]/g, ' ') === h)
+    );
 
     if (matchIndex !== -1) {
       mapping[targetField] = headers[matchIndex];
+      usedHeaderIndices.add(matchIndex);
+    }
+  }
+
+  // Pass 2: Substring / keyword inclusion matches for unmapped fields
+  for (const [targetField, keywords] of Object.entries(FIELD_KEYWORDS)) {
+    if (mapping[targetField]) continue; // Already mapped
+
+    const matchIndex = normalizedHeaders.findIndex(
+      (h, idx) =>
+        !usedHeaderIndices.has(idx) &&
+        keywords.some((kw) => {
+          const cleanKw = kw.replace(/[_-]/g, ' ');
+          return h.includes(cleanKw) || cleanKw.includes(h);
+        })
+    );
+
+    if (matchIndex !== -1) {
+      mapping[targetField] = headers[matchIndex];
+      usedHeaderIndices.add(matchIndex);
     }
   }
 
