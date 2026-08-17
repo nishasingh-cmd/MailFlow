@@ -70,9 +70,6 @@ type MetaTemplateListResponse = {
   error?: { message?: string; code?: number };
 };
 
-/**
- * Mock WhatsApp Provider — Simulates sending with 2-4s network latency when no API credentials exist.
- */
 export class MockWhatsappProvider implements IWhatsappProvider {
   name = 'MOCK';
 
@@ -118,15 +115,8 @@ interface TemplateMeta {
   bodyText?: string;
 }
 
-/**
- * In-memory cache: templateName -> { language, paramCount }
- * Cleared on #130001 or #132000 errors so the next attempt re-fetches.
- */
 const templateMetaCache: Map<string, TemplateMeta> = new Map();
 
-/**
- * Meta WhatsApp Cloud API Provider — Official WhatsApp Graph API implementation
- */
 export class MetaWhatsappProvider implements IWhatsappProvider {
   name = 'META_CLOUD';
 
@@ -147,10 +137,6 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
     this.wabaId = config.wabaId || env.WHATSAPP_BUSINESS_ACCOUNT_ID || '';
   }
 
-  /**
-   * Format phone number to clean digit string.
-   * Auto-prepends India country code '91' if user provided a 10-digit Indian mobile number.
-   */
   private formatPhoneNumber(rawPhone: string): string {
     let clean = rawPhone.replace(/[^\d]/g, '');
     if (!clean || clean.length < 7) {
