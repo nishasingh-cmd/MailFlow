@@ -5,10 +5,6 @@ import { env } from '../../config/env';
 
 const prisma = new PrismaClient();
 
-/**
- * Normalizes phone number strings for reliable cross-matching.
- * Strips non-digits and extracts 10-digit mobile number for Indian numbers.
- */
 function normalizePhone(rawPhone: string | null | undefined): string {
   if (!rawPhone) return '';
   let digits = rawPhone.replace(/[^\d]/g, '');

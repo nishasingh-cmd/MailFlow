@@ -36,9 +36,6 @@ export class WhatsappGeneratorService {
     }
   }
 
-  /**
-   * Generate personalized AI WhatsApp message for a lead (used when within 24-hour free-text window)
-   */
   static async generateMessage(
     userId: string,
     leadId: string,

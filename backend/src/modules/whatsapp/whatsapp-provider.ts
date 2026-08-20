@@ -150,10 +150,6 @@ export class MetaWhatsappProvider implements IWhatsappProvider {
     return clean;
   }
 
-  /**
-   * Fetches language code and expected parameter count ({{1}}, {{2}}) for a template from Meta WABA API.
-   * Cached in-process to maximize speed.
-   */
   private async resolveTemplateMeta(templateName: string): Promise<TemplateMeta> {
     const cached = templateMetaCache.get(templateName);
     if (cached) {

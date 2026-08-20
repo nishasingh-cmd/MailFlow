@@ -110,7 +110,6 @@ export class WhatsappService {
       throw new Error('No valid leads selected for WhatsApp outreach.');
     }
 
-    // Optionally fetch template if templateId is specified
     let template: { id: string; body: string } | null = null;
     if (input.templateId) {
       const client = prisma as unknown as {
@@ -125,7 +124,6 @@ export class WhatsappService {
         })) || null;
     }
 
-    // Process leads and generate/retrieve message per lead
     const queueItems: Prisma.WhatsappQueueUncheckedCreateInput[] = [];
 
     for (const lead of targetLeads) {

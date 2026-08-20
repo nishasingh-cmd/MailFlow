@@ -9,9 +9,6 @@ import { env } from '../../config/env';
 const prisma = new PrismaClient();
 
 export class WhatsappController {
-  /**
-   * POST /api/whatsapp/generate — Generate AI WhatsApp message for a lead
-   */
   static async generate(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { leadId, campaignObjective, cta } = req.body as {

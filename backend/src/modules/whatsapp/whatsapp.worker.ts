@@ -8,9 +8,6 @@ export class WhatsappWorker {
   private static isProcessing = false;
   private static timerId: NodeJS.Timeout | null = null;
 
-  /**
-   * Start background WhatsApp delivery queue worker
-   */
   static startWorker(intervalMs = 2500) {
     if (this.isRunning) return;
     this.isRunning = true;
@@ -25,9 +22,6 @@ export class WhatsappWorker {
     }, intervalMs);
   }
 
-  /**
-   * Stop worker loop
-   */
   static stopWorker() {
     if (this.timerId) {
       clearInterval(this.timerId);
@@ -38,9 +32,6 @@ export class WhatsappWorker {
     console.log('[WhatsappWorker] Background WhatsApp delivery queue worker stopped.');
   }
 
-  /**
-   * Process pending WhatsApp jobs in batches
-   */
   static async processQueueBatch() {
     if (this.isProcessing) return;
     this.isProcessing = true;
@@ -48,13 +39,12 @@ export class WhatsappWorker {
     try {
       const now = new Date();
 
-      // Fetch batch of PENDING WhatsApp jobs scheduled for now or earlier
       const pendingJobs = await prisma.whatsappQueue.findMany({
         where: {
           status: 'PENDING' as QueueJobStatus,
           scheduledAt: { lte: now },
         },
-        take: 5, // Process up to 5 jobs per batch tick
+        take: 5,
         orderBy: { scheduledAt: 'asc' },
         include: { lead: { select: { id: true, name: true, phone: true } } },
       });
@@ -65,7 +55,6 @@ export class WhatsappWorker {
         const activePhone = job.lead?.phone || job.phone;
         const attempts = job.attempts + 1;
 
-        // Atomic lock status transition: PENDING -> PROCESSING ("Sending")
         const lockResult = await prisma.whatsappQueue.updateMany({
           where: { id: job.id, status: 'PENDING' },
           data: {
@@ -77,7 +66,6 @@ export class WhatsappWorker {
         });
 
         if (lockResult.count === 0) {
-          // Job was already claimed or cancelled
           continue;
         }
 

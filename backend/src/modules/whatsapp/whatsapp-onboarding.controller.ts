@@ -159,10 +159,6 @@ export class WhatsappOnboardingController {
     }
   }
 
-  /**
-   * POST /api/whatsapp/disconnect
-   * Clears credentials, sets DISCONNECTED. Preserves all historical data.
-   */
   static async disconnect(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user!.userId;

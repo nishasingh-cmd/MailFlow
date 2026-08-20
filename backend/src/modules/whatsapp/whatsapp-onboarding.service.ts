@@ -107,19 +107,6 @@ function buildSnapshot(wa: Record<string, unknown> | null, userId: string): What
   };
 }
 
-// ─── Helper: exchange OAuth code for access token ─────────────────────────────
-//
-// IMPORTANT — redirect_uri behaviour for the Embedded Signup JS SDK flow:
-//
-// Even though FB.login() opens a popup (no browser redirect), Meta's SDK
-// internally ties the generated authorization code to the URL of the page
-// that called FB.login() (window.location.href). This implicit redirect_uri
-// MUST be forwarded to /oauth/access_token, or Meta rejects the exchange with
-// error_subcode 36008 ("Error validating verification code").
-//
-// The frontend captures window.location.href before calling FB.login() and
-// forwards it here. Authorization codes are single-use — if the exchange
-// fails, the code is burned and the user must restart the flow.
 async function exchangeCodeForToken(code: string, redirectUri?: string): Promise<string> {
   const appId = env.WHATSAPP_APP_ID;
   const appSecret = env.WHATSAPP_APP_SECRET;
