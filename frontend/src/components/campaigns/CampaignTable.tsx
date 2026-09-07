@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Campaign } from '@mailflow/shared';
 import { useNavigate } from 'react-router-dom';
 import { CampaignStatusBadge } from './CampaignStatusBadge';
@@ -31,8 +32,36 @@ function ActionMenu({
   onSend?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, () => setOpen(false));
+
+  const MENU_HEIGHT = 210; // approximate dropdown height in px
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top =
+        spaceBelow < MENU_HEIGHT
+          ? rect.top + window.scrollY - MENU_HEIGHT - 4 // open upward
+          : rect.bottom + window.scrollY + 4; // open downward
+      setMenuPos({
+        top,
+        left: rect.right + window.scrollX - 160, // right-align to button
+      });
+    }
+    setOpen((o) => !o);
+  };
+
+  // Close on scroll
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    return () => window.removeEventListener('scroll', close, true);
+  }, [open]);
 
   const items = [
     { label: 'View', icon: '👁', action: onView },
@@ -51,10 +80,11 @@ function ActionMenu({
   ];
 
   return (
-    <div ref={menuRef} className="relative">
+    <div className="relative">
       <button
+        ref={btnRef}
         id={`campaign-actions-${campaign.id}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleOpen}
         className="p-1.5 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
         aria-label="Campaign actions"
         aria-haspopup="menu"
@@ -66,32 +96,36 @@ function ActionMenu({
           <circle cx="12" cy="19" r="1.5" />
         </svg>
       </button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 mt-1 w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] shadow-elevation-2 animate-slide-up z-20 overflow-hidden"
-        >
-          {items.map((item) => (
-            <button
-              key={item.label}
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                item.action();
-              }}
-              className={cn(
-                'flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors',
-                item.danger
-                  ? 'text-red-400 hover:bg-red-500/10'
-                  : 'text-[var(--content-primary)] hover:bg-[var(--surface-hover)]'
-              )}
-            >
-              <span aria-hidden="true">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={{ position: 'absolute', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+            className="w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] shadow-elevation-2 animate-slide-up overflow-hidden"
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  item.action();
+                }}
+                className={cn(
+                  'flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors',
+                  item.danger
+                    ? 'text-red-400 hover:bg-red-500/10'
+                    : 'text-[var(--content-primary)] hover:bg-[var(--surface-hover)]'
+                )}
+              >
+                <span aria-hidden="true">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -207,7 +241,7 @@ export function CampaignTable({
                   </span>
                 </td>
                 <td className="px-4 py-3 text-[var(--content-secondary)] hidden md:table-cell">
-                  {campaign.templateId || <span className="text-[var(--content-tertiary)]">—</span>}
+                  <span className="text-[var(--content-tertiary)]">—</span>
                 </td>
                 <td className="px-4 py-3">
                   <CampaignStatusBadge status={campaign.status} size="sm" />
