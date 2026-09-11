@@ -4,6 +4,7 @@ import { Modal, Button, Input, Textarea, Select } from '../ui';
 import { LeadPickerTable } from './LeadPickerTable';
 import { CampaignStatusBadge } from './CampaignStatusBadge';
 import { campaignService } from '../../services/campaign.service';
+import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { cn } from '../../utils/cn';
 
 interface EditCampaignModalProps {
@@ -19,8 +20,8 @@ const STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed' },
 ];
 
-const TEMPLATE_OPTIONS = [
-  { value: '', label: 'None (No template)' },
+const EMAIL_TEMPLATE_OPTIONS = [
+  { value: '', label: 'None (Default AI Cold Outreach)' },
   { value: 'Cold Outreach', label: 'Cold Outreach' },
   { value: 'Follow-up', label: 'Follow-up' },
   { value: 'Partnership', label: 'Partnership' },
@@ -40,6 +41,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
   const [nameError, setNameError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [waTemplates, setWaTemplates] = useState<WhatsappMetaTemplate[]>([]);
 
   useEffect(() => {
     if (open && campaign) {
@@ -58,6 +60,15 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
         })
         .catch(() => setSelectedLeadIds([]))
         .finally(() => setLoadingDetail(false));
+
+      if (campaign.channel === 'WHATSAPP' || campaign.channel === 'EMAIL_AND_WHATSAPP') {
+        whatsappService
+          .getTemplates()
+          .then((res) => {
+            if (res?.templates) setWaTemplates(res.templates);
+          })
+          .catch(() => {});
+      }
     }
   }, [open, campaign]);
 
@@ -167,13 +178,46 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
 
       {tab === 'settings' && (
         <div className="space-y-4">
-          <Select
-            id="edit-campaign-template"
-            label="Email Template"
-            value={templateId}
-            onChange={(val) => setTemplateId(val)}
-            options={TEMPLATE_OPTIONS}
-          />
+          {campaign?.channel === 'WHATSAPP' ? (
+            <div className="space-y-2">
+              <Select
+                id="edit-campaign-template"
+                label="Approved Meta WhatsApp Template"
+                value={templateId}
+                onChange={(val) => setTemplateId(val)}
+                options={
+                  waTemplates.length > 0
+                    ? waTemplates.map((t) => ({
+                        value: t.name,
+                        label: `${t.name} (Meta Status: ✓ ${t.status}, Lang: ${t.language})`,
+                      }))
+                    : [
+                        {
+                          value: templateId || 'cold_outreach',
+                          label: `${templateId || 'cold_outreach'} (Meta Approved ✓)`,
+                        },
+                      ]
+                }
+              />
+              <p className="text-2xs text-emerald-400/80">
+                Meta Policy: AI personalizes template variables only. The approved template defines
+                the message structure.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Select
+                id="edit-campaign-template"
+                label="Email Template Framework"
+                value={templateId}
+                onChange={(val) => setTemplateId(val)}
+                options={EMAIL_TEMPLATE_OPTIONS}
+              />
+              <p className="text-2xs text-[var(--content-tertiary)]">
+                Email outreach: AI generates full personalized email (Subject, Body, CTA).
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--content-primary)]">Status</label>
             <div className="flex gap-2">

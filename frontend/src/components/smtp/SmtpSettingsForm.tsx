@@ -174,21 +174,28 @@ export function SmtpSettingsForm() {
         />
 
         {provider === 'GMAIL' && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-300 space-y-1.5">
-            <div className="font-semibold text-amber-200">💡 Gmail App Password Required</div>
-            <p className="text-amber-300/90 leading-relaxed">
+          <div className="text-xs text-black dark:text-neutral-100 space-y-1.5 pt-1">
+            <div className="font-bold text-black dark:text-white">Gmail App Password Required</div>
+            <p className="text-black dark:text-neutral-200 leading-relaxed">
               Google standard account passwords will not work for SMTP. To generate a 16-character
               App Password:
             </p>
-            <ol className="list-decimal list-inside space-y-0.5 text-amber-300/80 text-[11px] font-mono pt-1">
+            <ol className="list-decimal list-inside space-y-0.5 text-black dark:text-neutral-200 text-[11px] font-mono pt-1">
               <li>
-                Open Google Account (myaccount.google.com) &rarr; <strong>Security</strong>
+                Open Google Account (myaccount.google.com) &rarr;{' '}
+                <strong className="text-black dark:text-white font-bold">Security</strong>
               </li>
               <li>
-                Ensure <strong>2-Step Verification</strong> is ON
+                Ensure{' '}
+                <strong className="text-black dark:text-white font-bold">
+                  2-Step Verification
+                </strong>{' '}
+                is ON
               </li>
               <li>
-                Search for <strong>App Passwords</strong> &rarr; Create a new key for "Mail"
+                Search for{' '}
+                <strong className="text-black dark:text-white font-bold">App Passwords</strong>{' '}
+                &rarr; Create a new key for "Mail"
               </li>
               <li>Paste the generated 16-character code (without spaces) as your Password below</li>
             </ol>

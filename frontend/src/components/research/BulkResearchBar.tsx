@@ -34,7 +34,7 @@ export function BulkResearchBar({
             onClick={onSendEmailSelected}
             disabled={isResearching}
           >
-            ✉️ Send Email ({selectedCount})
+            Send Email ({selectedCount})
           </Button>
         )}
 
@@ -55,7 +55,7 @@ export function BulkResearchBar({
               Researching...
             </span>
           ) : (
-            `🔍 Research Selected (${selectedCount})`
+            `Research Selected (${selectedCount})`
           )}
         </Button>
 

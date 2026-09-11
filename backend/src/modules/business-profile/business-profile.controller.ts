@@ -27,7 +27,7 @@ export class BusinessProfileController {
       const userId = req.user!.userId;
       const body = req.body;
 
-      // Validation
+      // Validation: Only core business basics and description are required
       const errors: Record<string, string> = {};
 
       if (!body.businessName?.trim()) {
@@ -38,27 +38,6 @@ export class BusinessProfileController {
       }
       if (!body.businessDescription?.trim()) {
         errors.businessDescription = 'Business description is required.';
-      }
-      if (!body.productsOrServices?.trim()) {
-        errors.productsOrServices = 'Products or services are required.';
-      }
-      if (!body.valueProposition?.trim()) {
-        errors.valueProposition = 'Value proposition is required.';
-      }
-      if (!body.targetAudience?.trim()) {
-        errors.targetAudience = 'Target audience is required.';
-      }
-      if (!body.idealCustomerProfile?.trim()) {
-        errors.idealCustomerProfile = 'Ideal customer profile is required.';
-      }
-      if (
-        !body.outreachGoal ||
-        (Array.isArray(body.outreachGoal) && body.outreachGoal.length === 0)
-      ) {
-        errors.outreachGoal = 'At least one outreach goal is required.';
-      }
-      if (!body.toneOfVoice?.trim()) {
-        errors.toneOfVoice = 'Tone of voice is required.';
       }
 
       if (body.website?.trim()) {
@@ -93,8 +72,8 @@ export class BusinessProfileController {
         valueProposition: body.valueProposition,
         targetAudience: body.targetAudience,
         idealCustomerProfile: body.idealCustomerProfile,
-        outreachGoal: Array.isArray(body.outreachGoal) ? body.outreachGoal : [body.outreachGoal],
-        toneOfVoice: body.toneOfVoice,
+        outreachGoal: Array.isArray(body.outreachGoal) ? body.outreachGoal : [],
+        toneOfVoice: body.toneOfVoice || 'Professional',
       });
 
       res.status(201).json({

@@ -5,6 +5,7 @@ import {
   RegisterDto,
   LoginDto,
   UpdateProfileDto,
+  SignupResponse,
 } from '../services/auth.service';
 import { getAccessToken, clearTokens } from '../services/api';
 
@@ -13,7 +14,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginDto) => Promise<AuthUser>;
-  register: (data: RegisterDto) => Promise<AuthUser>;
+  register: (data: RegisterDto) => Promise<SignupResponse>;
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileDto) => Promise<AuthUser>;
   refreshUser: () => Promise<void>;
@@ -66,12 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (data: RegisterDto): Promise<AuthUser> => {
+  const register = async (data: RegisterDto): Promise<SignupResponse> => {
     setIsLoading(true);
     try {
       const res = await AuthService.register(data);
-      setUser(res.user);
-      return res.user;
+      return res;
     } finally {
       setIsLoading(false);
     }

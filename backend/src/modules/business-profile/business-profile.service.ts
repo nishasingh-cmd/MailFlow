@@ -8,12 +8,12 @@ export interface CreateBusinessProfileDto {
   location?: string;
   companySize?: string;
   businessDescription: string;
-  productsOrServices: string;
-  valueProposition: string;
-  targetAudience: string;
-  idealCustomerProfile: string;
-  outreachGoal: string[];
-  toneOfVoice: string;
+  productsOrServices?: string;
+  valueProposition?: string;
+  targetAudience?: string;
+  idealCustomerProfile?: string;
+  outreachGoal?: string[];
+  toneOfVoice?: string;
 }
 
 export type UpdateBusinessProfileDto = Partial<CreateBusinessProfileDto>;
@@ -48,12 +48,12 @@ export class BusinessProfileService {
         location: data.location?.trim() || null,
         companySize: data.companySize?.trim() || null,
         businessDescription: data.businessDescription.trim(),
-        productsOrServices: data.productsOrServices.trim(),
-        valueProposition: data.valueProposition.trim(),
-        targetAudience: data.targetAudience.trim(),
-        idealCustomerProfile: data.idealCustomerProfile.trim(),
-        outreachGoal: Array.isArray(data.outreachGoal) ? data.outreachGoal : [data.outreachGoal],
-        toneOfVoice: data.toneOfVoice.trim(),
+        productsOrServices: data.productsOrServices?.trim() || '',
+        valueProposition: data.valueProposition?.trim() || '',
+        targetAudience: data.targetAudience?.trim() || '',
+        idealCustomerProfile: data.idealCustomerProfile?.trim() || '',
+        outreachGoal: Array.isArray(data.outreachGoal) ? data.outreachGoal : [],
+        toneOfVoice: data.toneOfVoice?.trim() || 'Professional',
       },
     });
 
@@ -114,16 +114,24 @@ export class BusinessProfileService {
     const profile = await this.getProfile(userId);
     if (!profile) return '';
 
-    return `CLIENT SENDER IDENTITY & BUSINESS CONTEXT:
-- Sender Company: ${profile.businessName}
-- Industry: ${profile.industry}
-- Location: ${profile.location || 'Not specified'}
-- Company Overview: ${profile.businessDescription}
-- Core Products & Services: ${profile.productsOrServices}
-- Value Proposition: ${profile.valueProposition}
-- Target Audience: ${profile.targetAudience}
-- Ideal Customer Profile (ICP): ${profile.idealCustomerProfile}
-- Outreach Goals: ${profile.outreachGoal.join(', ')}
-- Preferred Tone of Voice: ${profile.toneOfVoice}`;
+    const lines = [
+      `CLIENT SENDER IDENTITY & BUSINESS CONTEXT:`,
+      `- Sender Company: ${profile.businessName}`,
+      `- Industry: ${profile.industry}`,
+      profile.location ? `- Location: ${profile.location}` : null,
+      `- Company Overview: ${profile.businessDescription}`,
+      profile.productsOrServices
+        ? `- Core Products & Services: ${profile.productsOrServices}`
+        : null,
+      profile.valueProposition ? `- Value Proposition: ${profile.valueProposition}` : null,
+      profile.targetAudience ? `- Target Audience: ${profile.targetAudience}` : null,
+      profile.idealCustomerProfile
+        ? `- Ideal Customer Profile (ICP): ${profile.idealCustomerProfile}`
+        : null,
+      profile.outreachGoal?.length ? `- Outreach Goals: ${profile.outreachGoal.join(', ')}` : null,
+      profile.toneOfVoice ? `- Preferred Tone of Voice: ${profile.toneOfVoice}` : null,
+    ].filter(Boolean);
+
+    return lines.join('\n');
   }
 }

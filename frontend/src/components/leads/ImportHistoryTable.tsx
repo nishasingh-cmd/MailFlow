@@ -27,7 +27,7 @@ export function ImportHistoryTable({ history, isLoading }: ImportHistoryTablePro
       key: 'fileName',
       header: 'File Name',
       render: (item) => (
-        <span className="font-semibold text-[var(--content-primary)]">📄 {item.fileName}</span>
+        <span className="font-semibold text-[var(--content-primary)]">{item.fileName}</span>
       ),
     },
     {

@@ -51,7 +51,7 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
         autoSaveDrafts,
       });
 
-      toast.success('⚙️ Application preferences saved successfully!');
+      toast.success('Application preferences saved successfully!');
       onUpdated();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };

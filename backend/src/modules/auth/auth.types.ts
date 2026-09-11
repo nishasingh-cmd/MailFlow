@@ -5,8 +5,22 @@ export interface UserResponse {
   email: string;
   avatar: string | null;
   hasBusinessProfile: boolean;
+  emailVerified: boolean;
+  accountStatus: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface SignupResponse {
+  requiresVerification: boolean;
+  email: string;
+  message: string;
+}
+
+export interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
+  code?: string;
 }
 
 export interface AuthResponse {

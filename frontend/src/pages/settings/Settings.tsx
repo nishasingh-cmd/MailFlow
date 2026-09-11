@@ -23,15 +23,15 @@ type TabKey =
   | 'preferences'
   | 'integrations';
 
-const TABS: Array<{ id: TabKey; label: string; icon: string }> = [
-  { id: 'profile', label: 'Profile', icon: '👤' },
-  { id: 'business', label: 'Business Profile', icon: '🏢' },
-  { id: 'security', label: 'Security', icon: '🔒' },
-  { id: 'email', label: 'Email Providers', icon: '✉️' },
-  { id: 'ai', label: 'AI Integration', icon: '✨' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-  { id: 'preferences', label: 'Preferences', icon: '⚙️' },
-  { id: 'integrations', label: 'Integrations', icon: '🔌' },
+const TABS: Array<{ id: TabKey; label: string }> = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'business', label: 'Business Profile' },
+  { id: 'security', label: 'Security' },
+  { id: 'email', label: 'Email Providers' },
+  { id: 'ai', label: 'AI Integration' },
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'preferences', label: 'Preferences' },
+  { id: 'integrations', label: 'Integrations' },
 ];
 
 export default function Settings() {
@@ -87,13 +87,12 @@ export default function Settings() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all flex items-center gap-2 whitespace-nowrap',
+              'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all whitespace-nowrap',
               activeTab === tab.id
                 ? 'border-brand-500 text-brand-400 font-semibold'
                 : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
             )}
           >
-            <span>{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         ))}

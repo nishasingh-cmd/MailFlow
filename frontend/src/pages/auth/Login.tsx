@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button, Input, Card } from '../../components/ui';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
+import { AuthService } from '../../services/auth.service';
 import { ROUTES } from '../../routes/routes';
 
 export default function Login() {
@@ -17,9 +18,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Unverified account handling
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setRequiresVerification(false);
 
     if (!email.trim() || !password.trim()) {
       setError('Please enter both email and password.');
@@ -29,7 +44,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const user = await login({ email, password });
+      const user = await login({ email: email.trim(), password });
       toast.success({
         title: 'Welcome back!',
         description: `Logged in as ${user.name}`,
@@ -39,13 +54,47 @@ export default function Login() {
         (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.DASHBOARD;
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { error?: string } } };
-      const msg =
-        apiErr.response?.data?.error ?? 'Failed to log in. Please check your credentials.';
-      setError(msg);
-      toast.error({ title: 'Authentication failed', description: msg });
+      const apiErr = err as {
+        response?: {
+          status?: number;
+          data?: { error?: string; requiresVerification?: boolean; email?: string };
+        };
+      };
+
+      if (apiErr.response?.data?.requiresVerification || apiErr.response?.status === 403) {
+        setRequiresVerification(true);
+        setUnverifiedEmail(apiErr.response?.data?.email || email.trim());
+        setError(apiErr.response?.data?.error || 'Please verify your email before logging in.');
+      } else {
+        const msg =
+          apiErr.response?.data?.error ?? 'Failed to log in. Please check your credentials.';
+        setError(msg);
+        toast.error({ title: 'Authentication failed', description: msg });
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    const target = unverifiedEmail || email.trim();
+    if (!target || resendCountdown > 0) return;
+
+    setResending(true);
+    try {
+      await AuthService.resendVerification(target);
+      setResendCountdown(60);
+      toast.success({
+        title: 'Verification email sent',
+        description: 'Please check your inbox for a fresh link.',
+      });
+    } catch {
+      toast.error({
+        title: 'Resend failed',
+        description: 'Failed to resend verification email. Please try again later.',
+      });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -61,10 +110,66 @@ export default function Login() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {error && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-medium">
-            {error}
+        {requiresVerification ? (
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <svg
+                className="w-5 h-5 text-amber-500 shrink-0 mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Please verify your email before logging in.
+                </p>
+                <p className="text-xs text-[var(--content-secondary)]">
+                  A 6-digit verification code was sent to your registered email. Please enter your
+                  code to activate your MailFlow account.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                fullWidth
+                onClick={() =>
+                  navigate(
+                    `${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(unverifiedEmail || email.trim())}`
+                  )
+                }
+              >
+                Enter Code
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                fullWidth
+                loading={resending}
+                disabled={resendCountdown > 0}
+                onClick={handleResend}
+              >
+                {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
+              </Button>
+            </div>
           </div>
+        ) : (
+          error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-medium">
+              {error}
+            </div>
+          )
         )}
 
         <Input

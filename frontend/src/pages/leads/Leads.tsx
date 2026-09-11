@@ -444,7 +444,7 @@ export default function Leads() {
             onClick={() => openWhatsappModal(lead)}
             className="text-xs text-emerald-400 hover:text-emerald-300"
           >
-            💬 WA
+            WhatsApp
           </Button>
           <Button size="sm" variant="ghost" onClick={() => handleOpenDetail(lead)}>
             View
@@ -538,7 +538,7 @@ export default function Leads() {
               onClick={() => openEmailGenerator(lead.id, lead.name, lead.company)}
               className="text-xs shadow-sm shadow-brand-500/20"
             >
-              ✨ Email
+              Email
             </Button>
           )}
           <Button
@@ -547,10 +547,10 @@ export default function Leads() {
             onClick={() => openWhatsappModal(lead)}
             className="text-xs text-emerald-400 hover:text-emerald-300"
           >
-            💬 WA
+            WhatsApp
           </Button>
           <Button size="sm" variant="ghost" onClick={() => handleOpenResearch(lead)}>
-            {researchStatuses[lead.id] === 'COMPLETED' ? '📊 View Research' : '🔍 Research'}
+            {researchStatuses[lead.id] === 'COMPLETED' ? 'View Research' : 'Research'}
           </Button>
         </div>
       ),
@@ -572,11 +572,11 @@ export default function Leads() {
         <div className="flex items-center gap-3">
           {activeTab === 'RESEARCH' && (
             <Button variant="outline" onClick={handleResearchAll} disabled={isResearching}>
-              {isResearching ? '⏳ Researching...' : '🔍 Research All Companies'}
+              {isResearching ? 'Researching...' : 'Research All Companies'}
             </Button>
           )}
           <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
-            📥 Import CSV / Excel
+            Import CSV / Excel
           </Button>
           <Button
             onClick={() => {
@@ -625,7 +625,7 @@ export default function Leads() {
             [
               { id: 'LEADS', label: `All Leads (${totalLeads})` },
               { id: 'HISTORY', label: 'Import History' },
-              { id: 'RESEARCH', label: '🔍 AI Research' },
+              { id: 'RESEARCH', label: 'AI Research' },
             ] as const
           ).map((tab) => (
             <button
@@ -689,7 +689,7 @@ export default function Leads() {
                 </span>
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="primary" onClick={() => setIsCreateCampaignOpen(true)}>
-                    ✉️ Send Email to Selected ({selectedLeadIds.length})
+                    Send Email to Selected ({selectedLeadIds.length})
                   </Button>
                   <Button size="sm" variant="danger" onClick={handleBulkDelete}>
                     Delete Selected ({selectedLeadIds.length})

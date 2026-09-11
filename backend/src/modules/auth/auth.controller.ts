@@ -6,6 +6,9 @@ import {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
+  verifyCodeSchema,
+  resendVerificationSchema,
 } from './auth.validation';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
@@ -47,6 +50,15 @@ export class AuthController {
       }
       if (err.message === 'INVALID_CREDENTIALS') {
         res.status(401).json({ error: 'Invalid email or password' });
+        return;
+      }
+      if (err.message === 'EMAIL_NOT_VERIFIED') {
+        const userEmail = (err as unknown as { userEmail?: string }).userEmail;
+        res.status(403).json({
+          error: 'Please verify your email before logging in.',
+          requiresVerification: true,
+          email: userEmail,
+        });
         return;
       }
       console.error('[auth.controller] Login error:', error);
@@ -124,6 +136,145 @@ export class AuthController {
         return;
       }
       res.status(500).json({ error: 'Failed to reset password' });
+    }
+  }
+
+  static async verifyCode(req: Request, res: Response): Promise<void> {
+    try {
+      const validated = verifyCodeSchema.parse(req.body);
+      const result = await AuthService.verifyCode(validated.email, validated.code);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as {
+        name?: string;
+        message?: string;
+        errors?: { message?: string }[];
+        attemptsRemaining?: number;
+      };
+      if (err.name === 'ZodError') {
+        res.status(400).json({
+          error: err.errors?.[0]?.message ?? 'Invalid verification request',
+          code: 'INVALID_REQUEST',
+        });
+        return;
+      }
+      if (err.message === 'TOO_MANY_ATTEMPTS') {
+        res.status(429).json({
+          error: 'Maximum verification attempts exceeded. Please request a new verification code.',
+          code: 'TOO_MANY_ATTEMPTS',
+        });
+        return;
+      }
+      if (err.message === 'CODE_EXPIRED') {
+        res.status(400).json({
+          error: 'This verification code has expired. Please request a new code.',
+          code: 'CODE_EXPIRED',
+        });
+        return;
+      }
+      if (err.message === 'NO_ACTIVE_CODE') {
+        res.status(400).json({
+          error: 'No active verification code found for this account. Please request a new code.',
+          code: 'NO_ACTIVE_CODE',
+        });
+        return;
+      }
+      if (err.message === 'INVALID_CODE') {
+        res.status(400).json({
+          error: 'Invalid verification code. Please check your email and try again.',
+          code: 'INVALID_CODE',
+        });
+        return;
+      }
+      if (err.attemptsRemaining !== undefined) {
+        res.status(400).json({
+          error: err.message,
+          code: 'INVALID_CODE',
+          attemptsRemaining: err.attemptsRemaining,
+        });
+        return;
+      }
+      console.error('[auth.controller] Verify code error:', error);
+      res.status(500).json({ error: 'Failed to verify email address' });
+    }
+  }
+
+  static async verifyEmail(req: Request, res: Response): Promise<void> {
+    try {
+      // If code & email are present in body, route to verifyCode
+      if (req.body?.code && req.body?.email) {
+        const validated = verifyCodeSchema.parse(req.body);
+        const result = await AuthService.verifyCode(validated.email, validated.code);
+        res.status(200).json(result);
+        return;
+      }
+
+      const token = (req.query.token as string) || req.body?.token;
+      const validated = verifyEmailSchema.parse({ token });
+      const result = await AuthService.verifyEmail(validated.token);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as {
+        name?: string;
+        message?: string;
+        errors?: { message?: string }[];
+        attemptsRemaining?: number;
+      };
+      if (err.name === 'ZodError') {
+        res.status(400).json({ error: err.errors?.[0]?.message ?? 'Invalid verification request' });
+        return;
+      }
+      if (err.message === 'TOO_MANY_ATTEMPTS') {
+        res.status(429).json({
+          error: 'Maximum verification attempts exceeded. Please request a new verification code.',
+          code: 'TOO_MANY_ATTEMPTS',
+        });
+        return;
+      }
+      if (err.message === 'CODE_EXPIRED' || err.message === 'TOKEN_EXPIRED') {
+        res.status(400).json({
+          error: 'This verification has expired. Please request a new one.',
+          code: 'EXPIRED',
+        });
+        return;
+      }
+      if (
+        err.message === 'INVALID_TOKEN' ||
+        err.message === 'USER_NOT_FOUND' ||
+        err.message === 'INVALID_CODE'
+      ) {
+        res.status(400).json({
+          error: 'Invalid verification details.',
+          code: 'INVALID',
+        });
+        return;
+      }
+      if (err.attemptsRemaining !== undefined) {
+        res.status(400).json({
+          error: err.message,
+          code: 'INVALID_CODE',
+          attemptsRemaining: err.attemptsRemaining,
+        });
+        return;
+      }
+      console.error('[auth.controller] Verify email error:', error);
+      res.status(500).json({ error: 'Failed to verify email address' });
+    }
+  }
+
+  static async resendVerification(req: Request, res: Response): Promise<void> {
+    try {
+      const validated = resendVerificationSchema.parse(req.body);
+      const result = await AuthService.resendVerification(validated.email);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as { name?: string; message?: string; errors?: { message?: string }[] };
+      if (err.name === 'ZodError') {
+        res.status(400).json({ error: err.errors?.[0]?.message ?? 'Invalid request data' });
+        return;
+      }
+      console.error('[auth.controller] Resend verification error:', error);
+      res.status(500).json({ error: 'Failed to resend verification email' });
     }
   }
 }

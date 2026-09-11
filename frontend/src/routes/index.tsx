@@ -8,6 +8,7 @@ import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
+import VerifyEmail from '../pages/auth/VerifyEmail';
 
 import Dashboard from '../pages/dashboard/Dashboard';
 import Leads from '../pages/leads/Leads';
@@ -16,6 +17,7 @@ import CampaignDetail from '../pages/campaigns/CampaignDetail';
 import DeliveryLogsPage from '../pages/delivery/DeliveryLogsPage';
 import FailedQueuePage from '../pages/delivery/FailedQueuePage';
 import WhatsappPage from '../pages/whatsapp/WhatsappPage';
+import TemplatesPage from '../pages/templates/TemplatesPage';
 import Analytics from '../pages/analytics/Analytics';
 import Settings from '../pages/settings/Settings';
 import BusinessOnboarding from '../pages/onboarding/BusinessOnboarding';
@@ -28,6 +30,7 @@ export function AppRoutes() {
         <Route path={ROUTES.REGISTER} element={<Register />} />
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
+        <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -41,6 +44,7 @@ export function AppRoutes() {
           <Route path={ROUTES.DELIVERY_LOGS} element={<DeliveryLogsPage />} />
           <Route path={ROUTES.FAILED_QUEUE} element={<FailedQueuePage />} />
           <Route path={ROUTES.WHATSAPP} element={<WhatsappPage />} />
+          <Route path={ROUTES.TEMPLATES} element={<TemplatesPage />} />
           <Route path={ROUTES.ANALYTICS} element={<Analytics />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
         </Route>

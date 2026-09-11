@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { whatsappService } from '../../services/whatsapp.service';
 import { WhatsappLogItem, WhatsappQueueItem, WhatsappStats } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
-import { Button, Input, Select, Badge, Skeleton } from '../../components/ui';
+import { Button, Input, Select, Badge, Skeleton, Modal } from '../../components/ui';
 import { Link } from 'react-router-dom';
 
 function formatDateTime(dateStr?: string | null) {
@@ -26,7 +26,9 @@ const STATUS_OPTIONS = [
 export default function WhatsappPage() {
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'history' | 'failed'>('history');
+  const [activeTab, setActiveTab] = useState<'setup' | 'history' | 'failed'>('setup');
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [tutorialModal, setTutorialModal] = useState<string | null>(null);
 
   const [stats, setStats] = useState<WhatsappStats>({
     totalSent: 0,
@@ -175,7 +177,7 @@ export default function WhatsappPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-              💬 WhatsApp Outreach Engine
+              WhatsApp Outreach Engine
             </h1>
             <Badge variant={isMetaActive ? 'success' : 'brand'} size="md" dot>
               {isMetaActive ? 'Provider: META CLOUD API' : 'Provider: MOCK'}
@@ -189,7 +191,7 @@ export default function WhatsappPage() {
 
         <Link to="/settings">
           <Button variant="outline" size="sm">
-            ⚙️ Configure WhatsApp API
+            Configure WhatsApp API
           </Button>
         </Link>
       </div>
@@ -241,10 +243,20 @@ export default function WhatsappPage() {
 
       <div className="flex items-center gap-4 border-b border-[var(--surface-border)]">
         <button
+          onClick={() => setActiveTab('setup')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === 'setup'
+              ? 'border-brand-500 text-brand-500'
+              : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
+          }`}
+        >
+          <span>API Setup Guide</span>
+        </button>
+        <button
           onClick={() => setActiveTab('history')}
           className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
             activeTab === 'history'
-              ? 'border-brand-500 text-brand-400'
+              ? 'border-brand-500 text-brand-500'
               : 'border-transparent text-[var(--content-secondary)] hover:text-[var(--content-primary)]'
           }`}
         >
@@ -261,6 +273,166 @@ export default function WhatsappPage() {
           Failed Queue ({stats.failed})
         </button>
       </div>
+
+      {activeTab === 'setup' && (
+        <div className="space-y-8 max-w-4xl py-2 animate-fade-in">
+          {/* Header */}
+          <div className="space-y-1.5">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <span>Setup Your WhatsApp Business API Account</span>
+              <span className="text-emerald-500 flex-shrink-0">
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                </svg>
+              </span>
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Complete the steps below to connect your WhatsApp API and start automating messages.
+            </p>
+          </div>
+
+          {/* Stepper List */}
+          <div className="space-y-8">
+            {/* Step 1 */}
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                1
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Get Your WhatsApp Business API
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Get instant access to the WhatsApp Business API using your Facebook account.
+                  </p>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setConnectModalOpen(true)}
+                    className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                    </svg>
+                    Connect WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                2
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Add Payment Method
+                    </h3>
+                    <button
+                      onClick={() => setTutorialModal('payment')}
+                      className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
+                    >
+                      Watch tutorial
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Add a payment method in Facebook Business Manager to send template messages and
+                    enable bulk messaging.
+                  </p>
+                </div>
+                <div>
+                  <a
+                    href="https://business.facebook.com/billing_hub/payment_settings"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)] text-sm font-semibold text-[var(--content-primary)] shadow-xs transition-all hover:border-brand-500/40"
+                  >
+                    Add Payment Method
+                    <svg
+                      className="w-3.5 h-3.5 text-[var(--content-tertiary)]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                3
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Facebook Business Verification
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                      Optional
+                    </span>
+                    <button
+                      onClick={() => setTutorialModal('verification')}
+                      className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
+                    >
+                      Watch tutorial
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Verify your Facebook business to display your brand name instead of your phone
+                    number and increase your messaging limits.
+                  </p>
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      Requirements:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 pl-1">
+                      <li>Legal business document with business name</li>
+                      <li>Working website</li>
+                    </ul>
+                  </div>
+                </div>
+                <div>
+                  <a
+                    href="https://business.facebook.com/settings/security"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)] text-sm font-semibold text-[var(--content-primary)] shadow-xs transition-all hover:border-brand-500/40"
+                  >
+                    Verify Business
+                    <svg
+                      className="w-3.5 h-3.5 text-[var(--content-tertiary)]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'history' && (
         <div className="space-y-4">
@@ -365,10 +537,10 @@ export default function WhatsappPage() {
                             {log.messageId || '—'}
                           </td>
                           <td
-                            className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-sm truncate"
+                            className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-sm"
                             title={log.message}
                           >
-                            <span className="line-clamp-2">{log.message}</span>
+                            <span className="break-words leading-relaxed">{log.message}</span>
                             {log.errorReason && (
                               <p
                                 className="text-2xs text-red-400 font-sans mt-0.5"
@@ -475,7 +647,7 @@ export default function WhatsappPage() {
               </div>
             ) : failedJobs.length === 0 ? (
               <div className="p-12 text-center text-sm text-[var(--content-tertiary)]">
-                ✅ No failed WhatsApp jobs in queue! All dispatches operating normally.
+                No failed WhatsApp jobs in queue! All dispatches operating normally.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -532,6 +704,141 @@ export default function WhatsappPage() {
           </div>
         </div>
       )}
+
+      {/* Connect WhatsApp Modal */}
+      <Modal
+        open={connectModalOpen}
+        onClose={() => setConnectModalOpen(false)}
+        title="Connect WhatsApp Business API"
+        size="md"
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-[var(--content-secondary)]">
+            MailFlow communicates directly with Meta Cloud API. Connect your Meta Developer App to
+            enable live WhatsApp dispatches and real-time read receipts.
+          </p>
+
+          <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+                Current Engine Status
+              </span>
+              <Badge variant={isMetaActive ? 'success' : 'neutral'} size="sm" dot>
+                {isMetaActive ? 'Meta Cloud API Live' : 'Mock Mode Active'}
+              </Badge>
+            </div>
+            <p className="text-xs text-[var(--content-secondary)]">
+              {isMetaActive
+                ? 'Your Meta credentials are configured. WhatsApp template messages are sent via your official Phone Number ID.'
+                : 'Configure your Phone Number ID and System User Access Token in Settings to start sending live WhatsApp messages.'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-[var(--content-primary)]">Helpful Links:</p>
+            <div className="flex flex-col gap-1.5 text-xs">
+              <a
+                href="https://developers.facebook.com/apps"
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-600 hover:underline flex items-center gap-1"
+              >
+                Meta for Developers Portal ↗
+              </a>
+              <a
+                href="https://business.facebook.com/settings/whatsapp-business-accounts"
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-600 hover:underline flex items-center gap-1"
+              >
+                Meta WhatsApp Business Accounts Manager ↗
+              </a>
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-[var(--surface-border)]">
+            <Button variant="secondary" onClick={() => setConnectModalOpen(false)}>
+              Close
+            </Button>
+            <Link to="/settings">
+              <Button variant="primary">Open Settings</Button>
+            </Link>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Tutorial Video / Instructions Modal */}
+      <Modal
+        open={tutorialModal !== null}
+        onClose={() => setTutorialModal(null)}
+        title={
+          tutorialModal === 'payment'
+            ? 'How to Add Payment Method'
+            : 'Facebook Business Verification'
+        }
+        size="md"
+      >
+        <div className="space-y-4 py-2">
+          {tutorialModal === 'payment' ? (
+            <>
+              <p className="text-sm text-[var(--content-secondary)]">
+                Meta requires a valid credit/debit card attached to your Business Manager to
+                authorize WhatsApp template messaging outside the free 24-hour service window.
+              </p>
+              <ol className="list-decimal list-inside space-y-2 text-xs text-[var(--content-primary)]">
+                <li>
+                  Log in to <strong>Meta Business Manager</strong>.
+                </li>
+                <li>
+                  Navigate to <strong>Billing & Payments</strong> &gt;{' '}
+                  <strong>Payment Methods</strong>.
+                </li>
+                <li>
+                  Click <strong>Add Payment Method</strong> and save your card details.
+                </li>
+                <li>
+                  Link the payment method to your <strong>WhatsApp Business Account (WABA)</strong>.
+                </li>
+              </ol>
+              <div className="pt-3 flex justify-end gap-2">
+                <a
+                  href="https://business.facebook.com/billing_hub/payment_settings"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold"
+                >
+                  Go to Meta Billing ↗
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-[var(--content-secondary)]">
+                Business verification ensures your brand name (rather than a raw phone number) is
+                displayed to recipients and unlocks unlimited messaging tiers.
+              </p>
+              <div className="space-y-2 text-xs text-[var(--content-primary)]">
+                <p className="font-semibold">Checklist:</p>
+                <ul className="list-disc list-inside space-y-1 text-[var(--content-secondary)]">
+                  <li>Official Certificate of Incorporation / Business Registration</li>
+                  <li>Utility bill or bank statement showing business legal address</li>
+                  <li>Live website matching the company domain</li>
+                </ul>
+              </div>
+              <div className="pt-3 flex justify-end gap-2">
+                <a
+                  href="https://business.facebook.com/settings/security"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold"
+                >
+                  Open Meta Security Center ↗
+                </a>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

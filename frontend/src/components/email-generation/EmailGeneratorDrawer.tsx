@@ -273,7 +273,7 @@ function EmailGeneratorDrawerInner({
   const painPoints = Array.isArray(research?.painPoints) ? (research!.painPoints as string[]) : [];
 
   return (
-    <Drawer open={isOpen} onClose={onClose} title="✨ AI Email Generator" width="w-[580px]">
+    <Drawer open={isOpen} onClose={onClose} title="AI Email Generator" width="w-[580px]">
       <div className="space-y-6 pb-20">
         {loadingCompany && (
           <div className="space-y-3 animate-pulse">
@@ -285,7 +285,19 @@ function EmailGeneratorDrawerInner({
         {!loadingCompany && !isResearchCompleted && (
           <Card variant="default" className="p-4 bg-amber-500/10 border-amber-500/30">
             <div className="flex items-start gap-3">
-              <span className="text-xl shrink-0">⚠️</span>
+              <svg
+                className="w-5 h-5 text-amber-400 shrink-0 mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
               <div>
                 <h4 className="font-bold text-amber-300 text-sm">Company Research Required</h4>
                 <p className="text-xs text-amber-200/80 mt-1">
@@ -304,7 +316,7 @@ function EmailGeneratorDrawerInner({
           >
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
-                📊 Intelligence Context ({company.name})
+                Intelligence Context ({company.name})
               </h4>
 
               <Badge variant="success" size="sm">
@@ -312,7 +324,7 @@ function EmailGeneratorDrawerInner({
               </Badge>
             </div>
 
-            <p className="text-xs text-[var(--content-secondary)] line-clamp-2">
+            <p className="text-xs text-[var(--content-secondary)] leading-relaxed">
               {research?.summary ?? company.description ?? 'No summary available.'}
             </p>
 
@@ -367,7 +379,7 @@ function EmailGeneratorDrawerInner({
             disabled={!isResearchCompleted || isGenerating}
             className="flex-1 shadow-lg shadow-brand-500/20"
           >
-            {body ? '🔄 Regenerate Email' : '✨ Generate AI Email'}
+            {body ? 'Regenerate Email' : 'Generate AI Email'}
           </Button>
 
           {body && (
@@ -382,7 +394,7 @@ function EmailGeneratorDrawerInner({
                     : 'text-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
                 )}
               >
-                ✏️ Edit
+                Edit
               </button>
               <button
                 type="button"
@@ -394,7 +406,7 @@ function EmailGeneratorDrawerInner({
                     : 'text-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
                 )}
               >
-                👁️ Preview
+                Preview
               </button>
             </div>
           )}
@@ -403,7 +415,7 @@ function EmailGeneratorDrawerInner({
         {subjectSuggestions.length > 0 && (
           <Card variant="default" className="p-4 space-y-2">
             <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
-              💡 AI Subject Line Suggestions (Click to Select)
+              AI Subject Line Suggestions (Click to Select)
             </h4>
             <div className="space-y-1.5">
               {subjectSuggestions.map((subjOption, idx) => (
@@ -505,7 +517,7 @@ function EmailGeneratorDrawerInner({
                     .catch(() => toast.error('Failed to copy to clipboard'));
                 }}
               >
-                📋 Copy
+                Copy
               </Button>
             )}
 
@@ -516,7 +528,7 @@ function EmailGeneratorDrawerInner({
               loading={isSaving}
               disabled={!subject || !body || isSaving || isSending}
             >
-              💾 Save Draft
+              Save Draft
             </Button>
 
             <Button
@@ -527,7 +539,7 @@ function EmailGeneratorDrawerInner({
               disabled={!subject || !body || isSaving || isSending}
               className="bg-brand-600 hover:bg-brand-500 shadow-md shadow-brand-500/20"
             >
-              🚀 Send Email
+              Send Email
             </Button>
           </div>
         </div>

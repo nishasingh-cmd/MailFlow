@@ -9,12 +9,12 @@ export interface BusinessProfile {
   location: string | null;
   companySize: string | null;
   businessDescription: string;
-  productsOrServices: string;
-  valueProposition: string;
-  targetAudience: string;
-  idealCustomerProfile: string;
-  outreachGoal: string[];
-  toneOfVoice: string;
+  productsOrServices?: string | null;
+  valueProposition?: string | null;
+  targetAudience?: string | null;
+  idealCustomerProfile?: string | null;
+  outreachGoal?: string[];
+  toneOfVoice?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,12 +26,12 @@ export interface CreateBusinessProfileDto {
   location?: string;
   companySize?: string;
   businessDescription: string;
-  productsOrServices: string;
-  valueProposition: string;
-  targetAudience: string;
-  idealCustomerProfile: string;
-  outreachGoal: string[];
-  toneOfVoice: string;
+  productsOrServices?: string;
+  valueProposition?: string;
+  targetAudience?: string;
+  idealCustomerProfile?: string;
+  outreachGoal?: string[];
+  toneOfVoice?: string;
 }
 
 export type UpdateBusinessProfileDto = Partial<CreateBusinessProfileDto>;

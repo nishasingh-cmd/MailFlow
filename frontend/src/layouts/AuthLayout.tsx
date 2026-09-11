@@ -54,12 +54,63 @@ export function AuthLayout() {
 
             <ul className="mt-8 space-y-3">
               {[
-                { icon: '⚡', text: 'Send 10,000 emails per day with 95%+ deliverability' },
-                { icon: '🎯', text: 'AI-powered personalization at scale' },
-                { icon: '📊', text: 'Real-time analytics and reply tracking' },
+                {
+                  icon: (
+                    <svg
+                      className="w-4 h-4 text-brand-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  ),
+                  text: 'Send 10,000 emails per day with 95%+ deliverability',
+                },
+                {
+                  icon: (
+                    <svg
+                      className="w-4 h-4 text-brand-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ),
+                  text: 'AI-powered personalization at scale',
+                },
+                {
+                  icon: (
+                    <svg
+                      className="w-4 h-4 text-brand-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                  ),
+                  text: 'Real-time analytics and reply tracking',
+                },
               ].map((f) => (
                 <li key={f.text} className="flex items-start gap-3 text-sm text-zinc-300">
-                  <span className="text-base mt-0.5 flex-shrink-0">{f.icon}</span>
+                  <span className="mt-0.5 flex-shrink-0">{f.icon}</span>
                   <span>{f.text}</span>
                 </li>
               ))}

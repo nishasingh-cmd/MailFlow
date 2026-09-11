@@ -244,9 +244,9 @@ export function CompanyResearchDrawer({
                   Researching...
                 </span>
               ) : researchStatus === 'FAILED' ? (
-                '🔄 Retry Research'
+                'Retry Research'
               ) : (
-                '🔍 Research Company'
+                'Research Company'
               )}
             </Button>
           </Card>
@@ -356,7 +356,7 @@ export function CompanyResearchDrawer({
                 }}
                 className="w-full shadow-lg shadow-brand-500/20 font-semibold"
               >
-                ✨ Generate AI Email
+                Generate AI Email
               </Button>
             )}
 
@@ -367,7 +367,7 @@ export function CompanyResearchDrawer({
               disabled={isResearching}
               className="w-full text-xs"
             >
-              {isResearching ? 'Re-researching...' : '🔄 Refresh Research'}
+              {isResearching ? 'Re-researching...' : 'Refresh Research'}
             </Button>
           </div>
         )}

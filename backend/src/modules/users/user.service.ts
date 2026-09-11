@@ -8,6 +8,8 @@ function sanitizeUser(user: {
   email: string;
   avatar: string | null;
   businessProfile?: { id: string } | null;
+  emailVerified?: boolean;
+  accountStatus?: string;
   createdAt: Date;
   updatedAt: Date;
 }): UserResponse {
@@ -18,6 +20,8 @@ function sanitizeUser(user: {
     email: user.email,
     avatar: user.avatar,
     hasBusinessProfile: !!user.businessProfile,
+    emailVerified: user.emailVerified ?? false,
+    accountStatus: user.accountStatus ?? 'PENDING',
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

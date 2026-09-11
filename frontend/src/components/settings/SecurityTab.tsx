@@ -54,7 +54,7 @@ export function SecurityTab() {
         confirmPassword,
       });
 
-      toast.success('🔒 Security password changed successfully!');
+      toast.success('Security password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');

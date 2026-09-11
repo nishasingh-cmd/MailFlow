@@ -7,6 +7,8 @@ export interface AuthUser {
   email: string;
   avatar: string | null;
   hasBusinessProfile?: boolean;
+  emailVerified?: boolean;
+  accountStatus?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +17,19 @@ export interface AuthResponseData {
   user: AuthUser;
   accessToken: string;
   refreshToken: string;
+}
+
+export interface SignupResponse {
+  requiresVerification: boolean;
+  email: string;
+  message: string;
+}
+
+export interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
+  code?: string;
+  attemptsRemaining?: number;
 }
 
 export interface RegisterDto {
@@ -34,10 +49,8 @@ export interface UpdateProfileDto {
 }
 
 export class AuthService {
-  static async register(data: RegisterDto): Promise<AuthResponseData> {
-    const response = await api.post<AuthResponseData>('/auth/register', data);
-    setTokens(response.data.accessToken, response.data.refreshToken);
-    localStorage.setItem('mailflow-auth', 'true');
+  static async register(data: RegisterDto): Promise<SignupResponse> {
+    const response = await api.post<SignupResponse>('/auth/register', data);
     return response.data;
   }
 
@@ -83,6 +96,23 @@ export class AuthService {
       password,
       confirmPassword,
     });
+    return response.data;
+  }
+
+  static async verifyEmail(token: string): Promise<VerifyEmailResponse> {
+    const response = await api.get<VerifyEmailResponse>(
+      `/auth/verify-email?token=${encodeURIComponent(token)}`
+    );
+    return response.data;
+  }
+
+  static async verifyCode(email: string, code: string): Promise<VerifyEmailResponse> {
+    const response = await api.post<VerifyEmailResponse>('/auth/verify-code', { email, code });
+    return response.data;
+  }
+
+  static async resendVerification(email: string): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>('/auth/resend-verification', { email });
     return response.data;
   }
 }

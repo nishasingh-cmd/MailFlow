@@ -43,7 +43,7 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
         maxTokens,
       });
 
-      toast.success('✨ AI Configuration saved successfully!');
+      toast.success('AI Configuration saved successfully!');
       onUpdated();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
@@ -63,9 +63,9 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
       });
 
       if (res.success) {
-        toast.success(`✅ ${res.message}`);
+        toast.success(res.message);
       } else {
-        toast.error(`⚠️ ${res.message}`);
+        toast.error(res.message);
       }
       onUpdated();
     } catch {

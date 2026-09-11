@@ -11,7 +11,7 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  success: 'bg-green-500/15 text-green-700 dark:text-green-400 ring-green-500/25',
+  success: 'bg-green-500/15 text-slate-900 dark:text-white ring-green-500/25',
   warning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-amber-500/25',
   error: 'bg-red-500/15 text-red-700 dark:text-red-400 ring-red-500/25',
   info: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-blue-500/25',

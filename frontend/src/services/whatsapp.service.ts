@@ -17,6 +17,13 @@ interface ApiEnvelope<T> {
   message?: string;
 }
 
+export interface WhatsappMetaTemplate {
+  name: string;
+  language: string;
+  status: string;
+  bodyText: string | null;
+}
+
 export const whatsappService = {
   async generateMessage(
     leadId: string,
@@ -128,6 +135,14 @@ export const whatsappService = {
 
   async getStats(): Promise<WhatsappStats> {
     const { data: envelope } = await api.get<ApiEnvelope<WhatsappStats>>('/whatsapp/stats');
+    return envelope.data;
+  },
+
+  async getTemplates(): Promise<{ wabaId?: string; templates: WhatsappMetaTemplate[] }> {
+    const { data: envelope } =
+      await api.get<ApiEnvelope<{ wabaId?: string; templates: WhatsappMetaTemplate[] }>>(
+        '/whatsapp/templates'
+      );
     return envelope.data;
   },
 

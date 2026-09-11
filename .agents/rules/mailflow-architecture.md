@@ -1,77 +1,126 @@
-# MAILFLOW — PERMANENT AI + CHANNEL ARCHITECTURE RULE
+ï»¿# MailFlow â€” Permanent AI + Channel Architecture Rule
 
-> **IMPORTANT:** This is a PERMANENT product architecture rule for MailFlow.
-> Do NOT change, reinterpret, or bypass this architecture in any future implementation unless the user explicitly instructs it.
+> **This is a PERMANENT product architecture rule. Do NOT change, reinterpret, or bypass it in any future implementation unless explicitly instructed by the user.**
 
 ---
 
-## CORE MAILFLOW COMMUNICATION ARCHITECTURE
+## Core Communication Architecture
 
-MailFlow has **TWO** communication channels:
+MailFlow has TWO communication channels:
 
 1. **EMAIL**
 2. **WHATSAPP**
 
-The AI behavior is **DIFFERENT** for each channel.
+The AI behavior is **different** for each channel.
 
 ---
 
-## 1. EMAIL — AI CAN GENERATE THE FULL MESSAGE
+## 1. EMAIL â€” AI Generates the Full Message
 
 Email is the primary AI-generated communication channel.
 
-The AI is allowed to generate: Subject, Greeting, Opening, Personalized body, Call-to-action, Closing.
+**Flow:**
+```
+Lead -> Research -> AI Personalization Engine -> Full personalized email -> User Preview/Edit -> Email Provider -> Recipient
+```
 
-AI-generated email content must **never** be replaced by a generic hardcoded message unless explicitly required as a fallback.
+The AI is allowed to generate:
+- Subject line
+- Greeting
+- Personalized opening
+- Full body copy
+- Call-to-action
+- Closing
 
----
-
-## 2. WHATSAPP — APPROVED META TEMPLATE ONLY
-
-WhatsApp must **NEVER** use AI to generate a completely free-form message.
-
-All outbound WhatsApp marketing messages must be sent through an **APPROVED META WHATSAPP TEMPLATE**.
-
-AI may determine template variables (e.g. {{1}} = Lead Name, {{2}} = Company Name) but **MUST NOT** rewrite the approved template body.
-
----
-
-## 3. AI ENGINE RESPONSIBILITY
-
-| Channel | AI Output |
-|---|---|
-| **EMAIL** | Complete personalized email (subject + body) |
-| **WHATSAPP** | Template variables / personalization data ONLY |
+AI-generated email content must never be replaced by a generic hardcoded fallback unless explicitly required.
 
 ---
 
-## 4. NEVER VIOLATE THIS RULE
+## 2. WHATSAPP â€” Approved Meta Template ONLY
+
+WhatsApp must **NEVER** use AI to generate a free-form marketing message.
+
+All outbound WhatsApp marketing messages must be sent through an **APPROVED Meta WhatsApp Template**.
+
+**Flow:**
+```
+Lead -> Research -> AI Personalization Engine -> Determine template variables -> Approved Meta Template -> WhatsApp Cloud API -> Recipient
+```
+
+**What AI may do:**
+- Determine the correct value for each template variable (e.g. {{1}} = lead name, {{2}} = company name)
+
+**What AI must NOT do:**
+- Rewrite the approved template body
+- Generate free-form WhatsApp message text
+- Replace approved template content with AI-generated content
+
+---
+
+## 3. AI Engine Responsibility (Per Channel)
+
+```
+                    AI ENGINE
+                        |
+              +----------+---------+
+              |                    |
+            EMAIL             WHATSAPP
+              |                    |
+       Full message        Template variables
+       generation               only
+              |                    |
+              v                    v
+        Email Provider     Approved Meta
+                           WhatsApp Template
+                                   |
+                                   v
+                            WhatsApp Cloud API
+```
+
+---
+
+## 4. Absolute Prohibitions
 
 - NO AI-generated free-form WhatsApp marketing messages
 - NO sending AI text directly to WhatsApp instead of a template
 - NO replacing approved template content with AI-generated content
-- NO WhatsApp UI preview that differs from the actual Meta template delivery
-- NO sending a WhatsApp message without an approved Meta template where required
-- NO hardcoding WhatsApp message text when approved template/variables should be used
+- NO creating a WhatsApp message in the UI that differs from the actual Meta template
+- NO sending a WhatsApp message without an approved Meta template where one is required
+- NO hardcoding WhatsApp message text when the template and variables should come from the database
 - NO treating WhatsApp and Email personalization as the same generation process
 
 ---
 
-## 5. PREVIEW MUST MATCH ACTUAL DELIVERY
+## 5. Preview Must Match Actual Delivery
 
-For WhatsApp: UI Preview == Actual WhatsApp Message (always).
+For WhatsApp, the preview shown inside MailFlow MUST represent the actual approved Meta template with the resolved variables.
+
+Example:
+Template:    "Hi {{1}}, I came across your practice and wanted to reach out on behalf of {{2}}."
+Resolved:    "Hi Dr. Rahul, I came across your practice and wanted to reach out on behalf of Sharma Dental Clinic."
+
+There must NEVER be a situation where: UI Preview != Actual WhatsApp Message Sent
 
 ---
 
-## 6. IMPLEMENTATION RULE
+## 6. Future Features â€” Implementation Checklist
 
-Before implementing any Email, WhatsApp, AI, Campaign, Lead, CRM, Analytics, or Messaging feature:
+Before implementing ANY future Email, WhatsApp, AI, Campaign, Lead, CRM, Analytics, or Messaging feature:
 
 1. Read and follow this architecture.
-2. Check whether the change affects Email or WhatsApp.
+2. Determine whether the change affects Email or WhatsApp.
 3. Preserve the channel-specific AI behavior.
 4. Never introduce a free-form WhatsApp AI message flow.
 5. Never assume Email and WhatsApp have identical message-generation rules.
 6. If a proposed feature conflicts with this architecture, STOP and ask for explicit confirmation before changing the architecture.
 
-This is a **PERMANENT MAILFLOW PRODUCT ARCHITECTURE RULE.**
+---
+
+## 7. Channel AI Output Summary
+
+| Channel   | AI Output                                  |
+|-----------|--------------------------------------------|
+| EMAIL     | Complete, fully personalized message body  |
+| WHATSAPP  | Template variable values only              |
+
+This distinction is PERMANENT and defines MailFlow core product identity.

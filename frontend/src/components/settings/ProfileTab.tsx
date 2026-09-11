@@ -50,7 +50,7 @@ export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
       });
 
       onUpdated(updated);
-      toast.success('✅ Workspace profile updated successfully!');
+      toast.success('Workspace profile updated successfully!');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
       toast.error(err.response?.data?.error || err.message || 'Failed to update profile.');

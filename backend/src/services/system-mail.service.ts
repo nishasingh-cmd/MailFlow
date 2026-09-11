@@ -6,7 +6,7 @@ import { decryptText } from '../utils/crypto';
 export class SystemMailService {
   /**
    * Helper to safely mask email address for server logs
-   * e.g. nishasingh59198@gmail.com -> n***8@gmail.com
+   * e.g. user@example.com -> u***r@example.com
    */
   static maskEmail(email: string): string {
     if (!email || !email.includes('@')) return '***';
@@ -262,6 +262,161 @@ If you did not request this, you can safely ignore this email.
     } catch (error: unknown) {
       const err = error as { message?: string };
       console.error(`[Auth] Password reset email delivery failed for ${masked}:`, err.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Sends the account email verification email with 6-digit verification code
+   */
+  static async sendVerificationEmail(
+    recipientEmail: string,
+    recipientName: string,
+    rawCode: string,
+    userId?: string
+  ): Promise<void> {
+    const masked = this.maskEmail(recipientEmail);
+    console.log(`[Auth] Verification code email dispatch initiated for: ${masked}`);
+
+    const displayName = recipientName ? recipientName.split(' ')[0] : 'there';
+
+    try {
+      const { transporter, fromName, fromEmail } = await this.getTransporter(userId);
+
+      const htmlContent = `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your MailFlow verification code</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
+          
+          <!-- Header / Brand Banner -->
+          <tr>
+            <td align="center" style="padding: 36px 32px 24px 32px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="display: inline-block; width: 44px; height: 44px; background: linear-gradient(135deg, #0b37a0 0%, #1d4ed8 100%); border-radius: 10px; text-align: center; line-height: 44px;">
+                      <span style="font-size: 20px; font-weight: 800; color: #ffffff; font-family: sans-serif;">M</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 10px;">
+                    <span style="font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.5px;">MailFlow</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Email Content Body -->
+          <tr>
+            <td style="padding: 32px 36px;">
+              <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">
+                Hi ${displayName},
+              </h2>
+              
+              <p style="margin: 0 0 14px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                Welcome to MailFlow!
+              </p>
+
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                Your verification code is:
+              </p>
+
+              <!-- 6-Digit Code Display Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
+                <tr>
+                  <td align="center">
+                    <div style="background-color: #f8fafc; border: 2px dashed #0b37a0; border-radius: 14px; padding: 20px 24px; display: inline-block; min-width: 240px; text-align: center;">
+                      <span style="font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #0b37a0; display: inline-block; padding-left: 10px;">
+                        ${rawCode}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 0 0; font-size: 14px; line-height: 1.6; color: #334155; text-align: center;">
+                Enter this code in MailFlow to verify your email address and activate your account.
+              </p>
+
+              <!-- Expiration Notice Box -->
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin: 28px 0 16px 0;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #64748b;">
+                  <strong style="color: #0f172a;">Notice:</strong> This code expires in <strong style="color: #0f172a;">10 minutes</strong>. If you did not create a MailFlow account, you can safely ignore this email.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Card Footer -->
+          <tr>
+            <td align="center" style="padding: 24px 32px 32px 32px; background-color: #fafafa; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #64748b;">
+                MailFlow &bull; AI Outreach Infrastructure
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                &copy; ${new Date().getFullYear()} MailFlow. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        
+        <!-- Outside Footer Note -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin-top: 16px;">
+          <tr>
+            <td align="center" style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
+              This is an automated system email sent to ${recipientEmail}.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `.trim();
+
+      const textContent = `
+Hi ${displayName},
+
+Welcome to MailFlow!
+
+Your verification code is:
+${rawCode}
+
+Enter this code in MailFlow to verify your email address and activate your account.
+
+This code expires in 10 minutes.
+
+If you did not create a MailFlow account, you can safely ignore this email.
+
+— MailFlow Team
+      `.trim();
+
+      await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: recipientEmail,
+        subject: 'Your MailFlow verification code',
+        text: textContent,
+        html: htmlContent,
+      });
+
+      console.log(`[Auth] Verification code email sent email=${masked}`);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error(`[Auth] Verification code email delivery failed for ${masked}:`, err.message);
       throw error;
     }
   }

@@ -60,7 +60,19 @@ function ConnectingProgress({ currentStep }: { currentStep: string }) {
     <div className="space-y-6 py-8">
       <div className="flex flex-col items-center gap-3">
         <div className="w-14 h-14 rounded-full bg-brand-500/15 flex items-center justify-center">
-          <span className="text-3xl animate-bounce-slow">💬</span>
+          <svg
+            className="w-7 h-7 text-brand-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
         </div>
         <h3 className="text-base font-semibold text-[var(--content-primary)]">
           Connecting to Meta…
@@ -143,8 +155,15 @@ function ConnectedDashboard({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-green-500/15 flex items-center justify-center text-2xl">
-            ✅
+          <div className="w-12 h-12 rounded-2xl bg-green-500/15 flex items-center justify-center text-green-400">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
           </div>
           <div>
             <h3 className="text-base font-semibold text-[var(--content-primary)]">
@@ -190,7 +209,7 @@ function ConnectedDashboard({
           disabled={refreshing}
           id="wa-refresh-btn"
         >
-          🔄 Refresh Status
+          Refresh Status
         </Button>
 
         <Button
@@ -222,7 +241,19 @@ function DisconnectedState({
     <div className="space-y-5">
       {status === 'FAILED' && errorMessage && (
         <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-xs flex items-start gap-3">
-          <span className="text-lg flex-shrink-0">⚠️</span>
+          <svg
+            className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
           <div>
             <p className="font-semibold text-red-200">Connection Failed</p>
             <p className="text-red-300/90 mt-0.5">{errorMessage}</p>
@@ -232,10 +263,22 @@ function DisconnectedState({
 
       {status === 'MOCK_ACTIVE' && (
         <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs flex items-start gap-3">
-          <span className="text-lg flex-shrink-0">💡</span>
+          <svg
+            className="w-5 h-5 flex-shrink-0 text-indigo-400 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
           <div>
-            <p className="font-semibold text-[var(--content-primary)]">Mock Mode Enabled</p>
-            <p className="text-indigo-300/80 mt-0.5">
+            <p className="font-semibold text-black dark:text-white">Mock Mode Enabled</p>
+            <p className="text-black dark:text-neutral-200 mt-0.5">
               MailFlow is simulating WhatsApp dispatches with 2–4 second delays and mock message
               IDs. Connect your Meta WhatsApp Business Account to send real messages.
             </p>
@@ -244,8 +287,15 @@ function DisconnectedState({
       )}
 
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-8 flex flex-col items-center text-center gap-5">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-green-500/20 to-emerald-600/10 border border-green-500/20 flex items-center justify-center text-4xl shadow-lg">
-          💬
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-green-500/20 to-emerald-600/10 border border-green-500/20 flex items-center justify-center text-green-400 shadow-lg">
+          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.8}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
         </div>
 
         <div className="space-y-2">
@@ -283,29 +333,45 @@ function DisconnectedState({
           {connecting ? 'Connecting…' : 'Connect WhatsApp'}
         </Button>
 
-        <p className="text-2xs text-[var(--content-tertiary)] max-w-xs">
+        <p className="text-xs text-black dark:text-white max-w-xs font-medium">
           A Meta popup will open. Log in to Facebook, select your Business Manager and phone number,
           then grant permissions.
         </p>
 
-        <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs text-left space-y-1.5 max-w-sm mt-2">
-          <p className="font-semibold text-amber-200">
-            💡 If Facebook shows "JSSDK option is not toggled":
+        <div className="text-black dark:text-neutral-100 text-xs text-left space-y-1.5 max-w-sm mt-3">
+          <p className="font-bold text-black dark:text-white">
+            Note: If Facebook shows "JSSDK option is not toggled":
           </p>
-          <ol className="list-decimal list-inside space-y-1 text-amber-300/90 text-[11px] font-mono">
+          <ol className="list-decimal list-inside space-y-1 text-black dark:text-neutral-200 text-[11px] font-mono">
             <li>
-              Go to <strong>developers.facebook.com</strong> &rarr; Your App (ID:{' '}
-              <code>28291286250455039</code>)
+              Go to{' '}
+              <strong className="text-black dark:text-white font-bold">
+                developers.facebook.com
+              </strong>{' '}
+              &rarr; Your App (ID:{' '}
+              <span className="font-bold text-black dark:text-white">28291286250455039</span>)
             </li>
             <li>
-              Navigate to <strong>Facebook Login</strong> &rarr; <strong>Settings</strong>
+              Navigate to{' '}
+              <strong className="text-black dark:text-white font-bold">Facebook Login</strong>{' '}
+              &rarr; <strong className="text-black dark:text-white font-bold">Settings</strong>
             </li>
             <li>
-              Set <strong>Log in with JavaScript SDK</strong> to <strong>YES</strong>
+              Set{' '}
+              <strong className="text-black dark:text-white font-bold">
+                Log in with JavaScript SDK
+              </strong>{' '}
+              to <strong className="text-black dark:text-white font-bold">YES</strong>
             </li>
             <li>
-              Add your app domain (e.g. <code>http://192.168.0.110:5173</code>) under{' '}
-              <strong>Allowed Domains for JavaScript SDK</strong>
+              Add your app domain (e.g.{' '}
+              <span className="font-bold text-black dark:text-white">
+                http://192.168.0.110:5173
+              </span>
+              ) under{' '}
+              <strong className="text-black dark:text-white font-bold">
+                Allowed Domains for JavaScript SDK
+              </strong>
             </li>
           </ol>
         </div>
@@ -346,7 +412,7 @@ export function WhatsappIntegrationTab({
     useCallback(
       (newConfig: WhatsappConfigData) => {
         setConfig(newConfig);
-        toast.success('✅ WhatsApp Business connected successfully!');
+        toast.success('WhatsApp Business connected successfully!');
         onUpdated();
       },
       [toast, onUpdated]
@@ -381,7 +447,7 @@ export function WhatsappIntegrationTab({
       await whatsappService.disconnect();
       const result = await whatsappService.getConnectionStatus();
       setConfig(result.config);
-      toast.info('ℹ️ WhatsApp account disconnected. All message history preserved.');
+      toast.info('WhatsApp account disconnected. All message history preserved.');
       onUpdated();
       resetSignup();
     } catch (err) {
@@ -423,7 +489,7 @@ export function WhatsappIntegrationTab({
         wabaId: manualWabaId.trim() || undefined,
       });
       setConfig(result.config);
-      toast.success('✅ WhatsApp Business connected via manual token!');
+      toast.success('WhatsApp Business connected via manual token!');
       setShowManualForm(false);
       setManualToken('');
       setManualPhoneId('');
@@ -519,7 +585,6 @@ export function WhatsappIntegrationTab({
           id="wa-manual-token-toggle"
         >
           <span className="flex items-center gap-2">
-            <span className="text-base">🔑</span>
             <span>Manual Token Setup</span>
             <span className="text-2xs font-normal text-[var(--content-tertiary)] px-1.5 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--surface-border)]">
               Advanced
@@ -534,33 +599,51 @@ export function WhatsappIntegrationTab({
         </button>
 
         {showManualForm && (
-          <div className="px-5 pb-6 pt-1 space-y-5 border-t border-[var(--surface-border)]">
-            <div className="p-3.5 rounded-xl border border-amber-500/25 bg-amber-500/8 text-amber-300/90 text-xs space-y-1.5">
-              <p className="font-semibold text-amber-200">
-                ⚠️ Use this when Embedded Signup fails with permission errors
+          <div className="px-5 pb-6 pt-3 space-y-5 border-t border-[var(--surface-border)]">
+            <div className="text-black dark:text-neutral-100 text-xs space-y-2">
+              <p className="font-bold text-black dark:text-white text-sm">
+                Use this when Embedded Signup fails with permission errors
               </p>
-              <p className="text-amber-300/80 leading-relaxed">
+              <p className="text-black dark:text-neutral-200 leading-relaxed">
                 The FB.login popup gives a User Access Token that cannot access production WhatsApp
-                Business numbers. You need a <strong>permanent System User Access Token</strong>{' '}
+                Business numbers. You need a{' '}
+                <strong className="text-black dark:text-white font-bold">
+                  permanent System User Access Token
+                </strong>{' '}
                 from Meta Business Manager.
               </p>
-              <ol className="list-decimal list-inside space-y-0.5 text-amber-300/75 font-mono text-[11px] mt-2">
+              <ol className="list-decimal list-inside space-y-1 text-black dark:text-neutral-200 font-mono text-[11px] mt-2">
                 <li>
-                  Go to <strong>business.facebook.com</strong> → Settings → System Users
+                  Go to{' '}
+                  <strong className="text-black dark:text-white font-bold">
+                    business.facebook.com
+                  </strong>{' '}
+                  → Settings → System Users
                 </li>
                 <li>
-                  Create a System User with <strong>Admin</strong> role
+                  Create a System User with{' '}
+                  <strong className="text-black dark:text-white font-bold">Admin</strong> role
                 </li>
                 <li>
-                  Click <strong>Add Assets</strong> → Apps → select your WhatsApp app → grant Full
-                  Control
+                  Click <strong className="text-black dark:text-white font-bold">Add Assets</strong>{' '}
+                  → Apps → select your WhatsApp app → grant Full Control
                 </li>
                 <li>
-                  Click <strong>Generate New Token</strong> → select your app
+                  Click{' '}
+                  <strong className="text-black dark:text-white font-bold">
+                    Generate New Token
+                  </strong>{' '}
+                  → select your app
                 </li>
                 <li>
-                  Tick <code>whatsapp_business_management</code> +{' '}
-                  <code>whatsapp_business_messaging</code>
+                  Tick{' '}
+                  <span className="font-bold text-black dark:text-white">
+                    whatsapp_business_management
+                  </span>{' '}
+                  +{' '}
+                  <span className="font-bold text-black dark:text-white">
+                    whatsapp_business_messaging
+                  </span>
                 </li>
                 <li>Copy the token and paste below</li>
               </ol>

@@ -63,7 +63,7 @@ export function LeadDetailsDrawer({
                 onGenerateEmail(lead);
               }}
             >
-              ✨ Email
+              Email
             </Button>
           )}
           <Button

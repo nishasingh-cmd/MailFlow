@@ -95,11 +95,11 @@ export default function CampaignDetail() {
 
       if (prevStatusRef.current && prevStatusRef.current !== p.status) {
         if (p.status === 'SENDING') {
-          toast.info('🚀 Sending started...');
+          toast.info('Sending started...');
         } else if (p.status === 'PAUSED') {
-          toast.warning('⏸ Campaign paused.');
+          toast.warning('Campaign paused.');
         } else if (p.status === 'COMPLETED' || p.status === 'COMPLETED_WITH_ERRORS') {
-          toast.success('🎉 Campaign completed successfully!');
+          toast.success('Campaign completed successfully!');
           setSummaryData({
             campaignId: campaign.id,
             campaignName: campaign.name,
@@ -370,23 +370,60 @@ export default function CampaignDetail() {
             {campaign.campaignLeads.length}
           </p>
         </div>
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
-          <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
-            Template
-          </p>
-          <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">
-            {campaign.templateId || 'None'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
-          <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
-            AI Email Drafts
-          </p>
-          <p className="text-2xl font-bold text-green-400 mt-1">
-            {campaign.campaignLeads.filter((cl) => (cl.lead?.emailDrafts?.length ?? 0) > 0).length}{' '}
-            / {campaign.campaignLeads.length}
-          </p>
-        </div>
+
+        {campaign.channel === 'WHATSAPP' ? (
+          <>
+            <div className="rounded-xl border border-emerald-500/30 bg-[var(--surface-card)] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">
+                  Approved Meta Template
+                </p>
+                <Badge variant="success" size="sm">
+                  ✓ Approved
+                </Badge>
+              </div>
+              <p className="text-xl font-mono font-bold text-emerald-300 mt-1 truncate">
+                {campaign.templateId || 'cold_outreach'}
+              </p>
+              <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">Meta Cloud API</p>
+            </div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+              <p className="text-xs font-semibold uppercase text-brand-400 tracking-wider">
+                AI Variable Personalization
+              </p>
+              <p className="text-xl font-bold text-brand-300 mt-1">
+                {campaign.campaignLeads.filter((cl) => Boolean(cl.lead?.phone)).length} /{' '}
+                {campaign.campaignLeads.length}
+              </p>
+              <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
+                Leads with valid phone & AI variables
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+              <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
+                Email Template
+              </p>
+              <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">
+                {campaign.templateId || 'Cold Outreach'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
+              <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
+                AI Full Email Drafts
+              </p>
+              <p className="text-2xl font-bold text-green-400 mt-1">
+                {
+                  campaign.campaignLeads.filter((cl) => (cl.lead?.emailDrafts?.length ?? 0) > 0)
+                    .length
+                }{' '}
+                / {campaign.campaignLeads.length}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -407,16 +444,47 @@ export default function CampaignDetail() {
               size="sm"
             >
               {campaign.channel === 'EMAIL_AND_WHATSAPP'
-                ? '⚡ Email + WhatsApp'
+                ? 'Email + WhatsApp'
                 : campaign.channel === 'WHATSAPP'
-                  ? '📱 WhatsApp Only'
-                  : '✉️ Email Only'}
+                  ? 'WhatsApp Only'
+                  : 'Email Only'}
             </Badge>
           </InfoRow>
           <InfoRow label="Status">
             <CampaignStatusBadge status={campaign.status} size="sm" />
           </InfoRow>
-          <InfoRow label="Template">{campaign.templateId || '—'}</InfoRow>
+          {campaign.channel === 'WHATSAPP' ? (
+            <>
+              <InfoRow label="Approved Template">
+                <span className="font-mono text-emerald-400 text-xs font-bold">
+                  {campaign.templateId || 'cold_outreach'}
+                </span>
+              </InfoRow>
+              <InfoRow label="Meta Template Status">
+                <span className="text-emerald-400 text-xs font-semibold">✓ Approved</span>
+              </InfoRow>
+              <InfoRow label="AI Personalization">
+                <span className="text-xs text-[var(--content-secondary)]">
+                  Template Variables Only ({'{{1}}'}, {'{{2}}'})
+                </span>
+              </InfoRow>
+              <InfoRow label="Delivery Provider">
+                <span className="text-xs text-[var(--content-primary)]">Meta Cloud API</span>
+              </InfoRow>
+            </>
+          ) : (
+            <>
+              <InfoRow label="Template">{campaign.templateId || 'Cold Outreach'}</InfoRow>
+              <InfoRow label="AI Personalization">
+                <span className="text-xs text-[var(--content-secondary)]">
+                  Full Personalized Message
+                </span>
+              </InfoRow>
+              <InfoRow label="Delivery Provider">
+                <span className="text-xs text-[var(--content-primary)]">SMTP Provider</span>
+              </InfoRow>
+            </>
+          )}
           <InfoRow label="Created">{formatDate(campaign.createdAt)}</InfoRow>
           <InfoRow label="Last Updated">{formatDateTime(campaign.updatedAt)}</InfoRow>
         </div>
@@ -441,13 +509,13 @@ export default function CampaignDetail() {
                 <thead className="bg-[var(--surface-elevated)]">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
-                      Name & Email
+                      Name & Contact
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
                       Company
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
-                      AI Draft
+                      {campaign.channel === 'WHATSAPP' ? 'WA Delivery Ready' : 'AI Email Draft'}
                     </th>
                   </tr>
                 </thead>
@@ -455,6 +523,8 @@ export default function CampaignDetail() {
                   {campaign.campaignLeads.map((cl) => {
                     const lead = cl.lead;
                     const hasDraft = (lead?.emailDrafts?.length ?? 0) > 0;
+                    const hasPhone = Boolean(lead?.phone);
+
                     return (
                       <tr
                         key={cl.leadId}
@@ -462,15 +532,25 @@ export default function CampaignDetail() {
                       >
                         <td className="px-3 py-2.5">
                           <p className="font-medium text-[var(--content-primary)]">{lead?.name}</p>
-                          <p className="text-xs text-[var(--content-tertiary)]">{lead?.email}</p>
+                          <p className="text-xs text-[var(--content-tertiary)]">
+                            {campaign.channel === 'WHATSAPP'
+                              ? lead?.phone || 'No phone set'
+                              : lead?.email}
+                          </p>
                         </td>
                         <td className="px-3 py-2.5 text-[var(--content-secondary)]">
                           {lead?.company || '—'}
                         </td>
                         <td className="px-3 py-2.5">
-                          <Badge variant={hasDraft ? 'success' : 'neutral'} size="sm">
-                            {hasDraft ? 'Ready' : 'Not generated'}
-                          </Badge>
+                          {campaign.channel === 'WHATSAPP' ? (
+                            <Badge variant={hasPhone ? 'success' : 'warning'} size="sm">
+                              {hasPhone ? 'Phone Valid ✓' : 'Missing Phone'}
+                            </Badge>
+                          ) : (
+                            <Badge variant={hasDraft ? 'success' : 'neutral'} size="sm">
+                              {hasDraft ? 'Ready' : 'Not generated'}
+                            </Badge>
+                          )}
                         </td>
                       </tr>
                     );

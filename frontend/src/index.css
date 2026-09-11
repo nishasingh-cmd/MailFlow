@@ -88,8 +88,23 @@
   }
 
   ::selection {
-    background-color: rgba(99, 102, 241, 0.3);
-    color: #f4f4f5;
+    background-color: #0b37a0 !important;
+    color: #ffffff !important;
+  }
+
+  *::selection {
+    background-color: #0b37a0 !important;
+    color: #ffffff !important;
+  }
+
+  ::-moz-selection {
+    background-color: #0b37a0 !important;
+    color: #ffffff !important;
+  }
+
+  *::-moz-selection {
+    background-color: #0b37a0 !important;
+    color: #ffffff !important;
   }
 }
 

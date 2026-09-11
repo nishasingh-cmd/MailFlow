@@ -40,13 +40,13 @@ export function WhatsappSendOptionsModal({
           leadIds: selectedLeadIds,
           campaignId,
         });
-        toast.success(`💬 ${res.message || `Queued ${res.count} WhatsApp outreach messages!`}`);
+        toast.success(res.message || `Queued ${res.count} WhatsApp outreach messages!`);
       } else {
         const res = await whatsappService.sendMessages({
           campaignId,
           sendAll: !campaignId,
         });
-        toast.success(`💬 ${res.message || 'Queued WhatsApp messages for all leads!'}`);
+        toast.success(res.message || 'Queued WhatsApp messages for all leads!');
       }
 
       onSuccess?.();
@@ -60,17 +60,18 @@ export function WhatsappSendOptionsModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="WhatsApp Batch Dispatch Options" size="md">
+    <Modal open={open} onClose={onClose} title="WhatsApp Template Batch Dispatch" size="md">
       <div className="space-y-6 py-2">
         <p className="text-sm text-[var(--content-secondary)]">
-          Choose how many recipients should receive AI-personalized WhatsApp outreach messages:
+          Choose how many recipients should receive the approved Meta WhatsApp template with
+          AI-personalized variables:
         </p>
 
         <div className="space-y-3">
           <label
             className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
               mode === 'selected'
-                ? 'border-brand-500/50 bg-brand-500/10'
+                ? 'border-emerald-500/50 bg-emerald-500/10'
                 : 'border-[var(--surface-border)] bg-[var(--surface-elevated)]'
             }`}
             onClick={() => setMode('selected')}
@@ -87,7 +88,8 @@ export function WhatsappSendOptionsModal({
                 Send Selected Leads ({selectedCount})
               </p>
               <p className="text-xs text-[var(--content-secondary)] mt-0.5">
-                Only send WhatsApp messages to the {selectedCount} currently highlighted lead(s).
+                Queue approved WhatsApp template dispatches for the {selectedCount} currently
+                highlighted lead(s).
               </p>
             </div>
           </label>
@@ -95,7 +97,7 @@ export function WhatsappSendOptionsModal({
           <label
             className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
               mode === 'all'
-                ? 'border-brand-500/50 bg-brand-500/10'
+                ? 'border-emerald-500/50 bg-emerald-500/10'
                 : 'border-[var(--surface-border)] bg-[var(--surface-elevated)]'
             }`}
             onClick={() => setMode('all')}
@@ -112,7 +114,8 @@ export function WhatsappSendOptionsModal({
                 Send All Leads ({totalLeadsCount > 0 ? totalLeadsCount : 'All'})
               </p>
               <p className="text-xs text-[var(--content-secondary)] mt-0.5">
-                Automatically generate and queue WhatsApp messages for all target leads.
+                Personalize template variables with AI and queue WhatsApp dispatches for all target
+                leads.
               </p>
             </div>
           </label>
@@ -128,7 +131,7 @@ export function WhatsappSendOptionsModal({
             loading={loading}
             disabled={loading || (mode === 'selected' && selectedCount === 0)}
           >
-            {loading ? 'Queueing WhatsApp...' : 'Start Batch Dispatch'}
+            {loading ? 'Queueing WhatsApp...' : 'Queue WhatsApp Dispatches'}
           </Button>
         </div>
       </div>

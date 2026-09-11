@@ -55,3 +55,9 @@ export const forgotPasswordRateLimiter = createRateLimiter({
   max: 5, // max 5 requests per 15 minutes
   message: 'Too many password reset attempts. Please try again after 15 minutes.',
 });
+
+export const resendVerificationRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 60 seconds cooldown
+  max: 3, // max 3 requests per 60s per client/email
+  message: 'Too many verification email requests. Please wait a minute before trying again.',
+});

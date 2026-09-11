@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Textarea, Select, Card, Badge } from '../../components/ui';
+import { Button, Input, Textarea, Select, Card } from '../../components/ui';
 import {
   businessProfileService,
   CreateBusinessProfileDto,
@@ -30,25 +30,6 @@ const COMPANY_SIZE_OPTIONS = [
   { value: '500+ employees', label: '500+ employees (Enterprise)' },
 ];
 
-const OUTREACH_GOALS = [
-  { id: 'Generate Leads', label: 'Generate Leads', icon: '🎯' },
-  { id: 'Book Meetings', label: 'Book Meetings', icon: '📅' },
-  { id: 'Increase Sales', label: 'Increase Sales', icon: '📈' },
-  { id: 'Promote Services', label: 'Promote Services', icon: '🚀' },
-  { id: 'Build Partnerships', label: 'Build Partnerships', icon: '🤝' },
-  { id: 'Recruit', label: 'Recruit Candidates', icon: '👥' },
-  { id: 'Other', label: 'Other Objectives', icon: '✨' },
-];
-
-const TONE_OPTIONS = [
-  { id: 'Professional', label: 'Professional', desc: 'Formal, authoritative, polished' },
-  { id: 'Friendly', label: 'Friendly', desc: 'Warm, welcoming, supportive' },
-  { id: 'Conversational', label: 'Conversational', desc: 'Natural, peer-to-peer dialogue' },
-  { id: 'Persuasive', label: 'Persuasive', desc: 'Benefit-driven, compelling call to action' },
-  { id: 'Direct', label: 'Direct', desc: 'Concise, high-impact, to the point' },
-  { id: 'Casual', label: 'Casual', desc: 'Relaxed, modern, approachable' },
-];
-
 export default function BusinessOnboarding() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -61,12 +42,6 @@ export default function BusinessOnboarding() {
     location: '',
     companySize: '',
     businessDescription: '',
-    productsOrServices: '',
-    valueProposition: '',
-    targetAudience: '',
-    idealCustomerProfile: '',
-    outreachGoal: ['Generate Leads', 'Book Meetings'],
-    toneOfVoice: 'Professional',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,15 +61,6 @@ export default function BusinessOnboarding() {
             location: profile.location || '',
             companySize: profile.companySize || '',
             businessDescription: profile.businessDescription || '',
-            productsOrServices: profile.productsOrServices || '',
-            valueProposition: profile.valueProposition || '',
-            targetAudience: profile.targetAudience || '',
-            idealCustomerProfile: profile.idealCustomerProfile || '',
-            outreachGoal:
-              Array.isArray(profile.outreachGoal) && profile.outreachGoal.length > 0
-                ? profile.outreachGoal
-                : ['Generate Leads'],
-            toneOfVoice: profile.toneOfVoice || 'Professional',
           });
         }
       } catch {
@@ -107,23 +73,6 @@ export default function BusinessOnboarding() {
     };
   }, []);
 
-  const toggleGoal = (goal: string) => {
-    setFormData((prev) => {
-      const exists = prev.outreachGoal.includes(goal);
-      const next = exists
-        ? prev.outreachGoal.filter((g) => g !== goal)
-        : [...prev.outreachGoal, goal];
-      return { ...prev, outreachGoal: next.length > 0 ? next : [goal] };
-    });
-    if (errors.outreachGoal) {
-      setErrors((prev) => {
-        const copy = { ...prev };
-        delete copy.outreachGoal;
-        return copy;
-      });
-    }
-  };
-
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
 
@@ -135,24 +84,6 @@ export default function BusinessOnboarding() {
     }
     if (!formData.businessDescription.trim()) {
       errs.businessDescription = 'Business description is required.';
-    }
-    if (!formData.productsOrServices.trim()) {
-      errs.productsOrServices = 'Products or services are required.';
-    }
-    if (!formData.valueProposition.trim()) {
-      errs.valueProposition = 'Value proposition is required.';
-    }
-    if (!formData.targetAudience.trim()) {
-      errs.targetAudience = 'Target audience is required.';
-    }
-    if (!formData.idealCustomerProfile.trim()) {
-      errs.idealCustomerProfile = 'Ideal customer profile is required.';
-    }
-    if (!formData.outreachGoal || formData.outreachGoal.length === 0) {
-      errs.outreachGoal = 'Please select at least one outreach goal.';
-    }
-    if (!formData.toneOfVoice) {
-      errs.toneOfVoice = 'Please select a tone of voice.';
     }
 
     if (formData.website?.trim()) {
@@ -239,8 +170,8 @@ export default function BusinessOnboarding() {
         </div>
 
         {/* Progress Stepper */}
-        <div className="bg-[var(--surface-card)] border border-[var(--surface-border)] rounded-2xl p-5 shadow-elevation-1">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-[var(--surface-card)] border border-[var(--surface-border)] rounded-2xl p-5 shadow-elevation-1 max-w-lg mx-auto">
+          <div className="grid grid-cols-2 gap-6 sm:gap-10">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-xs shadow-glow-brand flex-shrink-0">
                 1
@@ -249,7 +180,7 @@ export default function BusinessOnboarding() {
                 <p className="text-2xs uppercase tracking-wider text-brand-600 dark:text-brand-400 font-bold">
                   Step 1
                 </p>
-                <p className="text-xs font-semibold text-[var(--content-primary)]">
+                <p className="text-xs sm:text-sm font-semibold text-[var(--content-primary)]">
                   Business Profile
                 </p>
               </div>
@@ -263,34 +194,8 @@ export default function BusinessOnboarding() {
                 <p className="text-2xs uppercase tracking-wider text-[var(--content-tertiary)] font-bold">
                   Step 2
                 </p>
-                <p className="text-xs font-medium text-[var(--content-secondary)]">
-                  Connect Channels
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 opacity-60">
-              <div className="w-8 h-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--surface-border)] text-[var(--content-tertiary)] flex items-center justify-center font-bold text-xs flex-shrink-0">
-                3
-              </div>
-              <div>
-                <p className="text-2xs uppercase tracking-wider text-[var(--content-tertiary)] font-bold">
-                  Step 3
-                </p>
-                <p className="text-xs font-medium text-[var(--content-secondary)]">Import Leads</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 opacity-60">
-              <div className="w-8 h-8 rounded-full bg-[var(--surface-elevated)] border border-[var(--surface-border)] text-[var(--content-tertiary)] flex items-center justify-center font-bold text-xs flex-shrink-0">
-                4
-              </div>
-              <div>
-                <p className="text-2xs uppercase tracking-wider text-[var(--content-tertiary)] font-bold">
-                  Step 4
-                </p>
-                <p className="text-xs font-medium text-[var(--content-secondary)]">
-                  Create Campaign
+                <p className="text-xs sm:text-sm font-medium text-[var(--content-secondary)]">
+                  Start Using MailFlow
                 </p>
               </div>
             </div>
@@ -310,7 +215,19 @@ export default function BusinessOnboarding() {
 
         {serverError && (
           <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm flex items-start gap-3">
-            <span className="text-lg">⚠️</span>
+            <svg
+              className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
             <div>
               <p className="font-semibold text-red-200">Unable to save profile</p>
               <p className="text-xs text-red-300/90 mt-0.5">{serverError}</p>
@@ -321,10 +238,7 @@ export default function BusinessOnboarding() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* SECTION A: Business Basics */}
           <Card variant="elevated" padding="lg" className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[var(--surface-border)]">
-              <span className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-sm">
-                🏢
-              </span>
+            <div className="pb-4 border-b border-[var(--surface-border)]">
               <div>
                 <h2 className="text-base font-bold text-[var(--content-primary)]">
                   Section A — Business Basics
@@ -409,10 +323,7 @@ export default function BusinessOnboarding() {
 
           {/* SECTION B: What Your Business Does */}
           <Card variant="elevated" padding="lg" className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[var(--surface-border)]">
-              <span className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
-                💼
-              </span>
+            <div className="pb-4 border-b border-[var(--surface-border)]">
               <div>
                 <h2 className="text-base font-bold text-[var(--content-primary)]">
                   Section B — What Your Business Does
@@ -445,195 +356,6 @@ export default function BusinessOnboarding() {
                   error={errors.businessDescription}
                 />
               </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-[var(--content-secondary)]">
-                    Products & Services <span className="text-red-400">*</span>
-                  </label>
-                  <span className="text-2xs text-[var(--content-tertiary)]">Key offerings</span>
-                </div>
-                <Textarea
-                  value={formData.productsOrServices}
-                  onChange={(e) => {
-                    setFormData({ ...formData, productsOrServices: e.target.value });
-                    if (errors.productsOrServices) setErrors({ ...errors, productsOrServices: '' });
-                  }}
-                  placeholder="List your core products or services. E.g. B2B Lead Scraping, Automated Warmup, Multichannel AI Campaigns, WhatsApp Cloud Integration."
-                  rows={3}
-                  error={errors.productsOrServices}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-[var(--content-secondary)]">
-                    Value Proposition <span className="text-red-400">*</span>
-                  </label>
-                  <span className="text-2xs text-[var(--content-tertiary)]">
-                    Why clients choose you
-                  </span>
-                </div>
-                <Textarea
-                  value={formData.valueProposition}
-                  onChange={(e) => {
-                    setFormData({ ...formData, valueProposition: e.target.value });
-                    if (errors.valueProposition) setErrors({ ...errors, valueProposition: '' });
-                  }}
-                  placeholder="What unique problem do you solve and what result do you deliver? E.g. We help sales teams 3x their qualified pipeline without hiring extra SDRs."
-                  rows={3}
-                  error={errors.valueProposition}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* SECTION C: Your Ideal Customer */}
-          <Card variant="elevated" padding="lg" className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[var(--surface-border)]">
-              <span className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-sm">
-                🎯
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-[var(--content-primary)]">
-                  Section C — Your Ideal Customer
-                </h2>
-                <p className="text-xs text-[var(--content-tertiary)]">
-                  Specify who you are targeting with your campaigns
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-[var(--content-secondary)]">
-                    Target Audience <span className="text-red-400">*</span>
-                  </label>
-                  <span className="text-2xs text-[var(--content-tertiary)]">
-                    Roles & Industries
-                  </span>
-                </div>
-                <Input
-                  value={formData.targetAudience}
-                  onChange={(e) => {
-                    setFormData({ ...formData, targetAudience: e.target.value });
-                    if (errors.targetAudience) setErrors({ ...errors, targetAudience: '' });
-                  }}
-                  placeholder="e.g. Founders, VP of Sales, CMOs at B2B Tech & SaaS companies"
-                  error={errors.targetAudience}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-[var(--content-secondary)]">
-                    Ideal Customer Profile (ICP) <span className="text-red-400">*</span>
-                  </label>
-                  <span className="text-2xs text-[var(--content-tertiary)]">Detailed criteria</span>
-                </div>
-                <Textarea
-                  value={formData.idealCustomerProfile}
-                  onChange={(e) => {
-                    setFormData({ ...formData, idealCustomerProfile: e.target.value });
-                    if (errors.idealCustomerProfile)
-                      setErrors({ ...errors, idealCustomerProfile: '' });
-                  }}
-                  placeholder="E.g. SaaS and agency businesses with 10–150 employees actively hiring sales reps and struggling with low email deliverability."
-                  rows={3}
-                  error={errors.idealCustomerProfile}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* SECTION D: Outreach Goal */}
-          <Card variant="elevated" padding="lg" className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[var(--surface-border)]">
-              <span className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-sm">
-                🚀
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-[var(--content-primary)]">
-                  Section D — Outreach Goal
-                </h2>
-                <p className="text-xs text-[var(--content-tertiary)]">
-                  What primary outcomes do you want your campaigns to achieve? (Select all that
-                  apply)
-                </p>
-              </div>
-            </div>
-
-            {errors.outreachGoal && (
-              <p className="text-xs text-red-400 font-medium">{errors.outreachGoal}</p>
-            )}
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {OUTREACH_GOALS.map((goal) => {
-                const selected = formData.outreachGoal.includes(goal.id);
-                return (
-                  <button
-                    key={goal.id}
-                    type="button"
-                    onClick={() => toggleGoal(goal.id)}
-                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 ${
-                      selected
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 ring-1 ring-brand-500/40 shadow-sm'
-                        : 'border-[var(--surface-border)] bg-[var(--surface-card)] text-[var(--content-secondary)] hover:border-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
-                    }`}
-                  >
-                    <span className="text-xl">{goal.icon}</span>
-                    <span className="text-xs font-semibold">{goal.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* SECTION E: Communication Style */}
-          <Card variant="elevated" padding="lg" className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[var(--surface-border)]">
-              <span className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-sm">
-                💬
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-[var(--content-primary)]">
-                  Section E — Communication Style
-                </h2>
-                <p className="text-xs text-[var(--content-tertiary)]">
-                  Choose the default tone of voice for your AI-generated outreach
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {TONE_OPTIONS.map((tone) => {
-                const selected = formData.toneOfVoice === tone.id;
-                return (
-                  <button
-                    key={tone.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, toneOfVoice: tone.id })}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      selected
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 ring-1 ring-brand-500/40 shadow-sm'
-                        : 'border-[var(--surface-border)] bg-[var(--surface-card)] text-[var(--content-secondary)] hover:border-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-[var(--content-primary)]">
-                        {tone.label}
-                      </span>
-                      {selected && (
-                        <Badge variant="brand" size="sm">
-                          Selected
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-[var(--content-tertiary)] mt-1">{tone.desc}</p>
-                  </button>
-                );
-              })}
             </div>
           </Card>
 
@@ -666,7 +388,7 @@ export default function BusinessOnboarding() {
                 </svg>
               }
             >
-              {submitting ? 'Saving Profile…' : 'Save & Continue →'}
+              {submitting ? 'Setting up MailFlow…' : 'Start Using MailFlow →'}
             </Button>
           </div>
         </form>

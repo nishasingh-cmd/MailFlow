@@ -5,6 +5,7 @@ export const ROUTES = {
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
+  VERIFY_EMAIL: '/verify-email',
 
   DASHBOARD: '/dashboard',
   LEADS: '/leads',
@@ -13,6 +14,7 @@ export const ROUTES = {
   DELIVERY_LOGS: '/delivery-logs',
   FAILED_QUEUE: '/failed-queue',
   WHATSAPP: '/whatsapp',
+  TEMPLATES: '/templates',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
   ONBOARDING: '/onboarding/business',
@@ -27,6 +29,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   'delivery-logs': 'Delivery Logs',
   'failed-queue': 'Failed Queue',
   whatsapp: 'WhatsApp Outreach',
+  templates: 'Templates',
   analytics: 'Analytics',
   settings: 'Settings',
   'onboarding/business': 'Business Onboarding',
@@ -34,4 +37,5 @@ export const ROUTE_LABELS: Record<string, string> = {
   register: 'Register',
   'forgot-password': 'Forgot Password',
   'reset-password': 'Reset Password',
+  'verify-email': 'Verify Email',
 };
