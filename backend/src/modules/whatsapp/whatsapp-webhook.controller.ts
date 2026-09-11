@@ -107,6 +107,14 @@ export class WhatsappWebhookController {
           // 1. Process Status Events (sent, delivered, read, failed)
           const statuses = value.statuses || [];
 
+          // Status progression precedence: PENDING (0) < SENT (1) < DELIVERED (2) < READ (3)
+          const STATUS_RANK: Record<string, number> = {
+            PENDING: 0,
+            SENT: 1,
+            DELIVERED: 2,
+            READ: 3,
+          };
+
           for (const st of statuses) {
             const messageId = st.id;
             if (!messageId) continue;
@@ -114,24 +122,58 @@ export class WhatsappWebhookController {
             const statusStr = ((st.status as string) || '').toLowerCase(); // 'sent' | 'delivered' | 'read' | 'failed'
             const timestampSec = Number(st.timestamp) || Math.floor(Date.now() / 1000);
             const statusDate = new Date(timestampSec * 1000);
+            const recipientId = st.recipient_id;
 
             console.log(
-              `[WhatsappWebhook] 📩 Status Event | wamid: ${messageId} | status: ${statusStr.toUpperCase()}`
+              `[WhatsappWebhook] Received status | wamid=${messageId} | status=${statusStr} | recipient=${recipientId || 'unknown'}`
             );
 
-            // Find matching WhatsappLog by messageId
-            const logEntry = await prisma.whatsappLog.findFirst({
+            // Match exact message by Meta WAMID (messageId)
+            let logEntry = await prisma.whatsappLog.findFirst({
               where: { messageId },
             });
 
-            // Find matching WhatsappQueue by messageId
             const queueEntry = await prisma.whatsappQueue.findFirst({
               where: { messageId },
             });
 
-            if (logEntry || queueEntry) {
-              if (statusStr === 'sent') {
-                if (logEntry && logEntry.status !== 'DELIVERED' && logEntry.status !== 'READ') {
+            // If logEntry was not created yet but queueEntry exists, create logEntry to keep history synchronized
+            if (!logEntry && queueEntry) {
+              logEntry = await prisma.whatsappLog.create({
+                data: {
+                  userId: queueEntry.userId,
+                  campaignId: queueEntry.campaignId,
+                  leadId: queueEntry.leadId,
+                  queueId: queueEntry.id,
+                  phone: queueEntry.phone,
+                  message: queueEntry.message,
+                  status: 'SENT',
+                  provider: 'META_CLOUD',
+                  retryCount: queueEntry.attempts,
+                  messageId: queueEntry.messageId,
+                  sentAt: queueEntry.sentAt || statusDate,
+                },
+              });
+            }
+
+            if (!logEntry && !queueEntry) {
+              console.warn(`[WhatsappWebhook] No message found for WAMID | wamid=${messageId}`);
+              continue;
+            }
+
+            console.log(
+              `[WhatsappWebhook] Matched message | databaseMessageId=${logEntry?.id || queueEntry?.id} | wamid=${messageId}`
+            );
+
+            const currentStatus = (logEntry?.status || 'SENT').toUpperCase();
+            const currentRank = STATUS_RANK[currentStatus] ?? 1;
+
+            if (statusStr === 'sent') {
+              if (currentRank < 1) {
+                console.log(
+                  `[WhatsappWebhook] Updated status | wamid=${messageId} | oldStatus=${currentStatus} | newStatus=SENT`
+                );
+                if (logEntry) {
                   await prisma.whatsappLog.update({
                     where: { id: logEntry.id },
                     data: {
@@ -149,8 +191,27 @@ export class WhatsappWebhookController {
                     },
                   });
                 }
-              } else if (statusStr === 'delivered') {
-                if (logEntry && logEntry.status !== 'READ') {
+              } else {
+                // Idempotent / preserve existing higher status (DELIVERED or READ)
+                if (logEntry && !logEntry.sentAt) {
+                  await prisma.whatsappLog.update({
+                    where: { id: logEntry.id },
+                    data: { sentAt: statusDate },
+                  });
+                }
+                if (queueEntry && !queueEntry.sentAt) {
+                  await prisma.whatsappQueue.update({
+                    where: { id: queueEntry.id },
+                    data: { sentAt: statusDate },
+                  });
+                }
+              }
+            } else if (statusStr === 'delivered') {
+              if (currentRank < 2) {
+                console.log(
+                  `[WhatsappWebhook] Updated status | wamid=${messageId} | oldStatus=${currentStatus} | newStatus=DELIVERED`
+                );
+                if (logEntry) {
                   await prisma.whatsappLog.update({
                     where: { id: logEntry.id },
                     data: {
@@ -167,41 +228,66 @@ export class WhatsappWebhookController {
                     },
                   });
                 }
-              } else if (statusStr === 'read') {
-                if (logEntry) {
+              } else {
+                // Already READ (rank 3) or DELIVERED (rank 2) — preserve status, set timestamp if missing
+                if (logEntry && !logEntry.deliveredAt) {
                   await prisma.whatsappLog.update({
                     where: { id: logEntry.id },
-                    data: {
-                      status: 'READ',
-                      readAt: logEntry.readAt || statusDate,
-                      deliveredAt: logEntry.deliveredAt || statusDate,
-                    },
+                    data: { deliveredAt: statusDate },
                   });
                 }
-                if (queueEntry) {
+                if (queueEntry && !queueEntry.deliveredAt) {
                   await prisma.whatsappQueue.update({
                     where: { id: queueEntry.id },
-                    data: {
-                      readAt: queueEntry.readAt || statusDate,
-                      deliveredAt: queueEntry.deliveredAt || statusDate,
-                    },
+                    data: { deliveredAt: statusDate },
                   });
                 }
-              } else if (statusStr === 'failed') {
-                const errObj = st.errors?.[0];
-                const errCode = errObj?.code;
-                const errTitle = errObj?.title || 'Meta Delivery Failure';
-                const errMsg = errObj?.message || '';
-                const errDetails = errObj?.error_data?.details
-                  ? ` (${errObj.error_data.details})`
-                  : '';
-
-                const fullErrorStr = `[Meta Error #${errCode || 'unknown'}] ${errTitle}${errMsg ? ': ' + errMsg : ''}${errDetails}`;
-
-                console.error(
-                  `[WhatsappWebhook] ❌ Meta Delivery Failed | wamid: ${messageId} | ${fullErrorStr}`
+              }
+            } else if (statusStr === 'read') {
+              if (currentStatus !== 'READ') {
+                console.log(
+                  `[WhatsappWebhook] Updated status | wamid=${messageId} | oldStatus=${currentStatus} | newStatus=READ`
                 );
+              }
+              if (logEntry) {
+                await prisma.whatsappLog.update({
+                  where: { id: logEntry.id },
+                  data: {
+                    status: 'READ',
+                    readAt: logEntry.readAt || statusDate,
+                    deliveredAt: logEntry.deliveredAt || statusDate,
+                  },
+                });
+              }
+              if (queueEntry) {
+                await prisma.whatsappQueue.update({
+                  where: { id: queueEntry.id },
+                  data: {
+                    readAt: queueEntry.readAt || statusDate,
+                    deliveredAt: queueEntry.deliveredAt || statusDate,
+                  },
+                });
+              }
+            } else if (statusStr === 'failed') {
+              const errObj = st.errors?.[0];
+              const errCode = errObj?.code;
+              const errTitle = errObj?.title || 'Meta Delivery Failure';
+              const errMsg = errObj?.message || '';
+              const errDetails = errObj?.error_data?.details
+                ? ` (${errObj.error_data.details})`
+                : '';
 
+              const fullErrorStr = `[Meta Error #${errCode || 'unknown'}] ${errTitle}${errMsg ? ': ' + errMsg : ''}${errDetails}`;
+
+              console.error(
+                `[WhatsappWebhook] ❌ Meta Delivery Failed | wamid=${messageId} | ${fullErrorStr}`
+              );
+
+              // Only transition to FAILED if message hasn't already been confirmed DELIVERED or READ
+              if (currentRank < 2) {
+                console.log(
+                  `[WhatsappWebhook] Updated status | wamid=${messageId} | oldStatus=${currentStatus} | newStatus=FAILED`
+                );
                 if (logEntry) {
                   await prisma.whatsappLog.update({
                     where: { id: logEntry.id },
@@ -221,12 +307,8 @@ export class WhatsappWebhookController {
                   });
                 }
               }
-              processedCount++;
-            } else {
-              console.warn(
-                `[WhatsappWebhook] ⚠️ Received webhook status "${statusStr}" for unknown message ID: ${messageId}`
-              );
             }
+            processedCount++;
           }
 
           // 2. Handle Inbound Lead Messages (value.messages)

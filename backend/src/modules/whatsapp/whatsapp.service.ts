@@ -301,6 +301,7 @@ export class WhatsappService {
       where.OR = [
         { phone: { contains: query.search, mode: 'insensitive' } },
         { message: { contains: query.search, mode: 'insensitive' } },
+        { messageId: { contains: query.search, mode: 'insensitive' } },
         { lead: { name: { contains: query.search, mode: 'insensitive' } } },
       ];
     }

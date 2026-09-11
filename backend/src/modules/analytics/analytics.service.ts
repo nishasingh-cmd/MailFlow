@@ -177,8 +177,12 @@ export class AnalyticsService {
             filters.campaignId !== 'ALL' && { campaignId: filters.campaignId }),
         },
       }),
-      prisma.whatsappLog.count({ where: { ...whatsappLogWhere, status: 'SENT' } }),
-      prisma.whatsappLog.count({ where: { ...prevWhatsappLogWhere, status: 'SENT' } }),
+      prisma.whatsappLog.count({
+        where: { ...whatsappLogWhere, status: { in: ['SENT', 'DELIVERED', 'READ'] } },
+      }),
+      prisma.whatsappLog.count({
+        where: { ...prevWhatsappLogWhere, status: { in: ['SENT', 'DELIVERED', 'READ'] } },
+      }),
       prisma.whatsappLog.count({ where: { ...whatsappLogWhere, status: 'FAILED' } }),
       prisma.whatsappQueue.count({
         where: {
@@ -291,7 +295,9 @@ export class AnalyticsService {
       userCampaignsWithLogs.map((camp) => {
         const campEmailsSent = camp.emailLogs.filter((l) => l.status === 'SENT').length;
         const campEmailsFailed = camp.emailLogs.filter((l) => l.status === 'FAILED').length;
-        const campWaSent = camp.whatsappLogs.filter((l) => l.status === 'SENT').length;
+        const campWaSent = camp.whatsappLogs.filter((l) =>
+          ['SENT', 'DELIVERED', 'READ'].includes(l.status)
+        ).length;
         const campWaFailed = camp.whatsappLogs.filter((l) => l.status === 'FAILED').length;
 
         const campEmailPending = camp.emailQueues.filter(

@@ -61,27 +61,30 @@ export default function WhatsappPage() {
     }
   }, []);
 
-  const fetchHistory = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const res = await whatsappService.getHistory({
-        search: search || undefined,
-        status:
-          statusFilter !== 'ALL'
-            ? (statusFilter as 'SENT' | 'DELIVERED' | 'READ' | 'FAILED')
-            : undefined,
+  const fetchHistory = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setHistoryLoading(true);
+      try {
+        const res = await whatsappService.getHistory({
+          search: search || undefined,
+          status:
+            statusFilter !== 'ALL'
+              ? (statusFilter as 'SENT' | 'DELIVERED' | 'READ' | 'FAILED')
+              : undefined,
 
-        page,
-        limit: 15,
-      });
-      setLogs(res.logs);
-      setTotalPages(res.totalPages || 1);
-    } catch {
-      toast.error('Failed to load WhatsApp delivery history.');
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [search, statusFilter, page, toast]);
+          page,
+          limit: 15,
+        });
+        setLogs(res.logs);
+        setTotalPages(res.totalPages || 1);
+      } catch {
+        if (!isSilent) toast.error('Failed to load WhatsApp delivery history.');
+      } finally {
+        if (!isSilent) setHistoryLoading(false);
+      }
+    },
+    [search, statusFilter, page, toast]
+  );
 
   const fetchFailedQueue = useCallback(async () => {
     setFailedLoading(true);
@@ -101,11 +104,24 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     if (activeTab === 'history') {
-      fetchHistory();
+      fetchHistory(false);
     } else {
       fetchFailedQueue();
     }
-  }, [activeTab, fetchHistory, fetchFailedQueue]);
+
+    // Auto-refresh interval (polling every 3.5s for real-time status updates from Meta)
+    const interval = setInterval(() => {
+      if (activeTab === 'history') {
+        fetchHistory(true);
+        fetchStats();
+      } else {
+        fetchFailedQueue();
+        fetchStats();
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [activeTab, fetchHistory, fetchFailedQueue, fetchStats]);
 
   const handleRetry = async (jobIds?: string[]) => {
     setActionLoading(true);
@@ -259,16 +275,38 @@ export default function WhatsappPage() {
                 }}
               />
             </div>
-            <div className="w-48">
-              <Select
-                id="status-filter"
-                value={statusFilter}
-                onChange={(val) => {
-                  setStatusFilter(val);
-                  setPage(1);
+            <div className="flex items-center gap-2">
+              <div className="w-44">
+                <Select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(val) => {
+                    setStatusFilter(val);
+                    setPage(1);
+                  }}
+                  options={STATUS_OPTIONS}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  fetchHistory(false);
+                  fetchStats();
                 }}
-                options={STATUS_OPTIONS}
-              />
+                title="Refresh delivery status"
+                className="flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Refresh
+              </Button>
             </div>
           </div>
 

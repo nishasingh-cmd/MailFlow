@@ -92,7 +92,11 @@ export class WhatsappWorker {
           const sentTime = new Date();
           const finalSentMessage = result.finalMessage || job.message;
 
-          // Transition status: PROCESSING -> SENT
+          console.log(
+            `[WhatsappSend] Meta message accepted | wamid=${result.messageId} | leadId=${job.leadId} | phone="${activePhone}"`
+          );
+
+          // Transition status: PROCESSING -> SENT in queue
           await prisma.whatsappQueue.update({
             where: { id: job.id },
             data: {
@@ -104,25 +108,46 @@ export class WhatsappWorker {
             },
           });
 
-          // Create log entry in Delivery History
-          const logEntry = await prisma.whatsappLog.create({
-            data: {
-              userId: job.userId,
-              campaignId: job.campaignId,
-              leadId: job.leadId,
-              queueId: job.id,
-              phone: activePhone,
-              message: finalSentMessage,
-              status: 'SENT',
-              provider: result.provider,
-              retryCount: attempts - 1,
-              messageId: result.messageId,
-              sentAt: sentTime,
-            },
+          // Check if webhook already created or updated a log entry for this WAMID
+          const existingLog = await prisma.whatsappLog.findFirst({
+            where: { OR: [{ messageId: result.messageId }, { queueId: job.id }] },
           });
 
+          let logEntry;
+          if (existingLog) {
+            const isHigherStatus = ['DELIVERED', 'READ'].includes(existingLog.status);
+            logEntry = await prisma.whatsappLog.update({
+              where: { id: existingLog.id },
+              data: {
+                messageId: result.messageId,
+                queueId: job.id,
+                phone: activePhone,
+                message: finalSentMessage,
+                sentAt: existingLog.sentAt || sentTime,
+                ...(!isHigherStatus ? { status: 'SENT' } : {}),
+              },
+            });
+          } else {
+            // Create log entry in Delivery History
+            logEntry = await prisma.whatsappLog.create({
+              data: {
+                userId: job.userId,
+                campaignId: job.campaignId,
+                leadId: job.leadId,
+                queueId: job.id,
+                phone: activePhone,
+                message: finalSentMessage,
+                status: 'SENT',
+                provider: result.provider,
+                retryCount: attempts - 1,
+                messageId: result.messageId,
+                sentAt: sentTime,
+              },
+            });
+          }
+
           console.log(
-            `[WhatsApp RESULT] Queue ID: ${job.id} | Status: SENT | Provider: ${result.provider} | Meta Message ID: ${result.messageId} | Log ID: ${logEntry.id}`
+            `[WhatsApp RESULT] Queue ID: ${job.id} | Status: ${logEntry.status} | Provider: ${result.provider} | Meta Message ID: ${result.messageId} | Log ID: ${logEntry.id}`
           );
 
           // Update Lead status to CONTACTED
