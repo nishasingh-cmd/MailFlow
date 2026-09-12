@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Badge, Select } from '../ui';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { useToast } from '../../hooks/useToast';
+import { WhatsappChatPreview } from './WhatsappChatPreview';
 
 interface WhatsappPreviewModalProps {
   open: boolean;
@@ -297,19 +298,19 @@ export function WhatsappPreviewModal({
             </span>
           </div>
 
-          <div className="rounded-xl border border-emerald-500/30 overflow-hidden bg-[#0b141a] p-4 text-emerald-100 shadow-inner">
-            {generating ? (
-              <div className="py-8 text-center text-xs text-emerald-400 animate-pulse">
-                Resolving template preview with personalized AI variables...
-              </div>
-            ) : (
-              <p className="w-full text-sm font-sans leading-relaxed text-emerald-100 whitespace-pre-wrap break-words">
-                {previewText ||
-                  currentTemplate?.bodyText ||
-                  'Loading resolved WhatsApp template preview...'}
-              </p>
-            )}
-          </div>
+          {generating ? (
+            <div className="rounded-xl border border-emerald-500/30 overflow-hidden bg-[#0b141a] p-8 text-center text-xs text-emerald-400 animate-pulse shadow-inner">
+              Resolving template preview with personalized AI variables...
+            </div>
+          ) : (
+            <WhatsappChatPreview
+              body={
+                previewText ||
+                currentTemplate?.bodyText ||
+                'Loading resolved WhatsApp template preview...'
+              }
+            />
+          )}
           <p className="text-2xs text-[var(--content-tertiary)]">
             Fixed Meta Template: Text structure cannot be rewritten; only variables are
             personalized.

@@ -402,18 +402,48 @@ export default function Leads() {
       header: 'Actions',
       align: 'right',
       render: (lead) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => openWhatsappModal(lead)}
-            className="text-xs text-emerald-400 hover:text-emerald-300"
-          >
-            WhatsApp
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleOpenDetail(lead)}>
-            View
-          </Button>
+        <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center gap-3 mr-1">
+            <button
+              type="button"
+              onClick={() => openWhatsappModal(lead)}
+              className="p-1.5 rounded-lg text-[#25D366] hover:bg-[#25D366]/10 transition-colors focus:outline-none cursor-pointer"
+              title={`Send WhatsApp message to ${lead.phone || lead.name}`}
+              aria-label={`Send WhatsApp to ${lead.name}`}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path
+                  fill="#25D366"
+                  d="M12.004 2C6.48 2 2 6.48 2 12c0 1.947.56 3.763 1.528 5.305L2 22l4.832-1.498A9.953 9.953 0 0 0 12.004 22c5.524 0 10.004-4.48 10.004-10s-4.48-10-10.004-10z"
+                />
+                <path
+                  fill="#FFFFFF"
+                  d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.476-.15-.676.15-.2.3-.776.98-.952 1.18-.175.2-.351.225-.652.075-.3-.15-1.267-.467-2.414-1.49-.892-.796-1.494-1.778-1.669-2.079-.175-.3-.019-.462.131-.611.136-.134.301-.35.452-.525.15-.175.2-.3.301-.5.101-.2.051-.375-.025-.525-.075-.15-.676-1.63-.927-2.235-.244-.589-.493-.509-.676-.519-.175-.008-.376-.01-.576-.01-.2 0-.526.075-.802.375-.276.3-1.053 1.03-1.053 2.512 0 1.482 1.078 2.912 1.228 3.112.15.2 2.122 3.24 5.141 4.544.718.31 1.278.495 1.716.635.722.23 1.378.198 1.898.12.579-.087 1.78-.727 2.031-1.428.251-.7.251-1.301.176-1.428-.075-.125-.276-.2-.577-.35z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => openEmailGenerator(lead.id, lead.name, lead.company)}
+              className="p-1.5 rounded-lg text-[#5271ff] hover:bg-[#5271ff]/10 transition-colors focus:outline-none cursor-pointer"
+              title={`Generate & Send Email to ${lead.email || lead.name}`}
+              aria-label={`Generate and send email to ${lead.name}`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+          </div>
           <Button
             size="sm"
             variant="ghost"
@@ -495,25 +525,48 @@ export default function Leads() {
       header: 'Actions',
       align: 'right',
       render: (lead) => (
-        <div className="flex items-center justify-end gap-1">
-          {researchStatuses[lead.id] === 'COMPLETED' && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => openEmailGenerator(lead.id, lead.name, lead.company)}
-              className="text-xs shadow-sm shadow-brand-500/20"
+        <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center gap-3 mr-1">
+            <button
+              type="button"
+              onClick={() => openWhatsappModal(lead)}
+              className="p-1.5 rounded-lg text-[#25D366] hover:bg-[#25D366]/10 transition-colors focus:outline-none cursor-pointer"
+              title={`Send WhatsApp message to ${lead.phone || lead.name}`}
+              aria-label={`Send WhatsApp to ${lead.name}`}
             >
-              Email
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => openWhatsappModal(lead)}
-            className="text-xs text-emerald-400 hover:text-emerald-300"
-          >
-            WhatsApp
-          </Button>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path
+                  fill="#25D366"
+                  d="M12.004 2C6.48 2 2 6.48 2 12c0 1.947.56 3.763 1.528 5.305L2 22l4.832-1.498A9.953 9.953 0 0 0 12.004 22c5.524 0 10.004-4.48 10.004-10s-4.48-10-10.004-10z"
+                />
+                <path
+                  fill="#FFFFFF"
+                  d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.476-.15-.676.15-.2.3-.776.98-.952 1.18-.175.2-.351.225-.652.075-.3-.15-1.267-.467-2.414-1.49-.892-.796-1.494-1.778-1.669-2.079-.175-.3-.019-.462.131-.611.136-.134.301-.35.452-.525.15-.175.2-.3.301-.5.101-.2.051-.375-.025-.525-.075-.15-.676-1.63-.927-2.235-.244-.589-.493-.509-.676-.519-.175-.008-.376-.01-.576-.01-.2 0-.526.075-.802.375-.276.3-1.053 1.03-1.053 2.512 0 1.482 1.078 2.912 1.228 3.112.15.2 2.122 3.24 5.141 4.544.718.31 1.278.495 1.716.635.722.23 1.378.198 1.898.12.579-.087 1.78-.727 2.031-1.428.251-.7.251-1.301.176-1.428-.075-.125-.276-.2-.577-.35z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => openEmailGenerator(lead.id, lead.name, lead.company)}
+              className="p-1.5 rounded-lg text-[#5271ff] hover:bg-[#5271ff]/10 transition-colors focus:outline-none cursor-pointer"
+              title={`Generate & Send Email to ${lead.email || lead.name}`}
+              aria-label={`Generate and send email to ${lead.name}`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+          </div>
           <Button size="sm" variant="ghost" onClick={() => handleOpenResearch(lead)}>
             {researchStatuses[lead.id] === 'COMPLETED' ? 'View Research' : 'Research'}
           </Button>
@@ -556,28 +609,24 @@ export default function Leads() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
             Total Leads
           </span>
-          <p className="text-2xl font-bold text-[var(--content-primary)] mt-1">{stats.total}</p>
+          <p className="text-2xl font-bold text-[#5271ff] mt-1">{stats.total}</p>
         </Card>
 
         <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
             Not Contacted
           </span>
-          <p className="text-2xl font-bold text-zinc-700 dark:text-zinc-300 mt-1">
-            {stats.notContactedCount}
-          </p>
+          <p className="text-2xl font-bold text-[#5271ff] mt-1">{stats.notContactedCount}</p>
         </Card>
 
         <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
             Contacted
           </span>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            {stats.contactedCount}
-          </p>
+          <p className="text-2xl font-bold text-[#5271ff] mt-1">{stats.contactedCount}</p>
         </Card>
       </div>
 

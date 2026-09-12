@@ -193,17 +193,13 @@ export default function WhatsappPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)] tracking-wider">
-            Total Sent
-          </p>
-          <p className="text-xl font-bold text-[var(--content-primary)] mt-1">{stats.totalSent}</p>
+          <p className="text-2xs uppercase font-bold text-[#5271ff] tracking-wider">Total Sent</p>
+          <p className="text-xl font-bold text-[#5271ff] mt-1">{stats.totalSent}</p>
         </div>
 
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-green-400 tracking-wider">
-            Delivered
-          </p>
-          <p className="text-xl font-bold text-green-400 mt-1">
+          <p className="text-2xs uppercase font-bold text-[#5271ff] tracking-wider">Delivered</p>
+          <p className="text-xl font-bold text-[#5271ff] mt-1">
             {stats.delivered || stats.totalSent}
           </p>
           <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
@@ -212,27 +208,27 @@ export default function WhatsappPage() {
         </div>
 
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-emerald-400 tracking-wider">
+          <p className="text-2xs uppercase font-bold text-[#5271ff] tracking-wider">
             Read Receipts
           </p>
-          <p className="text-xl font-bold text-emerald-400 mt-1">{stats.read}</p>
+          <p className="text-xl font-bold text-[#5271ff] mt-1">{stats.read}</p>
           <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
             {stats.readRate}% Read Rate
           </p>
         </div>
 
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-brand-400 tracking-wider">
+          <p className="text-2xs uppercase font-bold text-[#5271ff] tracking-wider">
             Pending Queue
           </p>
-          <p className="text-xl font-bold text-brand-400 mt-1">{stats.pending}</p>
+          <p className="text-xl font-bold text-[#5271ff] mt-1">{stats.pending}</p>
         </div>
 
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4 shadow-elevation-1">
-          <p className="text-2xs uppercase font-semibold text-red-400 tracking-wider">
+          <p className="text-2xs uppercase font-bold text-[#5271ff] tracking-wider">
             Failed Dispatches
           </p>
-          <p className="text-xl font-bold text-red-400 mt-1">{stats.failed}</p>
+          <p className="text-xl font-bold text-[#5271ff] mt-1">{stats.failed}</p>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Campaign } from '@mailflow/shared';
 import { useNavigate } from 'react-router-dom';
 import { CampaignStatusBadge } from './CampaignStatusBadge';
-import { Skeleton, Badge } from '../ui';
+import { Skeleton } from '../ui';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { cn } from '../../utils/cn';
 
@@ -294,38 +294,38 @@ export function CampaignTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[var(--surface-elevated)]">
-            <tr>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+            <tr className="h-14">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider align-middle">
                 Campaign Name
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider align-middle">
                 Channel
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden sm:table-cell">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden sm:table-cell align-middle">
                 Created
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider align-middle">
                 Leads
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden md:table-cell">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden md:table-cell align-middle">
                 Template
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider align-middle">
                 Status
               </th>
-              <th className="px-4 py-3.5 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden lg:table-cell">
+              <th className="px-5 py-4 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden lg:table-cell align-middle">
                 Updated
               </th>
-              <th className="px-4 py-3.5 w-10"></th>
+              <th className="px-5 py-4 w-10 align-middle"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--surface-border)]">
             {campaigns.map((campaign) => (
               <tr
                 key={campaign.id}
-                className="hover:bg-[var(--surface-elevated)] transition-colors group"
+                className="h-14 hover:bg-[var(--surface-elevated)] transition-colors group"
               >
-                <td className="px-4 py-3.5">
+                <td className="px-5 py-4 align-middle">
                   <button
                     onClick={() => navigate(`/campaigns/${campaign.id}`)}
                     className="text-left"
@@ -340,23 +340,14 @@ export function CampaignTable({
                     )}
                   </button>
                 </td>
-                <td className="px-4 py-3.5">
-                  <Badge
-                    variant={
-                      campaign.channel === 'WHATSAPP'
-                        ? 'success'
-                        : campaign.channel === 'EMAIL_AND_WHATSAPP'
-                          ? 'warning'
-                          : 'brand'
-                    }
-                    size="sm"
-                  >
+                <td className="px-5 py-4 align-middle">
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">
                     {campaign.channel === 'WHATSAPP'
                       ? 'WhatsApp'
                       : campaign.channel === 'EMAIL_AND_WHATSAPP'
                         ? 'Multi-Channel'
                         : 'Email'}
-                  </Badge>
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-[var(--content-secondary)] hidden sm:table-cell">
                   {formatDate(campaign.createdAt)}

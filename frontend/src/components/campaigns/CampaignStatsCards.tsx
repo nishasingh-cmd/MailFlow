@@ -10,7 +10,6 @@ interface StatCard {
   label: string;
   value: number;
   icon: React.ReactNode;
-  gradient: string;
   iconBg: string;
 }
 
@@ -19,8 +18,7 @@ export function CampaignStatsCards({ stats, loading }: CampaignStatsCardsProps) 
     {
       label: 'Total Campaigns',
       value: stats?.total ?? 0,
-      gradient: 'from-brand-500/10 to-brand-600/5',
-      iconBg: 'bg-brand-500/15 text-brand-400',
+      iconBg: 'bg-[#5271ff]/15 text-[#5271ff]',
       icon: (
         <svg
           className="w-5 h-5"
@@ -40,8 +38,7 @@ export function CampaignStatsCards({ stats, loading }: CampaignStatsCardsProps) 
     {
       label: 'Draft',
       value: stats?.draft ?? 0,
-      gradient: 'from-zinc-500/10 to-zinc-600/5',
-      iconBg: 'bg-zinc-500/15 text-zinc-400',
+      iconBg: 'bg-[#5271ff]/15 text-[#5271ff]',
       icon: (
         <svg
           className="w-5 h-5"
@@ -61,8 +58,7 @@ export function CampaignStatsCards({ stats, loading }: CampaignStatsCardsProps) 
     {
       label: 'Ready',
       value: stats?.ready ?? 0,
-      gradient: 'from-blue-500/10 to-blue-600/5',
-      iconBg: 'bg-blue-500/15 text-blue-400',
+      iconBg: 'bg-[#5271ff]/15 text-[#5271ff]',
       icon: (
         <svg
           className="w-5 h-5"
@@ -82,8 +78,7 @@ export function CampaignStatsCards({ stats, loading }: CampaignStatsCardsProps) 
     {
       label: 'Completed',
       value: stats?.completed ?? 0,
-      gradient: 'from-green-500/10 to-green-600/5',
-      iconBg: 'bg-green-500/15 text-green-400',
+      iconBg: 'bg-[#5271ff]/15 text-[#5271ff]',
       icon: (
         <svg
           className="w-5 h-5"
@@ -119,15 +114,15 @@ export function CampaignStatsCards({ stats, loading }: CampaignStatsCardsProps) 
       {cards.map((card) => (
         <div
           key={card.label}
-          className={`relative rounded-xl border border-[var(--surface-border)] bg-gradient-to-br ${card.gradient} bg-[var(--surface-card)] p-5 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-[var(--surface-hover)]`}
+          className="relative rounded-xl border border-[var(--surface-border)] bg-white dark:bg-[var(--surface-card)] p-5 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-[var(--surface-hover)]"
         >
           <div className="flex items-start justify-between mb-3">
-            <p className="text-xs font-medium text-[var(--content-secondary)] uppercase tracking-wider">
+            <p className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
               {card.label}
             </p>
             <span className={`p-1.5 rounded-lg ${card.iconBg}`}>{card.icon}</span>
           </div>
-          <p className="text-3xl font-bold text-[var(--content-primary)] tabular-nums">
+          <p className="text-3xl font-bold text-[#5271ff] tabular-nums">
             {card.value.toLocaleString()}
           </p>
         </div>

@@ -35,9 +35,19 @@ export { ToastContext };
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
+  const recentToastsRef = useRef<Map<string, number>>(new Map());
 
   const addToast = useCallback((variant: ToastVariant, options: ToastOptions | string) => {
     const opts = typeof options === 'string' ? { title: options } : options;
+    const now = Date.now();
+    const lastTime = recentToastsRef.current.get(opts.title) || 0;
+
+    // Deduplication throttle: Ignore duplicate identical alerts triggered in quick succession (<1.5s)
+    if (now - lastTime < 1500) {
+      return '';
+    }
+    recentToastsRef.current.set(opts.title, now);
+
     const id = `toast-${++idRef.current}`;
     const newToast: Toast = {
       id,
@@ -45,7 +55,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       duration: 4000,
       ...opts,
     };
-    setToasts((prev) => [...prev, newToast]);
+    setToasts((prev) => {
+      // Prevent duplicate stacked alerts: remove any existing toast with the same title
+      const filtered = prev.filter((t) => t.title !== newToast.title);
+      const next = [...filtered, newToast];
+      // Keep maximum 3 toasts visible at once
+      return next.slice(-3);
+    });
     return id;
   }, []);
 
@@ -53,7 +69,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const clearAll = useCallback(() => setToasts([]), []);
+  const clearAll = useCallback(() => {
+    recentToastsRef.current.clear();
+    setToasts([]);
+  }, []);
 
   const toastHelpers = useMemo(
     () => ({

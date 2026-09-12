@@ -1,7 +1,4 @@
 import { Breadcrumb } from './Breadcrumb';
-import { NotificationDropdown } from './NotificationDropdown';
-import { UserMenu } from './UserMenu';
-import { useTheme } from '../../hooks/useTheme';
 import { cn } from '../../utils/cn';
 
 export interface AppNavbarProps {
@@ -10,14 +7,12 @@ export interface AppNavbarProps {
 }
 
 export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
-  const { isDark, toggleTheme } = useTheme();
-
   return (
     <header
       className={cn(
         'flex items-center justify-between gap-4 h-16 px-4 md:px-6',
-        'bg-[var(--surface-card)] border border-[var(--surface-border)] rounded-2xl shadow-elevation-1',
-        'mx-4 md:mx-6 lg:mx-8 mt-4 mb-1 flex-shrink-0 z-20 transition-shadow',
+        'bg-[#5271ff] border border-[#4462ea] rounded-2xl shadow-md shadow-[#5271ff]/20 text-white',
+        'mx-4 md:mx-6 lg:mx-8 mt-4 mb-1 flex-shrink-0 z-20 transition-all',
         className
       )}
       role="banner"
@@ -27,7 +22,7 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
           <button
             type="button"
             onClick={onMobileMenuToggle}
-            className="md:hidden p-2 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
+            className="md:hidden p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-colors focus:outline-none"
             aria-label="Toggle mobile menu"
           >
             <svg
@@ -44,51 +39,6 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
         )}
 
         <Breadcrumb />
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {isDark ? (
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-              />
-            </svg>
-          )}
-        </button>
-
-        <NotificationDropdown />
-
-        <UserMenu />
       </div>
     </header>
   );

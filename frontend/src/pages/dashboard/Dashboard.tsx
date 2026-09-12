@@ -151,22 +151,13 @@ export default function Dashboard() {
       key: 'channel',
       header: 'Channel',
       render: (row) => (
-        <Badge
-          variant={
-            row.channel === 'WHATSAPP'
-              ? 'success'
-              : row.channel === 'EMAIL_AND_WHATSAPP'
-                ? 'warning'
-                : 'brand'
-          }
-          size="sm"
-        >
+        <span className="text-sm font-medium text-slate-900 dark:text-white">
           {row.channel === 'WHATSAPP'
             ? 'WhatsApp'
             : row.channel === 'EMAIL_AND_WHATSAPP'
               ? 'Multi-Channel'
               : 'Email'}
-        </Badge>
+        </span>
       ),
     },
     {
@@ -297,10 +288,10 @@ export default function Dashboard() {
             <Card variant="elevated" padding="md">
               <div className="flex flex-col justify-between min-h-[125px] space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
                     Total Leads
                   </span>
-                  <span className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                  <span className="p-2 rounded-lg bg-[#5271ff]/10 text-[#5271ff]">
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -317,7 +308,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--content-primary)]">
+                  <span className="text-3xl font-extrabold tracking-tight text-[#5271ff]">
                     {fmt(data?.totalLeads ?? 0)}
                   </span>
                 </div>
@@ -329,10 +320,10 @@ export default function Dashboard() {
             <Card variant="elevated" padding="md">
               <div className="flex flex-col justify-between min-h-[125px] space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
                     Active Campaigns
                   </span>
-                  <span className="p-2 rounded-lg bg-brand-500/10 text-brand-400">
+                  <span className="p-2 rounded-lg bg-[#5271ff]/10 text-[#5271ff]">
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -349,7 +340,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--content-primary)]">
+                  <span className="text-3xl font-extrabold tracking-tight text-[#5271ff]">
                     {data?.activeCampaigns ?? 0}
                   </span>
                 </div>
@@ -361,10 +352,10 @@ export default function Dashboard() {
             <Card variant="elevated" padding="md">
               <div className="flex flex-col justify-between min-h-[125px] space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
                     Emails Sent
                   </span>
-                  <span className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                  <span className="p-2 rounded-lg bg-[#5271ff]/10 text-[#5271ff]">
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -381,7 +372,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--content-primary)]">
+                  <span className="text-3xl font-extrabold tracking-tight text-[#5271ff]">
                     {fmt(data?.emailsSent ?? 0)}
                   </span>
                 </div>
@@ -395,10 +386,10 @@ export default function Dashboard() {
             <Card variant="elevated" padding="md">
               <div className="flex flex-col justify-between min-h-[125px] space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#5271ff] uppercase tracking-wider">
                     Success Rate
                   </span>
-                  <span className="p-2 rounded-lg bg-green-500/10 text-green-400">
+                  <span className="p-2 rounded-lg bg-[#5271ff]/10 text-[#5271ff]">
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -415,7 +406,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--content-primary)]">
+                  <span className="text-3xl font-extrabold tracking-tight text-[#5271ff]">
                     {data?.hasEmailData ? `${data.emailSuccessRate}%` : '—'}
                   </span>
                 </div>

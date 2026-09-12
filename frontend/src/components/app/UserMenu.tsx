@@ -81,22 +81,20 @@ export function UserMenu({ className }: { className?: string }) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-label="Open user menu"
-        className="flex items-center gap-2.5 p-1 pl-1.5 pr-2.5 rounded-xl hover:bg-[var(--surface-elevated)] border border-transparent hover:border-[var(--surface-border)] transition-all cursor-pointer"
+        className="flex items-center gap-2.5 p-1.5 pl-2 pr-3 rounded-xl hover:bg-white/15 transition-all cursor-pointer focus:outline-none"
       >
         <Avatar name={userName} src={userAvatar} size="sm" online />
         <div className="hidden sm:flex flex-col text-left leading-tight">
-          <span className="text-xs font-semibold text-[var(--content-primary)] max-w-[120px] truncate">
+          <span className="text-xs font-semibold text-white max-w-[120px] truncate">
             {userName}
           </span>
           {userEmail && (
-            <span className="text-[10px] text-[var(--content-tertiary)] max-w-[120px] truncate">
-              {userEmail}
-            </span>
+            <span className="text-[10px] text-blue-100 max-w-[120px] truncate">{userEmail}</span>
           )}
         </div>
         <svg
           className={cn(
-            'w-3.5 h-3.5 text-[var(--content-tertiary)] transition-transform duration-150 ml-0.5',
+            'w-3.5 h-3.5 text-white/80 transition-transform duration-150 ml-0.5',
             open && 'rotate-180'
           )}
           fill="none"

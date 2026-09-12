@@ -80,7 +80,7 @@ export function Table<T>({
           <thead
             className={cn('bg-[var(--surface-elevated)]', stickyHeader && 'sticky top-0 z-10')}
           >
-            <tr>
+            <tr className="h-14">
               {columns.map((col) => {
                 const isSorted = sortKey === col.key;
                 return (
@@ -89,8 +89,8 @@ export function Table<T>({
                     scope="col"
                     style={{ width: col.width }}
                     className={cn(
-                      'px-6 py-4.5 text-xs font-semibold text-[var(--content-secondary)] uppercase tracking-wider',
-                      'border-b border-[var(--surface-border)]',
+                      'px-5 py-4 text-xs font-semibold text-[var(--content-secondary)] uppercase tracking-wider',
+                      'border-b border-[var(--surface-border)] align-middle',
                       alignClasses[col.align ?? 'left'],
                       col.sortable &&
                         'cursor-pointer select-none hover:text-[var(--content-primary)] transition-colors'
@@ -138,13 +138,13 @@ export function Table<T>({
               data.map((row, i) => (
                 <tr
                   key={keyExtractor(row, i)}
-                  className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface-hover)] transition-colors"
+                  className="h-14 border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface-hover)] transition-colors"
                 >
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
                       className={cn(
-                        'px-6 py-4 text-[var(--content-primary)]',
+                        'px-5 py-4 text-[var(--content-primary)] align-middle',
                         alignClasses[col.align ?? 'left']
                       )}
                     >

@@ -72,7 +72,7 @@ export function NotificationDropdown({ className }: { className?: string }) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={unreadCount ? `${unreadCount} unread notifications` : 'Notifications'}
-        className="relative p-2 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
+        className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-colors"
       >
         <svg
           className="w-4 h-4"
@@ -91,7 +91,7 @@ export function NotificationDropdown({ className }: { className?: string }) {
 
         {unreadCount > 0 && (
           <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-[var(--surface-card)]"
+            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#5271ff]"
             aria-hidden="true"
           />
         )}

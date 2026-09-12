@@ -3,7 +3,6 @@ import { Company, ResearchStatus } from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
 import { Drawer, Button, Card, Badge } from '../ui';
 import { ResearchStatusBadge } from './ResearchStatusBadge';
-import { cn } from '../../utils/cn';
 
 interface CompanyResearchDrawerProps {
   isOpen: boolean;
@@ -16,9 +15,7 @@ interface CompanyResearchDrawerProps {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-widest mb-2">
-      {children}
-    </h4>
+    <h4 className="text-xs font-bold text-black uppercase tracking-widest mb-2">{children}</h4>
   );
 }
 
@@ -26,32 +23,23 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div className="flex justify-between items-start gap-4 text-sm py-1.5 border-b border-[var(--surface-border)] last:border-0">
-      <span className="text-[var(--content-secondary)] shrink-0 w-32">{label}</span>
-      <span className="text-[var(--content-primary)] text-right">{value}</span>
+      <span className="text-black shrink-0 w-32 font-medium">{label}</span>
+      <span className="text-black text-right font-medium">{value}</span>
     </div>
   );
 }
 
-function TagList({ items, color = 'brand' }: { items: string[]; color?: string }) {
-  if (!items?.length)
-    return <p className="text-sm text-[var(--content-tertiary)] italic">None identified</p>;
+function PointerList({ items }: { items: string[] }) {
+  if (!items?.length) return <p className="text-sm text-black italic">None identified</p>;
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <ul className="space-y-2 pl-1">
       {items.map((item, i) => (
-        <span
-          key={i}
-          className={cn(
-            'px-2.5 py-1 text-xs rounded-full font-medium ring-1 ring-inset',
-            color === 'brand' && 'bg-brand-500/10 text-brand-300 ring-brand-500/20',
-            color === 'amber' && 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
-            color === 'green' && 'bg-green-500/10 text-green-300 ring-green-500/20',
-            color === 'purple' && 'bg-purple-500/10 text-purple-300 ring-purple-500/20'
-          )}
-        >
-          {item}
-        </span>
+        <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1.5" aria-hidden="true" />
+          <span className="text-black leading-snug">{item}</span>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -255,14 +243,12 @@ export function CompanyResearchDrawer({
         {hasResearch && research?.summary && (
           <Card
             variant="elevated"
-            className="p-4 space-y-2 border border-brand-500/20 bg-gradient-to-br from-brand-500/5 to-transparent"
+            className="p-4 space-y-2 border border-[var(--surface-border)] bg-[var(--surface-card)]"
           >
             <SectionHeading>AI Company Summary</SectionHeading>
-            <p className="text-sm text-[var(--content-primary)] leading-relaxed">
-              {research.summary}
-            </p>
+            <p className="text-sm text-black font-medium leading-relaxed">{research.summary}</p>
             {research.lastResearched && (
-              <p className="text-xs text-[var(--content-tertiary)]">
+              <p className="text-xs text-black/70">
                 Last updated:{' '}
                 {new Date(research.lastResearched).toLocaleDateString('en-IN', {
                   day: 'numeric',
@@ -279,12 +265,9 @@ export function CompanyResearchDrawer({
             <SectionHeading>Likely Pain Points</SectionHeading>
             <ul className="space-y-2">
               {(research?.painPoints as string[]).map((point, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-[var(--content-primary)]"
-                >
+                <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <PainPointIcon />
-                  <span>{point}</span>
+                  <span className="text-black leading-snug">{point}</span>
                 </li>
               ))}
             </ul>
@@ -296,12 +279,9 @@ export function CompanyResearchDrawer({
             <SectionHeading>Outreach Opportunities</SectionHeading>
             <ul className="space-y-2">
               {(research?.opportunities as string[]).map((opp, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-[var(--content-primary)]"
-                >
+                <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <OpportunityIcon />
-                  <span>{opp}</span>
+                  <span className="text-black leading-snug">{opp}</span>
                 </li>
               ))}
             </ul>
@@ -325,13 +305,13 @@ export function CompanyResearchDrawer({
               {company.products?.length > 0 && (
                 <div className="space-y-2">
                   <SectionHeading>Products</SectionHeading>
-                  <TagList items={company.products} color="brand" />
+                  <PointerList items={company.products} />
                 </div>
               )}
               {company.services?.length > 0 && (
                 <div className="space-y-2">
                   <SectionHeading>Services</SectionHeading>
-                  <TagList items={company.services} color="purple" />
+                  <PointerList items={company.services} />
                 </div>
               )}
             </Card>
@@ -340,7 +320,7 @@ export function CompanyResearchDrawer({
         {hasResearch && company && (company.techStack ?? []).length > 0 && (
           <Card variant="default" className="p-4 space-y-2">
             <SectionHeading>Technology Stack</SectionHeading>
-            <TagList items={company.techStack ?? []} color="amber" />
+            <PointerList items={company.techStack ?? []} />
           </Card>
         )}
 

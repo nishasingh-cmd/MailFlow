@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback, Component, type ReactNode, type ErrorInfo } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Component,
+  type ReactNode,
+  type ErrorInfo,
+} from 'react';
 import { Company, EmailDraft, EmailTemplateType, GeneratedEmailResult } from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
 import { emailGenerationService } from '../../services/email-generation.service';
@@ -86,6 +94,7 @@ function EmailGeneratorDrawerInner({
 
   const [template, setTemplate] = useState<EmailTemplateType>('Cold Outreach');
   const [isGenerating, setIsGenerating] = useState(false);
+  const isGeneratingRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -138,8 +147,9 @@ function EmailGeneratorDrawerInner({
   }, [isOpen, leadId, loadData]);
 
   const handleGenerate = async (selectedTpl: EmailTemplateType = template, isRegen = false) => {
-    if (!leadId) return;
+    if (!leadId || isGeneratingRef.current) return;
 
+    isGeneratingRef.current = true;
     setIsGenerating(true);
     const regenSeed = Date.now();
 
@@ -181,16 +191,13 @@ function EmailGeneratorDrawerInner({
         toast.error(`Regeneration failed: ${msg}. Keeping current draft.`);
       }
     } finally {
+      isGeneratingRef.current = false;
       setIsGenerating(false);
     }
   };
 
   const handleTemplateChange = (newTpl: EmailTemplateType) => {
     setTemplate(newTpl);
-
-    if (leadId && company?.research?.status === 'COMPLETED') {
-      void handleGenerate(newTpl);
-    }
   };
 
   const handleSelectSubject = (selected: string) => {
@@ -315,34 +322,38 @@ function EmailGeneratorDrawerInner({
             className="p-4 space-y-3 bg-[var(--surface-secondary)]/50 border-[var(--surface-border)]"
           >
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider">
                 Intelligence Context ({company.name})
               </h4>
 
-              <Badge variant="success" size="sm">
+              <Badge
+                size="sm"
+                className="bg-[#5271ff]/15 text-[#5271ff] ring-[#5271ff]/30 font-semibold"
+              >
                 Research Ready
               </Badge>
             </div>
 
-            <p className="text-xs text-[var(--content-secondary)] leading-relaxed">
+            <p className="text-xs text-black leading-relaxed">
               {research?.summary ?? company.description ?? 'No summary available.'}
             </p>
 
             {painPoints.length > 0 && (
               <div>
-                <span className="text-[11px] font-semibold text-amber-400 block mb-1">
+                <span className="text-xs font-bold text-black block mb-1.5 uppercase tracking-wider">
                   Key Pain Points:
                 </span>
-                <div className="flex flex-wrap gap-1.5">
+                <ul className="space-y-1.5 pl-1">
                   {painPoints.slice(0, 3).map((pt, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 text-[11px] rounded bg-amber-500/10 text-amber-300 border border-amber-500/20"
-                    >
-                      {pt}
-                    </span>
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-black font-medium">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1"
+                        aria-hidden="true"
+                      />
+                      <span className="text-black leading-snug">{pt}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
           </Card>

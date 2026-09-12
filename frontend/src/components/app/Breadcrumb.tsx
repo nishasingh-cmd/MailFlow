@@ -26,7 +26,7 @@ export function Breadcrumb({ className }: { className?: string }) {
           <li key={crumb.path} className="flex items-center gap-1.5">
             {i > 0 && (
               <svg
-                className="w-3.5 h-3.5 text-[var(--content-tertiary)] flex-shrink-0"
+                className="w-3.5 h-3.5 text-blue-200 flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -39,7 +39,7 @@ export function Breadcrumb({ className }: { className?: string }) {
 
             {crumb.isLast ? (
               <span
-                className="font-medium text-[var(--content-primary)] truncate max-w-[160px]"
+                className="font-semibold text-white text-base tracking-tight truncate max-w-[180px]"
                 aria-current="page"
               >
                 {crumb.label}
@@ -47,7 +47,7 @@ export function Breadcrumb({ className }: { className?: string }) {
             ) : (
               <Link
                 to={crumb.path}
-                className="text-[var(--content-secondary)] hover:text-[var(--content-primary)] transition-colors truncate max-w-[120px]"
+                className="text-blue-100 hover:text-white transition-colors truncate max-w-[120px]"
               >
                 {crumb.label}
               </Link>
