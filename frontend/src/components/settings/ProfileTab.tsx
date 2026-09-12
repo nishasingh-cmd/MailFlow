@@ -25,7 +25,7 @@ const TIMEZONES = [
 
 export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
   const [name, setName] = useState(profile.name || '');
-  const [email] = useState(profile.email || '');
+  const [email, setEmail] = useState(profile.email || '');
   const [avatar, setAvatar] = useState(profile.avatar || '');
   const [companyName, setCompanyName] = useState(profile.companyName || '');
   const [jobTitle, setJobTitle] = useState(profile.jobTitle || '');

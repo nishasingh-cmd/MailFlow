@@ -51,3 +51,6 @@ export * from './Chart';
 export { ConfirmModal } from './ConfirmModal/ConfirmModal';
 export { AlertBanner } from './AlertBanner/AlertBanner';
 export type { AlertState } from './AlertBanner/AlertBanner';
+
+export { Logo, LogoIcon } from './Logo/Logo';
+export type { LogoProps } from './Logo/Logo';

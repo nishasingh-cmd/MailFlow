@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { Logo } from '../components/ui/Logo/Logo';
 
 export function AuthLayout() {
   return (
@@ -20,23 +21,8 @@ export function AuthLayout() {
         />
 
         <div className="relative z-10 flex flex-col h-full px-10 py-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shadow-glow-brand flex-shrink-0">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight">MailFlow</span>
+          <div>
+            <Logo size="xl" textClassName="text-white" />
           </div>
 
           <div className="mt-auto pb-8">
@@ -152,25 +138,8 @@ export function AuthLayout() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-10 lg:px-14">
-        <div className="flex lg:hidden items-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <span className="text-base font-bold text-[var(--content-primary)] tracking-tight">
-            MailFlow
-          </span>
+        <div className="flex lg:hidden items-center justify-center mb-8">
+          <Logo size="lg" />
         </div>
 
         <div className="w-full max-w-md">

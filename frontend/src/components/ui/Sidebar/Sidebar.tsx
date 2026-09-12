@@ -14,6 +14,7 @@ export interface SidebarItem {
 export interface SidebarSection {
   title?: string;
   items: SidebarItem[];
+  bottom?: boolean;
 }
 
 export interface SidebarProps {
@@ -175,23 +176,31 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-none">
-        {sections.map((section, si) => (
-          <div key={si}>
-            {section.title && !collapsed && (
-              <p className="mb-1.5 px-3 text-2xs font-semibold uppercase tracking-widest text-[var(--content-tertiary)]">
-                {section.title}
-              </p>
-            )}
-            <ul className="space-y-0.5" role="list">
-              {section.items.map((item) => (
-                <li key={item.id}>
-                  <NavItem item={item} active={item.id === activeId} collapsed={collapsed} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <nav className="flex-1 flex flex-col overflow-y-auto px-3 py-4 scrollbar-none">
+        {sections.map((section, si) => {
+          const isBottom = section.bottom || (si === sections.length - 1 && sections.length > 1);
+          return (
+            <div
+              key={si}
+              className={cn(
+                isBottom ? 'mt-auto pt-3 border-t border-[var(--surface-border)]' : 'space-y-1 mb-2'
+              )}
+            >
+              {section.title && !collapsed && (
+                <p className="mb-1.5 px-3 text-2xs font-semibold uppercase tracking-widest text-[var(--content-tertiary)]">
+                  {section.title}
+                </p>
+              )}
+              <ul className="space-y-0.5" role="list">
+                {section.items.map((item) => (
+                  <li key={item.id}>
+                    <NavItem item={item} active={item.id === activeId} collapsed={collapsed} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </nav>
 
       {footer && (

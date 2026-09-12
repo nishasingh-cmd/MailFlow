@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" fill="none">
+  <!-- Royal Blue Background -->
+  <rect width="240" height="280" rx="36" fill="#5271ff"/>
+  
+  <!-- Centered Speech Bubble -->
+  <g transform="translate(48, 28) scale(1.44)">
+    <path d="
+      M 28 42
+      C 28 22 40 14 55 14
+      C 70 14 82 23 82 42
+      L 82 58
+      C 82 72 71 81 55 81
+      C 42 81 33 77 28 72
+      L 28 86
+      Z
+    " fill="#ffffff"/>
+    
+    <!-- 'm' -->
+    <path d="
+      M 41 50 L 41 38
+      C 41 33.5 48 33.5 48 38 L 48 50
+      M 48 38
+      C 48 33.5 55 33.5 55 38 L 55 50
+    " fill="none" stroke="#5271ff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Smile -->
+    <path d="
+      M 42 59
+      C 42 68 54 68 54 59
+    " fill="none" stroke="#5271ff" stroke-width="4.2" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text: MAILFLOW -->
+  <text x="120" y="210" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-weight="900" font-size="28" letter-spacing="2">MAILFLOW</text>
+  
+  <!-- Text: SINCE 2026 -->
+  <text x="120" y="240" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-weight="800" font-size="12" letter-spacing="4">SINCE 2026</text>
+</svg>

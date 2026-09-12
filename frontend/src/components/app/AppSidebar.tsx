@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, type SidebarSection } from '../ui/Sidebar/Sidebar';
 import { Avatar } from '../ui/Avatar/Avatar';
+import { Logo } from '../ui/Logo/Logo';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../routes/routes';
 
@@ -56,25 +57,6 @@ const icons = {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-      />
-    </svg>
-  ),
-  automation: (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  aiEmployee: (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.286L13 21l-2.286-6.857L5 12l5.714-2.286L13 3z"
       />
     </svg>
   ),
@@ -171,20 +153,7 @@ export function AppSidebar({
           id: ROUTES.LEADS,
           label: 'Contacts',
           icon: icons.contacts,
-          chevron: true,
           onClick: () => handleNav(ROUTES.LEADS),
-        },
-        {
-          id: ROUTES.DELIVERY_LOGS,
-          label: 'Automation',
-          icon: icons.automation,
-          onClick: () => handleNav(ROUTES.DELIVERY_LOGS),
-        },
-        {
-          id: ROUTES.ANALYTICS,
-          label: 'AI Employee',
-          icon: icons.aiEmployee,
-          onClick: () => handleNav(ROUTES.ANALYTICS),
         },
       ],
     },
@@ -203,6 +172,7 @@ export function AppSidebar({
           onClick: handleLogout,
         },
       ],
+      bottom: true,
     },
   ];
 
@@ -215,48 +185,10 @@ export function AppSidebar({
       className={className}
       logo={
         <div
-          className={`flex items-center cursor-pointer select-none ${collapsed ? 'justify-center w-full' : 'gap-2.5 px-1'}`}
+          className={`flex items-center cursor-pointer select-none ${collapsed ? 'justify-center w-full' : 'px-1'}`}
           onClick={() => handleNav(ROUTES.DASHBOARD)}
         >
-          {!collapsed ? (
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm shadow-brand-500/30">
-                <svg
-                  className="w-4 h-4 -rotate-12 translate-x-[-0.5px] translate-y-[-0.5px]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-center text-xl font-bold tracking-tight">
-                <span className="text-slate-900 dark:text-white">Mail</span>
-                <span className="text-brand-600 dark:text-brand-400">Flow</span>
-              </div>
-            </div>
-          ) : (
-            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm shadow-brand-500/30">
-              <svg
-                className="w-4 h-4 -rotate-12"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            </div>
-          )}
+          <Logo collapsed={collapsed} size="md" />
         </div>
       }
       footer={
