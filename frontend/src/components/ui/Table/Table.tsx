@@ -89,7 +89,7 @@ export function Table<T>({
                     scope="col"
                     style={{ width: col.width }}
                     className={cn(
-                      'px-4 py-3 text-xs font-semibold text-[var(--content-secondary)] uppercase tracking-wider',
+                      'px-6 py-4.5 text-xs font-semibold text-[var(--content-secondary)] uppercase tracking-wider',
                       'border-b border-[var(--surface-border)]',
                       alignClasses[col.align ?? 'left'],
                       col.sortable &&
@@ -144,7 +144,7 @@ export function Table<T>({
                     <td
                       key={String(col.key)}
                       className={cn(
-                        'px-4 py-3.5 text-[var(--content-primary)]',
+                        'px-6 py-4 text-[var(--content-primary)]',
                         alignClasses[col.align ?? 'left']
                       )}
                     >

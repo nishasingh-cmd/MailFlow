@@ -83,11 +83,11 @@ export class TrackingService {
         },
       });
 
-      // Update recipient lead status if currently NEW/CONTACTED
+      // Update recipient lead status to CONTACTED if currently NEW
       await prisma.lead
         .update({
           where: { id: log.leadId },
-          data: { status: 'QUALIFIED' },
+          data: { status: 'CONTACTED' },
         })
         .catch(() => {});
 

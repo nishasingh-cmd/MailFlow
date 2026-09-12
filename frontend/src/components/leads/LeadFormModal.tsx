@@ -11,12 +11,9 @@ interface LeadFormModalProps {
   onSuccess: () => void;
 }
 
-const STATUS_OPTIONS = [
-  { value: 'NEW', label: 'New' },
+const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
+  { value: 'NEW', label: 'Not Contacted' },
   { value: 'CONTACTED', label: 'Contacted' },
-  { value: 'QUALIFIED', label: 'Qualified' },
-  { value: 'UNSUBSCRIBED', label: 'Unsubscribed' },
-  { value: 'BOUNCED', label: 'Bounced' },
 ];
 
 const EMPTY_FORM = {
@@ -49,7 +46,10 @@ export function LeadFormModal({ isOpen, onClose, lead, onSuccess }: LeadFormModa
           website: lead.website ?? '',
           linkedin: lead.linkedin ?? '',
           industry: lead.industry ?? '',
-          status: lead.status ?? 'NEW',
+          status:
+            lead.status === 'CONTACTED' || (lead.status as string) === 'QUALIFIED'
+              ? 'CONTACTED'
+              : 'NEW',
         });
       } else {
         setFormData(EMPTY_FORM);

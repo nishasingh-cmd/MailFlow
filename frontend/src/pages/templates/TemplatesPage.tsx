@@ -445,13 +445,15 @@ export default function TemplatesPage() {
                         Language: {t.language}
                       </p>
                     </div>
-                    <Badge
-                      variant={isApproved ? 'success' : isPending ? 'brand' : 'error'}
-                      size="sm"
-                      dot
-                    >
-                      {t.status}
-                    </Badge>
+                    {isApproved ? (
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md bg-[#5271ff] text-white font-bold text-xs shadow-xs tracking-wide">
+                        APPROVED
+                      </span>
+                    ) : (
+                      <Badge variant={isPending ? 'brand' : 'error'} size="sm" dot>
+                        {t.status}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="p-3 rounded-xl bg-[var(--surface-elevated)] border border-[var(--surface-border)] text-xs text-[var(--content-secondary)] leading-relaxed font-sans whitespace-pre-wrap break-words">
@@ -692,13 +694,15 @@ export default function TemplatesPage() {
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500">Status:</span>
-              <Badge
-                variant={previewTemplate.status === 'APPROVED' ? 'success' : 'brand'}
-                size="sm"
-                dot
-              >
-                {previewTemplate.status}
-              </Badge>
+              {previewTemplate.status?.toUpperCase() === 'APPROVED' ? (
+                <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md bg-[#5271ff] text-white font-bold text-xs shadow-xs tracking-wide">
+                  APPROVED
+                </span>
+              ) : (
+                <Badge variant="brand" size="sm" dot>
+                  {previewTemplate.status}
+                </Badge>
+              )}
             </div>
 
             <WhatsappChatPreview

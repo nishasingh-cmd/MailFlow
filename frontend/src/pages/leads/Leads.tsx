@@ -2,16 +2,7 @@ import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { Lead, LeadStatus, ImportHistory, ResearchProgressResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
-import {
-  Button,
-  Card,
-  Input,
-  Select,
-  Badge,
-  Table,
-  Column,
-  BadgeVariant,
-} from '../../components/ui';
+import { Button, Card, Input, Select, Badge, Table, Column } from '../../components/ui';
 import { ImportLeadsModal } from '../../components/leads/ImportLeadsModal';
 import { LeadDetailsDrawer } from '../../components/leads/LeadDetailsDrawer';
 import { LeadFormModal } from '../../components/leads/LeadFormModal';
@@ -28,11 +19,8 @@ import { useToast } from '../../hooks/useToast';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
-  { value: 'NEW', label: 'New' },
+  { value: 'NEW', label: 'Not Contacted' },
   { value: 'CONTACTED', label: 'Contacted' },
-  { value: 'QUALIFIED', label: 'Qualified' },
-  { value: 'UNSUBSCRIBED', label: 'Unsubscribed' },
-  { value: 'BOUNCED', label: 'Bounced' },
 ];
 
 const SORT_OPTIONS = [
@@ -80,9 +68,8 @@ export default function Leads() {
 
   const [stats, setStats] = useState({
     total: 0,
-    newCount: 0,
+    notContactedCount: 0,
     contactedCount: 0,
-    qualifiedCount: 0,
   });
 
   const [researchLeads, setResearchLeads] = useState<LeadWithStatus[]>([]);
@@ -152,9 +139,10 @@ export default function Leads() {
       if (page === 1 && !searchQuery && statusFilter === 'ALL') {
         setStats({
           total: response.total,
-          newCount: response.leads.filter((l) => l.status === 'NEW').length,
-          contactedCount: response.leads.filter((l) => l.status === 'CONTACTED').length,
-          qualifiedCount: response.leads.filter((l) => l.status === 'QUALIFIED').length,
+          notContactedCount: response.leads.filter((l) => l.status === 'NEW').length,
+          contactedCount: response.leads.filter(
+            (l) => l.status === 'CONTACTED' || (l.status as string) === 'QUALIFIED'
+          ).length,
         });
       }
     } catch (err: unknown) {
@@ -320,33 +308,10 @@ export default function Leads() {
   };
 
   const getStatusBadge = (status: string) => {
-    let variant: BadgeVariant = 'neutral';
-    let label = status;
-
-    switch (status) {
-      case 'NEW':
-        variant = 'info';
-        label = 'New';
-        break;
-      case 'CONTACTED':
-        variant = 'warning';
-        label = 'Contacted';
-        break;
-      case 'QUALIFIED':
-        variant = 'success';
-        label = 'Qualified';
-        break;
-      case 'UNSUBSCRIBED':
-        variant = 'neutral';
-        label = 'Unsubscribed';
-        break;
-      case 'BOUNCED':
-        variant = 'error';
-        label = 'Bounced';
-        break;
+    if (status === 'CONTACTED' || status === 'QUALIFIED') {
+      return <Badge variant="success">Contacted</Badge>;
     }
-
-    return <Badge variant={variant}>{label}</Badge>;
+    return <Badge variant="neutral">Not Contacted</Badge>;
   };
 
   const leadColumns: Column<Lead>[] = [
@@ -589,7 +554,7 @@ export default function Leads() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card variant="default" className="p-4">
           <span className="text-xs font-medium text-[var(--content-tertiary)] uppercase tracking-wider">
             Total Leads
@@ -598,24 +563,21 @@ export default function Leads() {
         </Card>
 
         <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-brand-400 uppercase tracking-wider">
-            New Prospect Leads
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+            Not Contacted
           </span>
-          <p className="text-2xl font-bold text-brand-400 mt-1">{stats.newCount}</p>
+          <p className="text-2xl font-bold text-zinc-700 dark:text-zinc-300 mt-1">
+            {stats.notContactedCount}
+          </p>
         </Card>
 
         <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-amber-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
             Contacted
           </span>
-          <p className="text-2xl font-bold text-amber-400 mt-1">{stats.contactedCount}</p>
-        </Card>
-
-        <Card variant="default" className="p-4">
-          <span className="text-xs font-medium text-green-400 uppercase tracking-wider">
-            Qualified
-          </span>
-          <p className="text-2xl font-bold text-green-400 mt-1">{stats.qualifiedCount}</p>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+            {stats.contactedCount}
+          </p>
         </Card>
       </div>
 

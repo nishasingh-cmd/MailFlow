@@ -25,7 +25,7 @@ const STATUS_OPTIONS = [
 export default function EmailOutreachPage() {
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'setup' | 'history' | 'failed'>('history');
+  const [activeTab, setActiveTab] = useState<'setup' | 'history' | 'failed'>('setup');
   const [guideModal, setGuideModal] = useState<'dns' | 'warmup' | 'gmail' | null>(null);
 
   const [stats, setStats] = useState<EmailStats>({
@@ -41,7 +41,7 @@ export default function EmailOutreachPage() {
   });
 
   const [logs, setLogs] = useState<EmailLogItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPENED' | 'SENT' | 'FAILED'>('ALL');
   const [page, setPage] = useState(1);
@@ -56,9 +56,6 @@ export default function EmailOutreachPage() {
     try {
       const s = await deliveryService.getStats();
       setStats(s);
-      if (s.totalSent === 0 && s.provider === 'NOT_CONFIGURED') {
-        setActiveTab((prev) => (prev === 'history' ? 'setup' : prev));
-      }
     } catch (err: unknown) {
       void err;
     }
@@ -166,21 +163,14 @@ export default function EmailOutreachPage() {
     );
   };
 
-  const isConfigured = Boolean(stats.provider && stats.provider !== 'NOT_CONFIGURED');
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-              Email Outreach Engine
-            </h1>
-            <Badge variant={isConfigured ? 'success' : 'neutral'} size="md" dot={isConfigured}>
-              {isConfigured ? `Provider: ${stats.provider} SMTP` : 'Provider: NOT CONFIGURED'}
-            </Badge>
-          </div>
+          <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
+            Email Outreach Engine
+          </h1>
           <p className="text-sm text-[var(--content-secondary)] mt-1">
             Monitor AI personalized email dispatches, message queues, SMTP delivery, and live open
             status.

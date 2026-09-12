@@ -136,7 +136,7 @@ export function Sidebar({
         {!collapsed && onToggle && (
           <button
             onClick={onToggle}
-            className="ml-auto p-1.5 rounded-lg text-[var(--content-tertiary)] hover:text-[var(--content-primary)] hover:bg-[var(--surface-elevated)] transition-colors"
+            className="ml-auto w-7 h-7 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--content-tertiary)] hover:text-[var(--content-primary)] flex items-center justify-center transition-all cursor-pointer shadow-2xs"
             aria-label="Collapse sidebar"
           >
             <svg

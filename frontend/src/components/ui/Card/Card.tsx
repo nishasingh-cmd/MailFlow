@@ -13,21 +13,22 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'bg-[var(--surface-card)] border border-[var(--surface-border)]',
-  elevated: 'bg-[var(--surface-card)] border border-[var(--surface-border)] shadow-elevation-2',
+  default: 'bg-[var(--surface-card)] border border-[var(--surface-border)] shadow-elevation-1',
+  elevated:
+    'bg-[var(--surface-card)] border border-[var(--surface-border)] shadow-elevation-1 hover:shadow-elevation-2 transition-shadow duration-200',
   interactive: [
-    'bg-[var(--surface-card)] border border-[var(--surface-border)]',
+    'bg-[var(--surface-card)] border border-[var(--surface-border)] shadow-elevation-1',
     'cursor-pointer transition-all duration-150',
-    'hover:border-zinc-600 hover:shadow-elevation-2 hover:-translate-y-0.5',
+    'hover:border-zinc-400 dark:hover:border-zinc-600 hover:shadow-elevation-2 hover:-translate-y-0.5',
     'active:translate-y-0 active:shadow-elevation-1',
   ].join(' '),
 };
 
 const paddingClasses = {
   none: '',
-  sm: 'p-3',
-  md: 'p-5',
-  lg: 'p-6',
+  sm: 'p-3.5',
+  md: 'p-5 sm:p-6',
+  lg: 'p-6 sm:p-8',
 };
 
 export function Card({
@@ -44,7 +45,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-xl',
+        'rounded-2xl',
         overflow === 'hidden'
           ? 'overflow-hidden'
           : overflow === 'auto'
@@ -57,7 +58,7 @@ export function Card({
       {...props}
     >
       {header && (
-        <div className="px-5 py-4 border-b border-[var(--surface-border)] text-sm font-semibold text-[var(--content-primary)] rounded-t-xl">
+        <div className="px-6 py-5 border-b border-[var(--surface-border)] text-sm font-semibold text-[var(--content-primary)] rounded-t-2xl">
           {header}
         </div>
       )}
@@ -65,7 +66,7 @@ export function Card({
       <div className={cn(paddingClasses[padding])}>{children}</div>
 
       {footer && (
-        <div className="px-5 py-4 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] rounded-b-xl">
+        <div className="px-6 py-4 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] rounded-b-2xl">
           {footer}
         </div>
       )}

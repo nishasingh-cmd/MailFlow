@@ -16,8 +16,8 @@ export function AppNavbar({ onMobileMenuToggle, className }: AppNavbarProps) {
     <header
       className={cn(
         'flex items-center justify-between gap-4 h-16 px-4 md:px-6',
-        'bg-[var(--surface-card)] border-b border-[var(--surface-border)]',
-        'sticky top-0 z-30 flex-shrink-0',
+        'bg-[var(--surface-card)] border border-[var(--surface-border)] rounded-2xl shadow-elevation-1',
+        'mx-4 md:mx-6 lg:mx-8 mt-4 mb-1 flex-shrink-0 z-20 transition-shadow',
         className
       )}
       role="banner"

@@ -21,20 +21,10 @@ export function LeadDetailsDrawer({
   if (!lead) return null;
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'NEW':
-        return <Badge variant="info">New</Badge>;
-      case 'CONTACTED':
-        return <Badge variant="warning">Contacted</Badge>;
-      case 'QUALIFIED':
-        return <Badge variant="success">Qualified</Badge>;
-      case 'UNSUBSCRIBED':
-        return <Badge variant="neutral">Unsubscribed</Badge>;
-      case 'BOUNCED':
-        return <Badge variant="error">Bounced</Badge>;
-      default:
-        return <Badge variant="neutral">{status}</Badge>;
+    if (status === 'CONTACTED' || status === 'QUALIFIED') {
+      return <Badge variant="success">Contacted</Badge>;
     }
+    return <Badge variant="neutral">Not Contacted</Badge>;
   };
 
   return (

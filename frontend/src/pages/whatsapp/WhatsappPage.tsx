@@ -175,14 +175,9 @@ export default function WhatsappPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-              WhatsApp Outreach Engine
-            </h1>
-            <Badge variant={isMetaActive ? 'success' : 'brand'} size="md" dot>
-              {isMetaActive ? 'Provider: META CLOUD API' : 'Provider: MOCK'}
-            </Badge>
-          </div>
+          <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
+            WhatsApp Outreach Engine
+          </h1>
           <p className="text-sm text-[var(--content-secondary)] mt-1">
             Monitor AI personalized WhatsApp dispatches, message queues, webhooks, and live read
             status.
