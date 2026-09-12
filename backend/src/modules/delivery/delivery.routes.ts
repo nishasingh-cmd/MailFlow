@@ -15,6 +15,7 @@ router.get('/campaigns/:id/progress', DeliveryController.getProgress);
 router.post('/send-single', DeliveryController.sendSingle);
 
 router.get('/logs', DeliveryController.getDeliveryLogs);
+router.get('/stats', DeliveryController.getStats);
 router.get('/failed-queue', DeliveryController.getFailedQueue);
 router.post('/failed-queue/retry', DeliveryController.retryFailed);
 router.delete('/failed-queue', DeliveryController.deleteFailed);

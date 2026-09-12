@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { AiConfigData } from '@mailflow/shared';
 import { settingsService } from '../../services/settings.service';
-import { useToast } from '../../hooks/useToast';
-import { Button, Input, Select, Badge } from '../ui';
+import { Button, Input, Select, Badge, AlertBanner, AlertState } from '../ui';
 
 interface AiIntegrationTabProps {
   config: AiConfigData;
@@ -21,8 +20,6 @@ const MODEL_OPTIONS = [
 ];
 
 export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
-  const { toast } = useToast();
-
   const [provider, setProvider] = useState<'OPENAI' | 'GEMINI'>(config.provider || 'OPENAI');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -31,9 +28,11 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
   const [maxTokens, setMaxTokens] = useState(config.maxTokens ?? 1000);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
+    setAlert(null);
     try {
       await settingsService.saveAiConfig({
         provider,
@@ -43,11 +42,14 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
         maxTokens,
       });
 
-      toast.success('AI Configuration saved successfully!');
+      setAlert({ type: 'success', message: 'AI Configuration saved successfully!' });
       onUpdated();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err.response?.data?.error || err.message || 'Failed to save AI configuration.');
+      setAlert({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to save AI configuration.',
+      });
     } finally {
       setSaving(false);
     }
@@ -55,6 +57,7 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
 
   const handleTestConnection = async () => {
     setTesting(true);
+    setAlert(null);
     try {
       const res = await settingsService.testAiConnection({
         provider,
@@ -63,13 +66,13 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
       });
 
       if (res.success) {
-        toast.success(res.message);
+        setAlert({ type: 'success', message: res.message });
       } else {
-        toast.error(res.message);
+        setAlert({ type: 'error', message: res.message });
       }
       onUpdated();
     } catch {
-      toast.error('AI connection test failed. Verify API Key.');
+      setAlert({ type: 'error', message: 'AI connection test failed. Verify API Key.' });
     } finally {
       setTesting(false);
     }
@@ -185,6 +188,8 @@ export function AiIntegrationTab({ config, onUpdated }: AiIntegrationTabProps) {
             Save Configuration
           </Button>
         </div>
+
+        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
       </div>
     </div>
   );

@@ -83,12 +83,13 @@ export interface EmailLogItem {
   queueId?: string | null;
   recipientEmail: string;
   subject: string;
-  status: 'SENT' | 'FAILED';
+  status: 'SENT' | 'OPENED' | 'FAILED' | string;
   provider?: string | null;
   retryCount: number;
   messageId?: string | null;
   errorReason?: string | null;
   sentAt?: string | null;
+  openedAt?: string | null;
   createdAt: string;
   lead?: {
     name: string;
@@ -129,7 +130,7 @@ export interface CompletionSummaryData {
 
 export interface DeliveryLogsQuery {
   search?: string;
-  status?: 'SENT' | 'FAILED' | 'ALL';
+  status?: 'SENT' | 'OPENED' | 'FAILED' | 'ALL';
   campaignId?: string;
   sortBy?: 'createdAt' | 'recipientEmail' | 'subject';
   sortOrder?: 'asc' | 'desc';
@@ -158,4 +159,16 @@ export interface PaginatedFailedQueueResponse {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface EmailStats {
+  totalSent: number;
+  delivered: number;
+  opened: number;
+  pending: number;
+  failed: number;
+  successRate: number;
+  deliveryRate: number;
+  openRate: number;
+  provider: string;
 }

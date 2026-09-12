@@ -313,6 +313,7 @@ model EmailLog {
   messageId      String?
   errorReason    String?  @db.Text
   sentAt         DateTime?
+  openedAt       DateTime?
   createdAt      DateTime @default(now())
 
   @@index([userId])

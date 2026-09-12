@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { UserProfileData } from '@mailflow/shared';
 import { settingsService } from '../../services/settings.service';
-import { useToast } from '../../hooks/useToast';
-import { Button, Input, Select, Avatar } from '../ui';
+import { Button, Input, Select, Avatar, AlertBanner, AlertState } from '../ui';
 
 interface ProfileTabProps {
   profile: UserProfileData;
@@ -13,32 +12,35 @@ const TIMEZONES = [
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'America/New_York', label: 'Eastern Time (ET - US & Canada)' },
   { value: 'America/Chicago', label: 'Central Time (CT - US & Canada)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT - US & Canada)' },
   { value: 'America/Los_Angeles', label: 'Pacific Time (PT - US & Canada)' },
-  { value: 'Europe/London', label: 'London / GMT' },
-  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
-  { value: 'Asia/Kolkata', label: 'India Standard Time (IST - UTC+5:30)' },
-  { value: 'Asia/Singapore', label: 'Singapore Standard Time (SGT)' },
-  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
+  { value: 'Europe/London', label: 'London (GMT / BST)' },
+  { value: 'Europe/Paris', label: 'Paris / Berlin (CET / CEST)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST / AEDT)' },
 ];
 
 export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
-  const { toast } = useToast();
-
   const [name, setName] = useState(profile.name || '');
-  const [email, setEmail] = useState(profile.email || '');
+  const [email] = useState(profile.email || '');
   const [avatar, setAvatar] = useState(profile.avatar || '');
   const [companyName, setCompanyName] = useState(profile.companyName || '');
   const [jobTitle, setJobTitle] = useState(profile.jobTitle || '');
   const [timeZone, setTimeZone] = useState(profile.timeZone || 'UTC');
   const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error('Full Name is required.');
+      setAlert({ type: 'error', message: 'Full Name is required.' });
       return;
     }
 
     setSaving(true);
+    setAlert(null);
     try {
       const updated = await settingsService.updateProfile({
         name: name.trim(),
@@ -50,10 +52,13 @@ export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
       });
 
       onUpdated(updated);
-      toast.success('Workspace profile updated successfully!');
+      setAlert({ type: 'success', message: 'Workspace profile updated successfully!' });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err.response?.data?.error || err.message || 'Failed to update profile.');
+      setAlert({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to update profile.',
+      });
     } finally {
       setSaving(false);
     }
@@ -136,6 +141,8 @@ export function ProfileTab({ profile, onUpdated }: ProfileTabProps) {
             Save Profile
           </Button>
         </div>
+
+        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
       </div>
     </div>
   );

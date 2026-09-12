@@ -19,12 +19,17 @@ import settingsRouter from './modules/settings/settings.routes';
 import analyticsRouter from './modules/analytics/analytics.routes';
 import dashboardRouter from './modules/dashboard/dashboard.routes';
 import businessProfileRouter from './modules/business-profile/business-profile.routes';
+import trackingRouter from './modules/tracking/tracking.routes';
 import { DeliveryWorker } from './modules/delivery/delivery.worker';
 import { WhatsappWorker } from './modules/whatsapp/whatsapp.worker';
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -73,6 +78,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/business-profile', businessProfileRouter);
+app.use('/api/tracking', trackingRouter);
 
 let server: Server | null = null;
 let isBootstrapping = false;

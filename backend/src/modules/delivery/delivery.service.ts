@@ -3,6 +3,7 @@ import { personalizeText } from '../../utils/personalization';
 import { SmtpService } from '../smtp/smtp.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { WhatsappGeneratorService } from '../whatsapp/whatsapp-generator.service';
+import { TrackingService } from '../tracking/tracking.service';
 
 const prisma = new PrismaClient();
 
@@ -571,31 +572,45 @@ export class DeliveryService {
 
     const sentTime = new Date();
 
+    // Create initial emailLog record to get log.id for the tracking pixel
+    const log = await prisma.emailLog.create({
+      data: {
+        userId,
+        leadId: lead.id,
+        recipientEmail: lead.email,
+        subject: input.subject,
+        status: 'SENT',
+        provider: provider,
+        retryCount: 0,
+        sentAt: sentTime,
+      },
+    });
+
     try {
+      // Wrap any URLs/links with smart click tracking redirect
+      const rawHtml = input.body.replace(/\n/g, '<br />');
+      const htmlWithTrackedLinks = await TrackingService.wrapLinksInHtml(rawHtml, log.id);
+      const trackingPixel = await TrackingService.getTrackingPixelHtml(log.id);
+      const emailHtml = `${htmlWithTrackedLinks}<br/><br/>${trackingPixel}`;
+
       const info = await transporter.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
         to: lead.email,
         subject: input.subject,
-        html: input.body.replace(/\n/g, '<br />'),
+        html: emailHtml,
         text: input.body,
       });
 
       const messageId = info?.messageId || null;
 
-      // Log email delivery
-      await prisma.emailLog.create({
-        data: {
-          userId,
-          leadId: lead.id,
-          recipientEmail: lead.email,
-          subject: input.subject,
-          status: 'SENT',
-          provider: provider,
-          retryCount: 0,
-          messageId,
-          sentAt: sentTime,
-        },
-      });
+      if (messageId) {
+        await prisma.emailLog
+          .update({
+            where: { id: log.id },
+            data: { messageId },
+          })
+          .catch(() => {});
+      }
 
       // Update lead status to CONTACTED
       await prisma.lead
@@ -623,17 +638,12 @@ export class DeliveryService {
       const err = error as { message?: string };
       const errorMessage = err.message || 'Email delivery failed';
 
-      // Log failure in email logs
+      // Update log to FAILED
       await prisma.emailLog
-        .create({
+        .update({
+          where: { id: log.id },
           data: {
-            userId,
-            leadId: lead.id,
-            recipientEmail: lead.email,
-            subject: input.subject,
             status: 'FAILED',
-            provider: provider,
-            retryCount: 0,
             errorReason: errorMessage,
           },
         })
@@ -641,5 +651,56 @@ export class DeliveryService {
 
       throw new Error(`Failed to send email: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Get Email delivery statistics
+   */
+  static async getStats(userId: string) {
+    const [totalSent, openedCount, failedLogs, pendingQueue, failedQueue, smtpConfig] =
+      await Promise.all([
+        prisma.emailLog.count({
+          where: { userId, status: { in: ['SENT', 'OPENED'] } },
+        }),
+        prisma.emailLog.count({
+          where: { userId, status: 'OPENED' },
+        }),
+        prisma.emailLog.count({
+          where: { userId, status: 'FAILED' },
+        }),
+        prisma.emailQueue.count({
+          where: { userId, status: { in: [QueueJobStatus.PENDING, QueueJobStatus.PROCESSING] } },
+        }),
+        prisma.emailQueue.count({
+          where: { userId, status: QueueJobStatus.FAILED },
+        }),
+        prisma.smtpConfig.findUnique({
+          where: { userId },
+        }),
+      ]);
+
+    const totalFailed = failedLogs + failedQueue;
+    const deliveredCount = totalSent;
+    const totalAttempted = totalSent + totalFailed;
+    const successRate = totalAttempted > 0 ? Math.round((totalSent / totalAttempted) * 100) : 100;
+    const deliveryRate = totalSent > 0 ? 100 : 0;
+    const openRate = totalSent > 0 ? Math.round((openedCount / totalSent) * 100) : 0;
+
+    let provider = 'NOT_CONFIGURED';
+    if (smtpConfig) {
+      provider = smtpConfig.provider || 'CUSTOM';
+    }
+
+    return {
+      totalSent,
+      delivered: deliveredCount,
+      opened: openedCount,
+      pending: pendingQueue,
+      failed: totalFailed,
+      successRate,
+      deliveryRate,
+      openRate,
+      provider,
+    };
   }
 }

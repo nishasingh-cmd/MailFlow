@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SmtpProviderType, SmtpEncryption, SmtpConfig } from '@mailflow/shared';
 import { smtpService } from '../../services/smtp.service';
-import { useToast } from '../../hooks/useToast';
 import { Card, Button, Input, Select, Badge } from '../ui';
 
 const PROVIDER_OPTIONS = [
@@ -26,8 +25,6 @@ const PRESETS: Record<
 };
 
 export function SmtpSettingsForm() {
-  const { toast } = useToast();
-
   const [provider, setProvider] = useState<SmtpProviderType>('GMAIL');
   const [host, setHost] = useState(PRESETS.GMAIL.host);
   const [port, setPort] = useState(PRESETS.GMAIL.port);
@@ -63,6 +60,14 @@ export function SmtpSettingsForm() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!testResult) return;
+    const timer = setTimeout(() => {
+      setTestResult(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [testResult]);
+
   const handleProviderChange = (val: string) => {
     const p = val as SmtpProviderType;
     setProvider(p);
@@ -75,7 +80,10 @@ export function SmtpSettingsForm() {
 
   const handleTest = async () => {
     if (!host || !port || !username) {
-      toast.error('Please fill in Host, Port, and Username before testing.');
+      setTestResult({
+        success: false,
+        message: 'Please fill in Host, Port, and Username before testing.',
+      });
       return;
     }
     setTesting(true);
@@ -92,12 +100,10 @@ export function SmtpSettingsForm() {
         fromEmail,
       });
       setTestResult(res);
-      toast.success(res.message);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
       const msg = err.response?.data?.error || err.message || 'SMTP Connection test failed';
       setTestResult({ success: false, message: msg });
-      toast.error(msg);
     } finally {
       setTesting(false);
     }
@@ -106,11 +112,12 @@ export function SmtpSettingsForm() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!host || !port || !username || !fromName || !fromEmail) {
-      toast.error('Please fill in all required fields.');
+      setTestResult({ success: false, message: 'Please fill in all required fields.' });
       return;
     }
 
     setSaving(true);
+    setTestResult(null);
     try {
       const saved = await smtpService.saveConfig({
         provider,
@@ -124,11 +131,14 @@ export function SmtpSettingsForm() {
       });
       setExistingConfig(saved);
       setPassword('••••••••');
-      toast.success('SMTP Configuration saved and verified successfully!');
+      setTestResult({
+        success: true,
+        message: 'SMTP Configuration saved and verified successfully!',
+      });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
       const msg = err.response?.data?.error || err.message || 'Failed to save SMTP configuration';
-      toast.error(msg);
+      setTestResult({ success: false, message: msg });
     } finally {
       setSaving(false);
     }
@@ -269,19 +279,6 @@ export function SmtpSettingsForm() {
           />
         </div>
 
-        {testResult && (
-          <div
-            className={`rounded-lg border p-3.5 text-xs font-medium ${
-              testResult.success
-                ? 'border-green-500/30 bg-green-500/10 text-green-400'
-                : 'border-red-500/30 bg-red-500/10 text-red-400'
-            }`}
-          >
-            {testResult.success ? '✓ ' : '✕ '}
-            {testResult.message}
-          </div>
-        )}
-
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--surface-border)]">
           <Button
             type="button"
@@ -296,6 +293,31 @@ export function SmtpSettingsForm() {
             Save Configuration
           </Button>
         </div>
+
+        {testResult && (
+          <div
+            className={`w-full rounded-lg p-3.5 text-xs font-medium text-white flex items-center justify-between gap-3 animate-fade-in ${
+              testResult.success
+                ? 'bg-green-600 border border-green-500 shadow-sm'
+                : 'bg-red-600 border border-red-500 shadow-sm'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-bold text-sm leading-none">
+                {testResult.success ? '✓' : '✕'}
+              </span>
+              <span>{testResult.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTestResult(null)}
+              className="text-white/80 hover:text-white p-1 rounded transition-colors cursor-pointer shrink-0"
+              aria-label="Dismiss alert"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </form>
     </Card>
   );

@@ -49,3 +49,5 @@ export type { SkeletonProps, SkeletonVariant } from './Skeleton/Skeleton';
 export * from './Chart';
 
 export { ConfirmModal } from './ConfirmModal/ConfirmModal';
+export { AlertBanner } from './AlertBanner/AlertBanner';
+export type { AlertState } from './AlertBanner/AlertBanner';

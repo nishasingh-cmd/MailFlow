@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { AppPreferencesData } from '@mailflow/shared';
 import { settingsService } from '../../services/settings.service';
-import { useToast } from '../../hooks/useToast';
-import { Button, Select, Textarea } from '../ui';
+import { Button, Select, Textarea, AlertBanner, AlertState } from '../ui';
 
 interface AppPreferencesTabProps {
   preferences: AppPreferencesData;
@@ -29,8 +28,6 @@ const CAMPAIGN_TYPE_OPTIONS = [
 ];
 
 export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabProps) {
-  const { toast } = useToast();
-
   const [theme, setTheme] = useState(preferences.theme || 'dark');
   const [defaultAiTone, setDefaultAiTone] = useState(preferences.defaultAiTone || 'Professional');
   const [defaultCampaignType, setDefaultCampaignType] = useState(
@@ -39,9 +36,11 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
   const [emailSignature, setEmailSignature] = useState(preferences.emailSignature || '');
   const [autoSaveDrafts, setAutoSaveDrafts] = useState(preferences.autoSaveDrafts ?? true);
   const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
+    setAlert(null);
     try {
       await settingsService.updatePreferences({
         theme,
@@ -51,11 +50,14 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
         autoSaveDrafts,
       });
 
-      toast.success('Application preferences saved successfully!');
+      setAlert({ type: 'success', message: 'Application preferences saved successfully!' });
       onUpdated();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err.response?.data?.error || err.message || 'Failed to save preferences.');
+      setAlert({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to save preferences.',
+      });
     } finally {
       setSaving(false);
     }
@@ -127,6 +129,8 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
             Save Preferences
           </Button>
         </div>
+
+        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
       </div>
     </div>
   );

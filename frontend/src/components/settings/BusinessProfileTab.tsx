@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Textarea, Select, Card, Skeleton } from '../ui';
+import { Button, Input, Textarea, Select, Card, Skeleton, AlertBanner, AlertState } from '../ui';
 import {
   businessProfileService,
   UpdateBusinessProfileDto,
 } from '../../services/business-profile.service';
-import { useToast } from '../../hooks/useToast';
 
 const INDUSTRY_OPTIONS = [
   { value: 'SaaS & Software', label: 'SaaS & Software' },
@@ -28,10 +27,9 @@ const COMPANY_SIZE_OPTIONS = [
 ];
 
 export function BusinessProfileTab() {
-  const { toast } = useToast();
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
   const [formData, setFormData] = useState<UpdateBusinessProfileDto>({
     businessName: '',
     website: '',
@@ -60,7 +58,7 @@ export function BusinessProfileTab() {
           });
         }
       } catch {
-        toast.error('Failed to load business profile.');
+        setAlert({ type: 'error', message: 'Failed to load business profile.' });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -69,7 +67,7 @@ export function BusinessProfileTab() {
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, []);
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -101,14 +99,15 @@ export function BusinessProfileTab() {
 
   const handleSave = async () => {
     if (!validate()) {
-      toast.error('Please fix the validation errors before saving.');
+      setAlert({ type: 'error', message: 'Please fix the validation errors before saving.' });
       return;
     }
 
     setSaving(true);
+    setAlert(null);
     try {
       await businessProfileService.updateProfile(formData);
-      toast.success('Business profile updated successfully!');
+      setAlert({ type: 'success', message: 'Business profile updated successfully!' });
     } catch (err: unknown) {
       const e = err as {
         response?: { data?: { error?: string; details?: Record<string, string> } };
@@ -118,7 +117,7 @@ export function BusinessProfileTab() {
       if (e.response?.data?.details) {
         setErrors(e.response.data.details);
       }
-      toast.error(msg);
+      setAlert({ type: 'error', message: msg });
     } finally {
       setSaving(false);
     }
@@ -258,6 +257,8 @@ export function BusinessProfileTab() {
           {saving ? 'Saving…' : 'Save Changes'}
         </Button>
       </div>
+
+      <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
     </div>
   );
 }

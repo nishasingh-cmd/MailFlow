@@ -9,7 +9,6 @@ import { Button } from '../components/ui';
 export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -57,106 +56,6 @@ export function DashboardLayout() {
         </svg>
         Give Feedback
       </button>
-
-      {/* Floating Bottom-Right "Help Videos" Button */}
-      <button
-        onClick={() => setHelpOpen(true)}
-        className="fixed bottom-6 right-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--surface-card)] border border-[var(--surface-border)] shadow-lg hover:shadow-xl text-brand-600 dark:text-brand-400 font-semibold text-sm hover:scale-105 transition-all cursor-pointer"
-      >
-        <svg
-          className="w-4 h-4 text-brand-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        Help Videos
-      </button>
-
-      {/* Help Videos Modal */}
-      <Modal
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        title="MailFlow Video Tutorials & Setup Guides"
-        size="lg"
-      >
-        <div className="space-y-4 py-2">
-          <p className="text-sm text-[var(--content-secondary)]">
-            Explore step-by-step video tutorials to configure WhatsApp Business API, Meta Webhooks,
-            and AI variable personalization.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-            <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] space-y-2">
-              <div className="w-full h-24 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-500">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-[var(--content-primary)]">
-                Connecting Meta Cloud API
-              </p>
-              <p className="text-xs text-[var(--content-secondary)]">
-                How to obtain your Phone Number ID and Permanent Access Token.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] space-y-2">
-              <div className="w-full h-24 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-500">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-[var(--content-primary)]">
-                Configuring Meta Webhooks
-              </p>
-              <p className="text-xs text-[var(--content-secondary)]">
-                Step-by-step setup to receive DELIVERED and READ status in real time.
-              </p>
-            </div>
-          </div>
-          <div className="pt-3 flex justify-end">
-            <Button variant="secondary" onClick={() => setHelpOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Give Feedback Modal */}
       <Modal

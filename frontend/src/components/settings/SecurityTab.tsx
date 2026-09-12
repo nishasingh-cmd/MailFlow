@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { settingsService } from '../../services/settings.service';
-import { useToast } from '../../hooks/useToast';
-import { Button, Input } from '../ui';
+import { Button, Input, AlertBanner, AlertState } from '../ui';
 
 function getPasswordStrength(password: string): {
   label: string;
@@ -23,30 +22,33 @@ function getPasswordStrength(password: string): {
 }
 
 export function SecurityTab() {
-  const { toast } = useToast();
-
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState<AlertState | null>(null);
 
   const strength = getPasswordStrength(newPassword);
 
   const handlePasswordChange = async () => {
     if (!currentPassword) {
-      toast.error('Current password is required.');
+      setAlert({ type: 'error', message: 'Current password is required.' });
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      toast.error('New password must be at least 8 characters long.');
+      setAlert({ type: 'error', message: 'New password must be at least 8 characters long.' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('New password and confirmation password do not match.');
+      setAlert({
+        type: 'error',
+        message: 'New password and confirmation password do not match.',
+      });
       return;
     }
 
     setSaving(true);
+    setAlert(null);
     try {
       await settingsService.changePassword({
         currentPassword,
@@ -54,13 +56,16 @@ export function SecurityTab() {
         confirmPassword,
       });
 
-      toast.success('Security password changed successfully!');
+      setAlert({ type: 'success', message: 'Security password changed successfully!' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err.response?.data?.error || err.message || 'Failed to change password.');
+      setAlert({
+        type: 'error',
+        message: err.response?.data?.error || err.message || 'Failed to change password.',
+      });
     } finally {
       setSaving(false);
     }
@@ -134,6 +139,8 @@ export function SecurityTab() {
             Update Password
           </Button>
         </div>
+
+        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
       </div>
     </div>
   );

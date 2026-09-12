@@ -17,6 +17,7 @@ import CampaignDetail from '../pages/campaigns/CampaignDetail';
 import DeliveryLogsPage from '../pages/delivery/DeliveryLogsPage';
 import FailedQueuePage from '../pages/delivery/FailedQueuePage';
 import WhatsappPage from '../pages/whatsapp/WhatsappPage';
+import EmailOutreachPage from '../pages/email/EmailOutreachPage';
 import TemplatesPage from '../pages/templates/TemplatesPage';
 import Analytics from '../pages/analytics/Analytics';
 import Settings from '../pages/settings/Settings';
@@ -43,6 +44,7 @@ export function AppRoutes() {
           <Route path={ROUTES.CAMPAIGN_DETAIL} element={<CampaignDetail />} />
           <Route path={ROUTES.DELIVERY_LOGS} element={<DeliveryLogsPage />} />
           <Route path={ROUTES.FAILED_QUEUE} element={<FailedQueuePage />} />
+          <Route path={ROUTES.EMAIL_OUTREACH} element={<EmailOutreachPage />} />
           <Route path={ROUTES.WHATSAPP} element={<WhatsappPage />} />
           <Route path={ROUTES.TEMPLATES} element={<TemplatesPage />} />
           <Route path={ROUTES.ANALYTICS} element={<Analytics />} />

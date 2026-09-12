@@ -1,5 +1,6 @@
 import { PrismaClient, CampaignStatus, QueueJobStatus } from '@prisma/client';
 import { SmtpService } from '../smtp/smtp.service';
+import { TrackingService } from '../tracking/tracking.service';
 
 const prisma = new PrismaClient();
 
@@ -138,11 +139,34 @@ export class DeliveryWorker {
           });
 
           try {
+            // Create emailLog first to obtain log.id for the tracking pixel
+            const log = await prisma.emailLog.create({
+              data: {
+                userId: job.userId,
+                campaignId: job.campaignId,
+                leadId: job.leadId,
+                queueId: job.id,
+                recipientEmail: job.recipientEmail,
+                subject: job.subject,
+                status: 'SENT',
+                provider: provider,
+                retryCount: attempts - 1,
+                sentAt: new Date(),
+              },
+            });
+
+            const htmlWithTrackedLinks = await TrackingService.wrapLinksInHtml(
+              job.htmlBody,
+              log.id
+            );
+            const trackingPixel = await TrackingService.getTrackingPixelHtml(log.id);
+            const htmlWithPixel = `${htmlWithTrackedLinks}<br/><br/>${trackingPixel}`;
+
             const info = await transporter.sendMail({
               from: `"${fromName}" <${fromEmail}>`,
               to: job.recipientEmail,
               subject: job.subject,
-              html: job.htmlBody,
+              html: htmlWithPixel,
               text: job.htmlBody.replace(/<[^>]*>?/gm, ''),
             });
 
@@ -159,22 +183,14 @@ export class DeliveryWorker {
               },
             });
 
-            // Log delivery entry
-            await prisma.emailLog.create({
-              data: {
-                userId: job.userId,
-                campaignId: job.campaignId,
-                leadId: job.leadId,
-                queueId: job.id,
-                recipientEmail: job.recipientEmail,
-                subject: job.subject,
-                status: 'SENT',
-                provider: provider,
-                retryCount: attempts - 1,
-                messageId,
-                sentAt: sentTime,
-              },
-            });
+            if (messageId) {
+              await prisma.emailLog
+                .update({
+                  where: { id: log.id },
+                  data: { messageId, sentAt: sentTime },
+                })
+                .catch(() => {});
+            }
 
             // Update Lead status to CONTACTED
             await prisma.lead

@@ -5,6 +5,7 @@ import {
   PaginatedDeliveryLogsResponse,
   FailedQueueQuery,
   PaginatedFailedQueueResponse,
+  EmailStats,
 } from '@mailflow/shared';
 
 interface ApiEnvelope<T> {
@@ -39,6 +40,11 @@ export interface CampaignPreview {
 }
 
 export const deliveryService = {
+  async getStats(): Promise<EmailStats> {
+    const { data: envelope } = await api.get<ApiEnvelope<EmailStats>>('/delivery/stats');
+    return envelope.data;
+  },
+
   async getPreview(campaignId: string, leadId?: string): Promise<CampaignPreview> {
     const { data: envelope } = await api.get<ApiEnvelope<CampaignPreview>>(
       `/delivery/campaigns/${campaignId}/preview`,

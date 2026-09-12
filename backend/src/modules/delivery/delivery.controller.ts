@@ -216,4 +216,18 @@ export class DeliveryController {
       res.status(400).json({ error: err.message || 'Failed to send email' });
     }
   }
+
+  /**
+   * GET /api/delivery/stats — Get delivery statistics and active provider
+   */
+  static async getStats(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const stats = await DeliveryService.getStats(userId);
+      res.status(200).json({ success: true, data: stats });
+    } catch (error: unknown) {
+      console.error('[delivery.controller] getStats error:', error);
+      res.status(500).json({ error: 'Failed to fetch email delivery stats' });
+    }
+  }
 }
