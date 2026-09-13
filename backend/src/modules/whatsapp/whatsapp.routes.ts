@@ -30,5 +30,6 @@ router.delete('/failed', WhatsappController.deleteFailed);
 
 router.get('/stats', WhatsappController.getStats);
 router.get('/templates', WhatsappController.getTemplates);
+router.post('/templates', WhatsappController.createTemplate);
 
 export default router;

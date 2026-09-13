@@ -315,4 +315,176 @@ export class WhatsappController {
       res.status(500).json({ error: 'Failed to fetch WhatsApp templates from Meta' });
     }
   }
+
+  /**
+   * POST /api/whatsapp/templates — Create or submit a new template to Meta WABA API.
+   */
+  static async createTemplate(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const {
+        name,
+        language = 'en_US',
+        category = 'MARKETING',
+        headerType = 'NONE',
+        headerText,
+        bodyText,
+        sampleValues = [],
+        footerText,
+        buttons = [],
+      } = req.body;
+
+      if (!name || !bodyText) {
+        res
+          .status(400)
+          .json({ success: false, error: 'Template name and body text are required.' });
+        return;
+      }
+
+      const sanitizedName = name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9_]/g, '_');
+      const config = await prisma.whatsappConfig.findUnique({ where: { userId } });
+
+      // Build Meta components payload
+      const components: Array<Record<string, unknown>> = [];
+
+      if (headerType === 'TEXT' && headerText?.trim()) {
+        components.push({
+          type: 'HEADER',
+          format: 'TEXT',
+          text: headerText.trim(),
+        });
+      }
+
+      const bodyComponent: Record<string, unknown> = {
+        type: 'BODY',
+        text: bodyText.trim(),
+      };
+      if (Array.isArray(sampleValues) && sampleValues.length > 0 && sampleValues.some(Boolean)) {
+        bodyComponent.example = {
+          body_text: [sampleValues],
+        };
+      }
+      components.push(bodyComponent);
+
+      if (footerText?.trim()) {
+        components.push({
+          type: 'FOOTER',
+          text: footerText.trim(),
+        });
+      }
+
+      if (Array.isArray(buttons) && buttons.length > 0) {
+        const formattedButtons = buttons.map(
+          (btn: { type?: string; text?: string; url?: string }) => {
+            if (btn.type === 'QUICK_REPLY') {
+              return {
+                type: 'QUICK_REPLY',
+                text: btn.text || 'Reply',
+              };
+            } else if (btn.type === 'URL') {
+              return {
+                type: 'URL',
+                text: btn.text || 'Visit Website',
+                url: btn.url || 'https://example.com',
+              };
+            } else if (btn.type === 'PHONE_NUMBER') {
+              return {
+                type: 'PHONE_NUMBER',
+                text: btn.text || 'Call Phone',
+                phone_number: btn.phoneNumber || '+1234567890',
+              };
+            }
+            return btn;
+          }
+        );
+
+        components.push({
+          type: 'BUTTONS',
+          buttons: formattedButtons,
+        });
+      }
+
+      // If live credentials exist, dispatch to Meta Cloud API
+      if (config?.accessToken && config?.businessAccountId) {
+        let token = '';
+        try {
+          token = decrypt(config.accessToken);
+        } catch {
+          token = config.accessToken;
+        }
+
+        const graphVersion = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
+        const wabaId = config.businessAccountId;
+        const url = `https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates`;
+
+        const metaPayload = {
+          name: sanitizedName,
+          category,
+          language,
+          components,
+        };
+
+        console.log(
+          '[WhatsappController.createTemplate] Dispatching to Meta:',
+          JSON.stringify(metaPayload)
+        );
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(metaPayload),
+        });
+
+        const data = (await response.json()) as {
+          id?: string;
+          status?: string;
+          error?: { message?: string; code?: number };
+        };
+
+        console.log('[WhatsappController.createTemplate] Meta API Response:', JSON.stringify(data));
+
+        if (!response.ok || data.error) {
+          const errMsg = data.error?.message || `Meta API Error (${response.status})`;
+          res.status(400).json({ success: false, error: errMsg });
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          data: {
+            id: data.id,
+            name: sanitizedName,
+            status: data.status || 'PENDING',
+            category,
+            language,
+          },
+          message: 'Template submitted successfully to Meta for approval.',
+        });
+        return;
+      }
+
+      // If no live Meta connection, return success in local/demo mode
+      res.status(200).json({
+        success: true,
+        data: {
+          id: `tmpl_${Date.now()}`,
+          name: sanitizedName,
+          status: 'PENDING',
+          category,
+          language,
+          isMock: true,
+        },
+        message: 'Template created and queued for review.',
+      });
+    } catch (error: unknown) {
+      console.error('[whatsapp.controller] createTemplate error:', error);
+      res.status(500).json({ success: false, error: 'Failed to create WhatsApp template' });
+    }
+  }
 }

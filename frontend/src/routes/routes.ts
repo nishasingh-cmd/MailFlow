@@ -10,11 +10,13 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   LEADS: '/leads',
   CAMPAIGNS: '/campaigns',
+  CAMPAIGNS_CREATE: '/campaigns/addcampaign',
   CAMPAIGN_DETAIL: '/campaigns/:id',
   FAILED_QUEUE: '/failed-queue',
   WHATSAPP: '/whatsapp',
   EMAIL_OUTREACH: '/email-outreach',
   TEMPLATES: '/templates',
+  TEMPLATES_CREATE: '/templates/addtemplate',
   SETTINGS: '/settings',
   ONBOARDING: '/onboarding/business',
 } as const;

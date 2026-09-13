@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { useToast } from '../../hooks/useToast';
-import { Button, Input, Badge, Skeleton, Modal } from '../../components/ui';
+import { Button, Badge, Skeleton, Modal } from '../../components/ui';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/routes';
 
@@ -79,21 +79,8 @@ export default function TemplatesPage() {
   const [syncing, setSyncing] = useState(false);
 
   // Modals
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [browseModalOpen, setBrowseModalOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WhatsappMetaTemplate | null>(null);
-
-  // Form State for Create Template
-  const [formName, setFormName] = useState('');
-  const [formCategory, setFormCategory] = useState<'MARKETING' | 'UTILITY' | 'AUTHENTICATION'>(
-    'MARKETING'
-  );
-  const [formLang, setFormLang] = useState('en_US');
-  const [formHeader, setFormHeader] = useState('');
-  const [formBody, setFormBody] = useState('');
-  const [formFooter, setFormFooter] = useState('');
-  const [formButton, setFormButton] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchTemplates = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -141,58 +128,8 @@ export default function TemplatesPage() {
   };
 
   const handleApplyPreset = (preset: SampleTemplate) => {
-    setFormName(preset.name);
-    setFormCategory(preset.category);
-    setFormLang(preset.language);
-    setFormHeader(preset.header || '');
-    setFormBody(preset.body);
-    setFormFooter(preset.footer || '');
-    setFormButton(preset.buttonText || '');
     setBrowseModalOpen(false);
-    setCreateModalOpen(true);
-    toast.info(`Loaded preset "${preset.name}". You can now customize and submit.`);
-  };
-
-  const insertVariable = () => {
-    const nextVarNumber = (formBody.match(/\{\{\d+\}\}/g) || []).length + 1;
-    setFormBody((prev) => `${prev} {{${nextVarNumber}}}`);
-  };
-
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim() || !formBody.trim()) {
-      toast.error('Template Name and Message Body are required.');
-      return;
-    }
-
-    const sanitizedName = formName
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_]/g, '_');
-
-    setSubmitting(true);
-    setTimeout(() => {
-      // Add to local state as PENDING
-      const newTemplate: WhatsappMetaTemplate = {
-        name: sanitizedName,
-        language: formLang,
-        status: 'PENDING',
-        bodyText: formBody,
-      };
-
-      setTemplates((prev) => [newTemplate, ...prev]);
-      setSubmitting(false);
-      setCreateModalOpen(false);
-      // Reset form
-      setFormName('');
-      setFormHeader('');
-      setFormBody('');
-      setFormFooter('');
-      setFormButton('');
-      toast.success(
-        `Template "${sanitizedName}" submitted to Meta for approval! (Usually approved in 1-2 minutes)`
-      );
-    }, 900);
+    navigate(ROUTES.TEMPLATES_CREATE, { state: { preset } });
   };
 
   // Filtered Templates
@@ -226,7 +163,7 @@ export default function TemplatesPage() {
             Browse Templates
           </button>
           <button
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => navigate(ROUTES.TEMPLATES_CREATE)}
             className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5"
           >
             <span className="text-base leading-none font-bold">+</span>
@@ -339,8 +276,8 @@ export default function TemplatesPage() {
           </div>
 
           <button
-            onClick={() => setCreateModalOpen(true)}
-            className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+            onClick={() => navigate(ROUTES.TEMPLATES_CREATE)}
+            className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 cursor-pointer"
           >
             <span className="font-bold text-base leading-none">+</span>
             <span>Create New Template</span>
@@ -402,7 +339,7 @@ export default function TemplatesPage() {
                 <div className="pt-2 border-t border-[var(--surface-border)] flex items-center justify-between text-xs">
                   <button
                     onClick={() => setPreviewTemplate(t)}
-                    className="font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                    className="font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>Preview Bubble</span>
                   </button>
@@ -412,7 +349,7 @@ export default function TemplatesPage() {
                       navigator.clipboard.writeText(t.name);
                       toast.success(`Copied "${t.name}" to clipboard`);
                     }}
-                    className="text-[var(--content-tertiary)] hover:text-[var(--content-primary)] font-medium transition-colors"
+                    className="text-[var(--content-tertiary)] hover:text-[var(--content-primary)] font-medium transition-colors cursor-pointer"
                   >
                     Copy Name
                   </button>
@@ -422,134 +359,6 @@ export default function TemplatesPage() {
           })}
         </div>
       )}
-
-      {/* Create New Template Modal */}
-      <Modal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Create New WhatsApp Template"
-        size="lg"
-      >
-        <form onSubmit={handleCreateSubmit} className="space-y-4 py-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Template Name"
-              placeholder="e.g. lead_outreach_q4"
-              value={formName}
-              onChange={(e) =>
-                setFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))
-              }
-              hint="Only lowercase alphanumeric characters and underscores allowed."
-              required
-            />
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--content-secondary)] mb-1.5">
-                Category
-              </label>
-              <select
-                value={formCategory}
-                onChange={(e) =>
-                  setFormCategory(e.target.value as 'MARKETING' | 'UTILITY' | 'AUTHENTICATION')
-                }
-                className="w-full h-10 px-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="MARKETING">MARKETING (Promotions, Lead Gen, Deals)</option>
-                <option value="UTILITY">UTILITY (Reminders, Confirmations, Updates)</option>
-                <option value="AUTHENTICATION">AUTHENTICATION (OTPs, Verification)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Header (Optional)"
-              placeholder="e.g. Partnership Opportunity"
-              value={formHeader}
-              onChange={(e) => setFormHeader(e.target.value)}
-            />
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--content-secondary)] mb-1.5">
-                Language
-              </label>
-              <select
-                value={formLang}
-                onChange={(e) => setFormLang(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="en_US">English (US) - en_US</option>
-                <option value="en_GB">English (UK) - en_GB</option>
-                <option value="hi">Hindi - hi</option>
-                <option value="es">Spanish - es</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-[var(--content-secondary)]">
-                Body Text <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={insertVariable}
-                className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-              >
-                + Add Variable &#123;&#123;1&#125;&#125;
-              </button>
-            </div>
-            <textarea
-              value={formBody}
-              onChange={(e) => setFormBody(e.target.value)}
-              placeholder="Hi {{1}}, we noticed {{2}} is expanding outreach this quarter..."
-              className="w-full h-28 p-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] text-sm text-[var(--content-primary)] focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
-              required
-            />
-            <p className="text-xs text-[var(--content-tertiary)] mt-1 font-sans">
-              Use variables like &#123;&#123;1&#125;&#125;, &#123;&#123;2&#125;&#125; which MailFlow
-              AI will personalize dynamically for each lead.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Footer Text (Optional)"
-              placeholder="e.g. Reply STOP to opt out"
-              value={formFooter}
-              onChange={(e) => setFormFooter(e.target.value)}
-            />
-            <Input
-              label="Button Text (Optional)"
-              placeholder="e.g. Schedule Demo"
-              value={formButton}
-              onChange={(e) => setFormButton(e.target.value)}
-            />
-          </div>
-
-          {/* Live Preview Bubble - WhatsApp UI */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-white font-sans">
-              Live WhatsApp Preview
-            </p>
-            <WhatsappChatPreview
-              header={formHeader}
-              body={formBody}
-              footer={formFooter}
-              buttonText={formButton}
-            />
-          </div>
-
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--surface-border)]">
-            <Button variant="secondary" onClick={() => setCreateModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" loading={submitting}>
-              Submit to Meta for Approval
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Browse Preset Templates Modal */}
       <Modal

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { cn } from '../../../utils/cn';
 import { useKeyPress } from '../../../hooks/useKeyPress';
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
 
 export interface ModalProps {
   open: boolean;
@@ -22,6 +22,10 @@ const sizeClasses: Record<ModalSize, string> = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-2xl',
+  '2xl': 'max-w-3xl',
+  '3xl': 'max-w-4xl',
+  '4xl': 'max-w-5xl',
+  '5xl': 'max-w-6xl',
   full: 'max-w-[95vw] max-h-[95vh]',
 };
 

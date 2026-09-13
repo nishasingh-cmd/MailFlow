@@ -24,6 +24,22 @@ export interface WhatsappMetaTemplate {
   bodyText: string | null;
 }
 
+export interface CreateTemplateInput {
+  name: string;
+  language: string;
+  category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  headerType?: 'NONE' | 'TEXT' | 'MEDIA';
+  headerText?: string;
+  bodyText: string;
+  sampleValues?: string[];
+  footerText?: string;
+  buttons?: Array<
+    | { type: 'QUICK_REPLY'; text: string }
+    | { type: 'URL'; text: string; url: string; urlType?: 'Static' | 'Dynamic' }
+    | { type: 'PHONE_NUMBER'; text: string; phoneNumber: string }
+  >;
+}
+
 export const whatsappService = {
   async generateMessage(
     leadId: string,
@@ -143,6 +159,22 @@ export const whatsappService = {
       await api.get<ApiEnvelope<{ wabaId?: string; templates: WhatsappMetaTemplate[] }>>(
         '/whatsapp/templates'
       );
+    return envelope.data;
+  },
+
+  async createTemplate(
+    payload: CreateTemplateInput
+  ): Promise<{ id?: string; name: string; status: string; isMock?: boolean }> {
+    const { data: envelope } = await api.post<
+      ApiEnvelope<{ id?: string; name: string; status: string; isMock?: boolean }>
+    >('/whatsapp/templates', payload);
+    if (!envelope.success) {
+      throw new Error(
+        (envelope as unknown as { error?: string }).error ||
+          envelope.message ||
+          'Failed to create template'
+      );
+    }
     return envelope.data;
   },
 
