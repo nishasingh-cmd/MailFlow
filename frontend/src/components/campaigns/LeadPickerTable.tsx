@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Lead, PaginatedLeadsResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { Input, Skeleton } from '../ui';
@@ -7,15 +7,21 @@ import { cn } from '../../utils/cn';
 interface LeadPickerTableProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  onLeadsLoaded?: (leads: Lead[]) => void;
 }
 
-export function LeadPickerTable({ selectedIds, onChange }: LeadPickerTableProps) {
+export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPickerTableProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const onLeadsLoadedRef = useRef(onLeadsLoaded);
+  useEffect(() => {
+    onLeadsLoadedRef.current = onLeadsLoaded;
+  }, [onLeadsLoaded]);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -28,6 +34,7 @@ export function LeadPickerTable({ selectedIds, onChange }: LeadPickerTableProps)
       setLeads(result.leads);
       setTotal(result.total);
       setTotalPages(result.totalPages);
+      onLeadsLoadedRef.current?.(result.leads);
     } catch {
       // ignore
     } finally {
@@ -171,7 +178,7 @@ export function LeadPickerTable({ selectedIds, onChange }: LeadPickerTableProps)
                       <td className="px-3 py-2.5 text-[var(--content-secondary)] hidden sm:table-cell">
                         {lead.email}
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--content-secondary)] hidden md:table-cell">
+                      <td className="px-3 py-2.5 text-[var(--content-secondary)] hidden md:table-cell whitespace-nowrap">
                         {lead.company ?? '—'}
                       </td>
                     </tr>

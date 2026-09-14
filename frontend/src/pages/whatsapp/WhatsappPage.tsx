@@ -23,6 +23,44 @@ const STATUS_OPTIONS = [
   { value: 'FAILED', label: 'Failed' },
 ];
 
+function MessageSnippetCell({
+  message,
+  errorReason,
+}: {
+  message: string;
+  errorReason?: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 45;
+  const isLong = Boolean(message && message.length > LIMIT);
+  const snippet = isLong && !expanded ? `${message.slice(0, LIMIT)}...` : message;
+
+  return (
+    <div className="max-w-xs sm:max-w-sm text-xs space-y-1">
+      <div className="leading-relaxed text-[var(--content-secondary)]">
+        <span>{snippet}</span>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="ml-1.5 font-bold text-brand-600 dark:text-brand-400 hover:underline inline-block cursor-pointer focus:outline-none"
+          >
+            {expanded ? 'Read less' : 'Read more'}
+          </button>
+        )}
+      </div>
+      {errorReason && (
+        <p
+          className="text-2xs text-red-500 dark:text-red-400 font-sans break-words bg-red-500/10 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-500/20"
+          title={errorReason}
+        >
+          {errorReason}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function WhatsappPage() {
   const { toast } = useToast();
 
@@ -527,19 +565,11 @@ export default function WhatsappPage() {
                           >
                             {log.messageId || '—'}
                           </td>
-                          <td
-                            className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-sm"
-                            title={log.message}
-                          >
-                            <span className="break-words leading-relaxed">{log.message}</span>
-                            {log.errorReason && (
-                              <p
-                                className="text-2xs text-red-400 font-sans mt-0.5"
-                                title={log.errorReason}
-                              >
-                                {log.errorReason}
-                              </p>
-                            )}
+                          <td className="px-4 py-3">
+                            <MessageSnippetCell
+                              message={log.message}
+                              errorReason={log.errorReason}
+                            />
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant={statusVariant} size="sm">

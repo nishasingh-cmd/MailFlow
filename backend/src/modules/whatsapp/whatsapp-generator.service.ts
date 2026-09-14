@@ -154,16 +154,28 @@ ${ctaText}`;
     templateName?: string,
     templateBodyText?: string
   ) {
-    const lead = await prisma.lead.findFirst({
-      where: { id: leadId, userId },
-      include: {
-        companyRef: {
-          include: { research: true },
-        },
-      },
-    });
+    let lead =
+      leadId && leadId !== 'sample'
+        ? await prisma.lead.findFirst({
+            where: { id: leadId, userId },
+            include: {
+              companyRef: {
+                include: { research: true },
+              },
+            },
+          })
+        : null;
 
-    if (!lead) throw new Error('LEAD_NOT_FOUND');
+    if (!lead) {
+      lead = await prisma.lead.findFirst({
+        where: { userId },
+        include: {
+          companyRef: {
+            include: { research: true },
+          },
+        },
+      });
+    }
 
     const activeTemplateName =
       templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';
@@ -248,10 +260,12 @@ ${ctaText}`;
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
-    const companyName = lead.company || lead.companyRef?.name || 'your company';
-    const specialtyOrIndustry = lead.industry || lead.companyRef?.industry || 'your field';
-    const phone = lead.phone || '—';
+    const leadName = lead?.name || 'Alex Rivera';
+    const firstName = leadName.split(' ')[0] || 'there';
+    const companyName = lead?.company || lead?.companyRef?.name || 'InnovaTech Solutions';
+    const specialtyOrIndustry = lead?.industry || lead?.companyRef?.industry || 'Healthcare Tech';
+    const phone = lead?.phone || '—';
+    const finalLeadId = lead?.id || 'sample';
 
     // Default variable values — AI will improve these if Gemini is configured
     let variables: Record<string, string> = {
@@ -262,14 +276,14 @@ ${ctaText}`;
 
     if (env.GEMINI_API_KEY) {
       let painPointsStr = '';
-      if (Array.isArray(lead.companyRef?.research?.painPoints)) {
-        painPointsStr = (lead.companyRef?.research?.painPoints as string[]).join(', ');
+      if (Array.isArray(lead?.companyRef?.research?.painPoints)) {
+        painPointsStr = (lead?.companyRef?.research?.painPoints as string[]).join(', ');
       }
 
       const prompt = `You are a B2B sales personalization AI. Your task is to extract exact, concise values for WhatsApp template variables.
 
 PROSPECT DATA:
-- Full Name: ${lead.name}
+- Full Name: ${leadName}
 - First Name: ${firstName}
 - Company/Clinic Name: ${companyName}
 - Industry/Specialty: ${specialtyOrIndustry}
@@ -330,9 +344,10 @@ INSTRUCTIONS:
     });
 
     return {
-      leadId: lead.id,
-      leadName: lead.name,
+      leadId: finalLeadId,
+      leadName,
       companyName,
+      industry: specialtyOrIndustry,
       phone,
       templateName: activeTemplateName,
       templateLang: resolvedLang,

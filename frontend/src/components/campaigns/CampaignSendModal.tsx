@@ -106,30 +106,13 @@ export function CampaignSendModal({
           </div>
         ) : preview ? (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
-              <div>
-                <span className="text-[var(--content-tertiary)]">Sample lead preview: </span>
-                <span className="font-semibold text-[var(--content-primary)]">
-                  {preview.lead.name}
-                </span>{' '}
-                ({isWhatsappOnly ? preview.lead.phone || 'No phone set' : preview.lead.email})
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant={isWhatsappOnly ? 'success' : isMultiChannel ? 'warning' : 'brand'}
-                  size="sm"
-                >
-                  {isWhatsappOnly
-                    ? 'WhatsApp Only'
-                    : isMultiChannel
-                      ? 'Email + WhatsApp'
-                      : 'Email Only'}
-                </Badge>
-                <span className="text-[var(--content-tertiary)]">
-                  Total Leads:{' '}
-                  <strong className="text-[var(--content-primary)]">{preview.totalLeads}</strong>
-                </span>
-              </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
+              <span>
+                Total Leads:{' '}
+                <strong className="text-[var(--content-primary)] font-bold">
+                  {preview.totalLeads}
+                </strong>
+              </span>
             </div>
 
             {isWhatsappOnly ? (
@@ -209,25 +192,6 @@ export function CampaignSendModal({
               </div>
             ) : (
               <div className="space-y-3">
-                {/* EMAIL ARCHITECTURE REVIEW CARD */}
-                <div className="p-4 rounded-xl border border-brand-500/30 bg-brand-500/8 text-brand-200 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-300 text-sm">Email Campaign Review</span>
-                    <Badge variant="brand" size="sm">
-                      Full AI Generation
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-[var(--content-secondary)]">
-                    AI generated the complete personalized email for each lead:
-                  </p>
-                  <div className="flex flex-wrap gap-3 text-2xs text-green-400 font-medium">
-                    <span>✓ Subject Line</span>
-                    <span>✓ Greeting & Opening</span>
-                    <span>✓ Body Copy</span>
-                    <span>✓ Call to Action (CTA)</span>
-                  </div>
-                </div>
-
                 <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden bg-[var(--surface-card)]">
                   <div className="p-4 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
                     <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)]">

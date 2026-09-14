@@ -13,6 +13,64 @@ interface CompanyResearchDrawerProps {
   onGenerateEmail?: (leadId: string, companyName?: string) => void;
 }
 
+function simplifyToPlainEnglish(text: string): string {
+  if (!text) return '';
+  let s = text;
+
+  // Exact boilerplate replacements from earlier generations
+  s = s.replace(
+    /delivers domain-focused business capabilities designed to streamline operational workflows and increase business performance\. Their portfolio combines modern technology offerings with dedicated customer support\./gi,
+    'helps businesses run smoothly. They give friendly customer help and easy-to-use tools so teams can get their work done quickly without stress.'
+  );
+  s = s.replace(
+    /Scaling customer acquisition and outbound pipeline generation efficiently/gi,
+    'Finding new customers and getting more sales easily'
+  );
+  s = s.replace(
+    /Integrating disconnected operational tools into unified workflows/gi,
+    'Using too many different apps that do not talk to each other'
+  );
+  s = s.replace(
+    /Optimizing internal team bandwidth and resource management/gi,
+    'Team members have too much work to do and not enough time'
+  );
+  s = s.replace(
+    /Propose automated cold outreach and lead enrichment solutions/gi,
+    'Help them send friendly emails to find new clients automatically'
+  );
+  s = s.replace(
+    /Offer workflow integration and process optimization consulting/gi,
+    'Help them connect all their tools so they save hours of work every week'
+  );
+  s = s.replace(
+    /is an established company providing specialized business solutions and products to commercial clients\./gi,
+    'is a company that helps other businesses do their daily work faster and better.'
+  );
+
+  // Common corporate buzzwords
+  s = s.replace(/\bdomain-focused business capabilities\b/gi, 'helpful tools and services');
+  s = s.replace(/\bstreamline operational workflows\b/gi, 'make daily work easier and faster');
+  s = s.replace(/\bstreamlining operational workflows\b/gi, 'making daily work easier and faster');
+  s = s.replace(/\bincrease business performance\b/gi, 'help businesses grow');
+  s = s.replace(/\bscalable customer acquisition\b/gi, 'finding new customers');
+  s = s.replace(/\boutbound pipeline generation\b/gi, 'getting more sales meetings');
+  s = s.replace(/\bdisconnected operational tools\b/gi, 'different apps that do not work together');
+  s = s.replace(/\bunified workflows\b/gi, 'working smoothly together');
+  s = s.replace(
+    /\bteam bandwidth and resource management\b/gi,
+    'having enough time and team members'
+  );
+  s = s.replace(/\bdedicated customer support\b/gi, 'friendly customer support');
+  s = s.replace(/\bleverage\b/gi, 'use');
+  s = s.replace(/\bleveraging\b/gi, 'using');
+  s = s.replace(/\butilize\b/gi, 'use');
+  s = s.replace(/\butilizing\b/gi, 'using');
+  s = s.replace(/\bfrictionless\b/gi, 'simple and easy');
+  s = s.replace(/\bdisparate tools\b/gi, 'different apps');
+
+  return s;
+}
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h4 className="text-xs font-bold text-black uppercase tracking-widest mb-2">{children}</h4>
@@ -246,7 +304,9 @@ export function CompanyResearchDrawer({
             className="p-4 space-y-2 border border-[var(--surface-border)] bg-[var(--surface-card)]"
           >
             <SectionHeading>AI Company Summary</SectionHeading>
-            <p className="text-sm text-black font-medium leading-relaxed">{research.summary}</p>
+            <p className="text-sm text-black font-medium leading-relaxed">
+              {simplifyToPlainEnglish(research.summary)}
+            </p>
             {research.lastResearched && (
               <p className="text-xs text-black/70">
                 Last updated:{' '}
@@ -267,7 +327,7 @@ export function CompanyResearchDrawer({
               {(research?.painPoints as string[]).map((point, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <PainPointIcon />
-                  <span className="text-black leading-snug">{point}</span>
+                  <span className="text-black leading-snug">{simplifyToPlainEnglish(point)}</span>
                 </li>
               ))}
             </ul>
@@ -281,7 +341,7 @@ export function CompanyResearchDrawer({
               {(research?.opportunities as string[]).map((opp, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <OpportunityIcon />
-                  <span className="text-black leading-snug">{opp}</span>
+                  <span className="text-black leading-snug">{simplifyToPlainEnglish(opp)}</span>
                 </li>
               ))}
             </ul>
@@ -293,8 +353,16 @@ export function CompanyResearchDrawer({
             <SectionHeading>Company Details</SectionHeading>
             <InfoRow label="Headquarters" value={company.headquarters} />
             <InfoRow label="Company Size" value={company.companySize} />
-            <InfoRow label="Target Customers" value={company.targetCustomers} />
-            <InfoRow label="Description" value={company.description} />
+            <InfoRow
+              label="Target Customers"
+              value={
+                company.targetCustomers ? simplifyToPlainEnglish(company.targetCustomers) : null
+              }
+            />
+            <InfoRow
+              label="Description"
+              value={company.description ? simplifyToPlainEnglish(company.description) : null}
+            />
           </Card>
         )}
 
@@ -305,13 +373,13 @@ export function CompanyResearchDrawer({
               {company.products?.length > 0 && (
                 <div className="space-y-2">
                   <SectionHeading>Products</SectionHeading>
-                  <PointerList items={company.products} />
+                  <PointerList items={company.products.map(simplifyToPlainEnglish)} />
                 </div>
               )}
               {company.services?.length > 0 && (
                 <div className="space-y-2">
                   <SectionHeading>Services</SectionHeading>
-                  <PointerList items={company.services} />
+                  <PointerList items={company.services.map(simplifyToPlainEnglish)} />
                 </div>
               )}
             </Card>

@@ -22,6 +22,15 @@ export interface WhatsappMetaTemplate {
   language: string;
   status: string;
   bodyText: string | null;
+  headerText?: string | null;
+  footerText?: string | null;
+  buttons?: Array<{
+    type?: string;
+    text?: string;
+    url?: string;
+    phone_number?: string;
+    phoneNumber?: string;
+  }>;
 }
 
 export interface CreateTemplateInput {
@@ -54,12 +63,14 @@ export const whatsappService = {
   },
 
   async previewTemplate(
-    leadId: string,
-    templateName?: string
+    leadId?: string,
+    templateName?: string,
+    templateBodyText?: string
   ): Promise<{
     leadId: string;
     leadName: string;
     companyName: string;
+    industry?: string;
     phone: string;
     templateName: string;
     templateLang: string;
@@ -72,6 +83,7 @@ export const whatsappService = {
         leadId: string;
         leadName: string;
         companyName: string;
+        industry?: string;
         phone: string;
         templateName: string;
         templateLang: string;
@@ -79,7 +91,7 @@ export const whatsappService = {
         templateParams: string[];
         previewText: string;
       }>
-    >('/whatsapp/preview-template', { leadId, templateName });
+    >('/whatsapp/preview-template', { leadId, templateName, templateBodyText });
     return envelope.data;
   },
 

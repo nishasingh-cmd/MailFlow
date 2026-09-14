@@ -341,7 +341,7 @@ export default function Leads() {
       render: (lead) => (
         <button
           onClick={() => handleOpenDetail(lead)}
-          className="font-semibold text-[var(--content-primary)] hover:text-brand-400 text-left"
+          className="font-semibold text-[var(--content-primary)] hover:text-brand-400 text-left whitespace-nowrap"
         >
           {lead.name}
         </button>
@@ -351,14 +351,17 @@ export default function Leads() {
       key: 'email',
       header: 'Email',
       render: (lead) => (
-        <span className="text-xs font-mono text-[var(--content-secondary)]">{lead.email}</span>
+        <span className="text-xs font-mono text-[var(--content-secondary)] whitespace-nowrap">
+          {lead.email}
+        </span>
       ),
     },
     {
       key: 'company',
       header: 'Company',
+      width: '160px',
       render: (lead) => (
-        <span className="text-xs">
+        <span className="text-xs whitespace-nowrap">
           {lead.company || <span className="text-[var(--content-tertiary)] italic">—</span>}
         </span>
       ),
@@ -367,7 +370,7 @@ export default function Leads() {
       key: 'phone',
       header: 'Phone',
       render: (lead) => (
-        <span className="text-xs font-mono">
+        <span className="text-xs font-mono whitespace-nowrap">
           {lead.phone || <span className="text-[var(--content-tertiary)] italic">—</span>}
         </span>
       ),
@@ -376,13 +379,13 @@ export default function Leads() {
       key: 'website',
       header: 'Website',
       render: (lead) => (
-        <span className="text-xs">
+        <span className="text-xs whitespace-nowrap">
           {lead.website ? (
             <a
               href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
               target="_blank"
               rel="noreferrer"
-              className="text-brand-400 hover:underline truncate max-w-[120px] block"
+              className="text-brand-400 hover:underline truncate max-w-[120px] inline-block"
             >
               {lead.website}
             </a>
@@ -395,6 +398,7 @@ export default function Leads() {
     {
       key: 'status',
       header: 'Status',
+      width: '140px',
       render: (lead) => getStatusBadge(lead.status),
     },
     {
@@ -402,7 +406,7 @@ export default function Leads() {
       header: 'Actions',
       align: 'right',
       render: (lead) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
           <div className="flex items-center gap-3 mr-1">
             <button
               type="button"

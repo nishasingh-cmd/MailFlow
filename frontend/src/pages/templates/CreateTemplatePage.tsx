@@ -37,6 +37,11 @@ export default function CreateTemplatePage() {
     name?: string;
     language?: string;
     category?: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+    header?: string;
+    footer?: string;
+    body?: string;
+    sampleValues?: Record<string, string>;
+    buttons?: TemplateButton[];
   }
   const passedPreset = (location.state as { preset?: PresetState })?.preset;
 

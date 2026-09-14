@@ -6,7 +6,7 @@
  * caching, status tracking, and step-by-step logging.
  */
 import { prisma } from '../../config/db';
-import { researchCompanyWithAI } from '../../services/gemini.service';
+import { researchCompanyWithAI, simplifyJargon } from '../../services/gemini.service';
 import { ResearchProgressResponse } from '@mailflow/shared';
 
 function serializeDates<T extends Record<string, unknown>>(obj: T): T {
@@ -291,11 +291,45 @@ export class ResearchService {
 
     if (!company) return null;
 
+    const researchObj = company.research
+      ? (serializeDates(company.research as unknown as Record<string, unknown>) as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+    if (researchObj) {
+      if (typeof researchObj.summary === 'string') {
+        researchObj.summary = simplifyJargon(researchObj.summary);
+      }
+      if (Array.isArray(researchObj.painPoints)) {
+        researchObj.painPoints = researchObj.painPoints.map((p) =>
+          typeof p === 'string' ? simplifyJargon(p) : p
+        );
+      }
+      if (Array.isArray(researchObj.opportunities)) {
+        researchObj.opportunities = researchObj.opportunities.map((o) =>
+          typeof o === 'string' ? simplifyJargon(o) : o
+        );
+      }
+    }
+
+    const companySerialized = serializeDates(
+      company as unknown as Record<string, unknown>
+    ) as Record<string, unknown>;
+    if (typeof companySerialized.industry === 'string') {
+      companySerialized.industry = simplifyJargon(companySerialized.industry);
+    }
+    if (typeof companySerialized.description === 'string') {
+      companySerialized.description = simplifyJargon(companySerialized.description);
+    }
+    if (typeof companySerialized.targetCustomers === 'string') {
+      companySerialized.targetCustomers = simplifyJargon(companySerialized.targetCustomers);
+    }
+
     return {
-      ...serializeDates(company as unknown as Record<string, unknown>),
-      research: company.research
-        ? serializeDates(company.research as unknown as Record<string, unknown>)
-        : null,
+      ...companySerialized,
+      research: researchObj,
     };
   }
 

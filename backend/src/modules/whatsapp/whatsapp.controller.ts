@@ -43,20 +43,15 @@ export class WhatsappController {
   static async previewTemplate(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { leadId, templateName, templateBodyText } = req.body as {
-        leadId: string;
+        leadId?: string;
         templateName?: string;
         templateBodyText?: string;
       };
       const userId = req.user!.userId;
 
-      if (!leadId) {
-        res.status(400).json({ error: 'Lead ID is required' });
-        return;
-      }
-
       const generated = await WhatsappGeneratorService.generateTemplateVariables(
         userId,
-        leadId,
+        leadId || '',
         templateName,
         templateBodyText
       );
@@ -307,6 +302,11 @@ export class WhatsappController {
             language: t.language,
             status: t.status,
             bodyText: t.components?.find((c) => c.type === 'BODY')?.text || null,
+            headerText: t.components?.find((c) => c.type === 'HEADER')?.text || null,
+            footerText: t.components?.find((c) => c.type === 'FOOTER')?.text || null,
+            buttons:
+              (t.components?.find((c) => c.type === 'BUTTONS') as { buttons?: unknown[] })
+                ?.buttons || [],
           })),
         },
       });
@@ -378,7 +378,13 @@ export class WhatsappController {
 
       if (Array.isArray(buttons) && buttons.length > 0) {
         const formattedButtons = buttons.map(
-          (btn: { type?: string; text?: string; url?: string }) => {
+          (btn: {
+            type?: string;
+            text?: string;
+            url?: string;
+            phoneNumber?: string;
+            phone_number?: string;
+          }) => {
             if (btn.type === 'QUICK_REPLY') {
               return {
                 type: 'QUICK_REPLY',
@@ -394,7 +400,7 @@ export class WhatsappController {
               return {
                 type: 'PHONE_NUMBER',
                 text: btn.text || 'Call Phone',
-                phone_number: btn.phoneNumber || '+1234567890',
+                phone_number: btn.phoneNumber || btn.phone_number || '+1234567890',
               };
             }
             return btn;
