@@ -1,5 +1,9 @@
 import { api } from './api';
-import { Company, ResearchProgressResponse, BulkResearchRequest } from '@mailflow/shared';
+import {
+  ResearchProgressResponse,
+  BulkResearchRequest,
+  LeadResearchResult,
+} from '@mailflow/shared';
 
 export const researchService = {
   async researchSingle(leadId: string): Promise<{
@@ -23,9 +27,9 @@ export const researchService = {
     return data;
   },
 
-  async getResearch(leadId: string): Promise<Company | null> {
+  async getResearch(leadId: string): Promise<LeadResearchResult | null> {
     try {
-      const { data } = await api.get<Company>(`/research/lead/${leadId}`);
+      const { data } = await api.get<LeadResearchResult>(`/research/lead/${leadId}`);
       return data;
     } catch {
       return null;

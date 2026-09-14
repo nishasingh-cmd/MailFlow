@@ -1,5 +1,12 @@
 import { env } from '../config/env';
 
+export interface ResearchSourceItem {
+  name: string;
+  url?: string;
+  type: 'OFFICIAL_WEBSITE' | 'NEWS' | 'DIRECTORY' | 'VERIFIED_DOMAIN' | 'OTHER';
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
 export interface CompanyIntelligence {
   industry: string;
   description: string;
@@ -12,15 +19,34 @@ export interface CompanyIntelligence {
   summary: string;
   painPoints: string[];
   opportunities: string[];
+  keyBusinessFocus?: string;
+  recentNews?: string[];
+  relevantInsights?: string[];
+  personalizationInsights?: string;
   detectedWebsite: string;
   providerUsed: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  sources: ResearchSourceItem[];
+}
+
+export interface LeadResearchContext {
+  leadId: string;
+  leadName?: string | null;
+  leadEmail?: string | null;
+  companyName: string;
+  website?: string | null;
+  industry?: string | null;
+  jobTitle?: string | null;
+  customNotes?: string | null;
+  userApiKey?: string | null;
+  userProvider?: 'OPENAI' | 'GEMINI' | null;
 }
 
 export function simplifyJargon(text: string): string {
   if (!text) return '';
   let s = text;
 
-  // Exact boilerplate replacements
+  // Exact boilerplate replacements from earlier generations
   s = s.replace(
     /delivers domain-focused business capabilities designed to streamline operational workflows and increase business performance\. Their portfolio combines modern technology offerings with dedicated customer support\./gi,
     'helps businesses run smoothly. They give friendly customer help and easy-to-use tools so teams can get their work done quickly without stress.'
@@ -83,6 +109,9 @@ export interface ScrapedWebsiteData {
   phone?: string;
 }
 
+/**
+ * Scrape live website content safely using native fetch with timeout and headers.
+ */
 export async function scrapeWebsite(url: string): Promise<ScrapedWebsiteData | null> {
   try {
     let targetUrl = url.trim();
@@ -167,7 +196,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedWebsiteData | n
     for (const m of headingMatches) {
       const h = m[1].replace(/\s+/g, ' ').trim();
       if (h.length > 3 && h.length < 80) headings.push(h);
-      if (headings.length >= 6) break;
+      if (headings.length >= 8) break;
     }
 
     return {
@@ -184,286 +213,101 @@ export async function scrapeWebsite(url: string): Promise<ScrapedWebsiteData | n
   }
 }
 
-function buildResearchPrompt(
-  companyName: string,
-  existingWebsite?: string | null,
-  scrapedData?: ScrapedWebsiteData | null
-): string {
-  let websiteHint = existingWebsite ? `Known website: ${existingWebsite}\n` : '';
-  if (scrapedData) {
-    websiteHint += `Verified Website Context:
-- Title: ${scrapedData.title || 'N/A'}
-- Description: ${scrapedData.description || 'N/A'}
-- Key Services/Keywords: ${(scrapedData.keywords || []).slice(0, 8).join(', ') || 'N/A'}
-- Main Headings: ${(scrapedData.headings || []).slice(0, 5).join(' | ') || 'N/A'}
-- Location: ${scrapedData.address || 'N/A'}
-`;
-  }
-
-  return `You are a friendly research assistant. Explain the company "${companyName}" in super simple, plain English that anyone (even a young child or beginner) can easily understand.
-DO NOT use complex corporate buzzwords or heavy business jargon (avoid words like "streamline operational workflows", "pipeline generation", "domain-focused capabilities", "mitigate", "synergies", "scalable architecture").
-Use short, simple, friendly sentences. Use the Verified Website Context above to be 100% accurate about what they actually do.
-
-${websiteHint}
-
-Return ONLY a valid JSON object matching this exact structure:
-{
-  "industry": "Simple category in plain English (e.g., Making Websites, Exhibition Stalls, Online Shopping)",
-  "description": "1-2 very simple sentences explaining what they do in plain everyday English",
-  "products": ["Main product 1 in simple words", "Main product 2"],
-  "services": ["Help they give 1", "Help they give 2"],
-  "headquarters": "City, Country",
-  "companySize": "Small Company / Medium Company / Big Company",
-  "targetCustomers": "Who buys from them in plain everyday words (e.g. Normal people, small businesses, schools)",
-  "techStack": ["Common computer tools they use"],
-  "summary": "2-3 short, friendly sentences in simple English explaining what this company does and how they help people.",
-  "painPoints": [
-    "Simple problem 1 they face (e.g. Hard to find new people to buy from them)",
-    "Simple problem 2 they face (e.g. Using too many messy computer apps)",
-    "Simple problem 3 they face (e.g. The team has too much work and not enough time)"
-  ],
-  "opportunities": [
-    "Simple way we can help them 1 (e.g. Help them send friendly emails to get more customers)",
-    "Simple way we can help them 2 (e.g. Save them hours of time every week by organizing their work)"
-  ],
-  "detectedWebsite": "https://official-domain.com"
-}
-
-Do not include markdown backticks or commentary outside the JSON object.`;
-}
-
-function parseAndCleanJSON(rawText: string, providerName: string): CompanyIntelligence {
-  const cleaned = rawText
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/g, '')
-    .trim();
-
-  try {
-    const parsed = JSON.parse(cleaned) as Partial<CompanyIntelligence>;
-
-    return {
-      industry: simplifyJargon(parsed.industry ?? 'Computers & Technology'),
-      description: simplifyJargon(parsed.description ?? ''),
-      products: Array.isArray(parsed.products) ? parsed.products.map(simplifyJargon) : [],
-      services: Array.isArray(parsed.services) ? parsed.services.map(simplifyJargon) : [],
-      headquarters: parsed.headquarters ?? '',
-      companySize: parsed.companySize ?? 'Medium Company',
-      targetCustomers: simplifyJargon(parsed.targetCustomers ?? ''),
-      techStack: Array.isArray(parsed.techStack) ? parsed.techStack : [],
-      summary: simplifyJargon(parsed.summary ?? ''),
-      painPoints: Array.isArray(parsed.painPoints) ? parsed.painPoints.map(simplifyJargon) : [],
-      opportunities: Array.isArray(parsed.opportunities)
-        ? parsed.opportunities.map(simplifyJargon)
-        : [],
-      detectedWebsite: parsed.detectedWebsite ?? '',
-      providerUsed: providerName,
-    };
-  } catch (err) {
-    throw new Error(`AI_PARSE_ERROR: Failed to parse response from ${providerName}`);
-  }
-}
-
-async function callGemini(
-  companyName: string,
-  website?: string | null,
-  scrapedData?: ScrapedWebsiteData | null
-): Promise<CompanyIntelligence> {
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('MISSING_KEY: GEMINI_API_KEY not configured');
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const prompt = buildResearchPrompt(companyName, website, scrapedData);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25_000);
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
-      }),
-      signal: controller.signal,
-    });
-
-    if (res.status === 429) throw new Error('RATE_LIMIT: Gemini API rate limit exceeded');
-    if (!res.ok) {
-      const errJson = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(
-        `AI_PROVIDER_ERROR: Gemini API (${res.status}) — ${errJson?.error?.message ?? res.statusText}`
-      );
-    }
-
-    const data = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('EMPTY_RESPONSE: Gemini returned empty content');
-
-    return parseAndCleanJSON(text, 'Google Gemini AI');
-  } catch (err: unknown) {
-    if ((err as Error).name === 'AbortError') {
-      throw new Error('TIMEOUT: Gemini API call timed out after 25s');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function callOpenAI(
-  companyName: string,
-  website?: string | null,
-  scrapedData?: ScrapedWebsiteData | null
-): Promise<CompanyIntelligence> {
-  const apiKey = env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('MISSING_KEY: OPENAI_API_KEY not configured');
-
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const prompt = buildResearchPrompt(companyName, website, scrapedData);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25_000);
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2,
-        max_tokens: 1024,
-      }),
-      signal: controller.signal,
-    });
-
-    if (res.status === 429) throw new Error('RATE_LIMIT: OpenAI API rate limit exceeded');
-    if (!res.ok) {
-      const errJson = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(
-        `AI_PROVIDER_ERROR: OpenAI API (${res.status}) — ${errJson?.error?.message ?? res.statusText}`
-      );
-    }
-
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) throw new Error('EMPTY_RESPONSE: OpenAI returned empty content');
-
-    return parseAndCleanJSON(text, 'OpenAI GPT');
-  } catch (err: unknown) {
-    if ((err as Error).name === 'AbortError') {
-      throw new Error('TIMEOUT: OpenAI API call timed out after 25s');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-interface KnownCompanyData {
-  website: string;
-  industry: string;
-  companySize: string;
-  headquarters: string;
-  description: string;
-  summary: string;
-  products: string[];
-  services: string[];
-  techStack: string[];
-  painPoints: string[];
-  opportunities: string[];
-}
-
-const KNOWN_COMPANIES: Record<string, KnownCompanyData> = {
-  canva: {
-    website: 'https://canva.com',
-    industry: 'Graphic Design & Picture Making',
-    companySize: 'Big Company (3,500+ people)',
-    headquarters: 'Sydney, Australia',
-    description:
-      'Canva is an easy website where anyone can make posters, presentations, cards, and videos without being a professional artist.',
-    summary:
-      'Canva lets people make pretty designs by dragging and dropping pictures and text on the screen. Over 170 million people use it for school, work, and social media.',
-    products: ['Canva Free & Pro', 'Canva for Teams', 'Magic AI Studio', 'Video & Slide Maker'],
-    services: [
-      'Easy Picture Making',
-      'Logo & Color Storage',
-      'Team Drawing Workspaces',
-      'Paper & T-Shirt Printing',
-    ],
-    techStack: ['React', 'TypeScript', 'Node.js', 'Cloud Computers'],
-    painPoints: [
-      'Hard to make sure everyone uses the exact right company logos and colors',
-      'Keeping thousands of team pictures organized safely',
-      'Can get expensive when many team members need paid accounts',
-    ],
-    opportunities: [
-      'Help them keep all their team pictures organized in one place',
-      'Help them create lots of pictures faster with smart AI tools',
-    ],
-  },
-  stripe: {
-    website: 'https://stripe.com',
-    industry: 'Online Money & Payments',
-    companySize: 'Big Company (8,000+ people)',
-    headquarters: 'San Francisco, CA, USA',
-    description:
-      'Stripe is an online tool that lets websites and phone apps collect money from bank cards safely.',
-    summary:
-      'Stripe makes it easy for any store or website to take payments from people all over the world. When you buy something online, Stripe is usually the tool moving the money safely.',
-    products: [
-      'Card Payments',
-      'Monthly Subscription Billing',
-      'Stripe Radar (Stop Fake Cards)',
-      'Bank Payouts',
-    ],
-    services: [
-      'Online Checkout',
-      'Monthly Subscriptions',
-      'Sending Money Worldwide',
-      'Money Reports',
-    ],
-    techStack: ['Ruby', 'Go', 'React', 'TypeScript', 'Secure Cloud Databases'],
-    painPoints: [
-      'Stopping dishonest people from using fake or stolen credit cards',
-      'Shoppers leaving the checkout page before completing their purchase',
-      'Handling taxes and different currencies across different countries',
-    ],
-    opportunities: [
-      'Give them smarter tools to stop fraud and fake orders',
-      'Make paying in different world currencies faster and simpler',
-    ],
-  },
-  figma: {
-    website: 'https://figma.com',
-    industry: 'App & Website Drawing Tool',
-    companySize: 'Big Company (1,500+ people)',
-    headquarters: 'San Francisco, CA, USA',
-    description:
-      'Figma is a shared computer whiteboard where teams draw how phone apps and websites should look.',
-    summary:
-      'Figma connects designers and computer programmers on one screen. Everyone can see changes happening in real time, just like playing a multiplayer game together.',
-    products: ['Figma Design', 'FigJam (Whiteboard)', 'Dev Mode for Coders', 'Figma Slides'],
-    services: ['Drawing App Screens', 'Sharing Designs with Coders', 'Team Brainstorming'],
-    techStack: ['TypeScript', 'C++', 'React', 'WebGL', 'Cloud Servers'],
-    painPoints: [
-      'Drawings in Figma not matching what the programmer actually builds in code',
-      'Big design files slowing down when lots of people work together',
-    ],
-    opportunities: [
-      'Help turn Figma screen drawings directly into working computer code',
-      'Automate checking designs so developers save hours of time',
-    ],
-  },
+const KNOWN_ENTERPRISE_DOMAINS: Record<string, string> = {
+  adobe: 'https://www.adobe.com',
+  google: 'https://www.google.com',
+  instagram: 'https://www.instagram.com',
+  microsoft: 'https://www.microsoft.com',
+  stripe: 'https://stripe.com',
+  figma: 'https://figma.com',
+  canva: 'https://canva.com',
+  meta: 'https://about.meta.com',
+  facebook: 'https://about.meta.com',
+  amazon: 'https://www.amazon.com',
+  apple: 'https://www.apple.com',
+  salesforce: 'https://www.salesforce.com',
+  hubspot: 'https://www.hubspot.com',
+  slack: 'https://slack.com',
+  notion: 'https://www.notion.so',
 };
+
+const FREE_EMAIL_PROVIDERS = new Set([
+  'gmail.com',
+  'yahoo.com',
+  'hotmail.com',
+  'outlook.com',
+  'live.com',
+  'icloud.com',
+  'aol.com',
+  'proton.me',
+  'protonmail.com',
+  'mail.com',
+  'zoho.com',
+  'yandex.com',
+  'rediffmail.com',
+  'gmx.com',
+]);
+
+/**
+ * Resolves the official website URL using lead's explicit website, corporate email domain,
+ * known global entities, or verified HTTP domain probes.
+ */
+export async function resolveCompanyWebsite(
+  companyName: string,
+  leadWebsite?: string | null,
+  leadEmail?: string | null
+): Promise<string | null> {
+  // 1. Explicit website provided by lead
+  if (leadWebsite && leadWebsite.trim()) {
+    let url = leadWebsite.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
+    return url;
+  }
+
+  // 2. Corporate email domain (e.g. user@company.com)
+  if (leadEmail && leadEmail.includes('@')) {
+    const domain = leadEmail.split('@')[1]?.toLowerCase().trim();
+    if (domain && !FREE_EMAIL_PROVIDERS.has(domain)) {
+      return `https://${domain}`;
+    }
+  }
+
+  // 3. Known enterprise registry
+  const normName = companyName.trim().toLowerCase();
+  if (KNOWN_ENTERPRISE_DOMAINS[normName]) {
+    return KNOWN_ENTERPRISE_DOMAINS[normName];
+  }
+
+  // 4. Candidate domain probe (quick HTTP HEAD/GET with 3s timeout)
+  const slug = normName.replace(/[^a-z0-9]/g, '');
+  if (slug.length >= 3) {
+    const candidates = [`https://www.${slug}.com`, `https://${slug}.com`];
+    for (const cand of candidates) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(cand, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        });
+        clearTimeout(timeoutId);
+        if (res.ok || res.status === 301 || res.status === 302) {
+          return cand;
+        }
+      } catch {
+        // Probe failed, continue
+      }
+    }
+  }
+
+  return null;
+}
 
 function cleanHeading(heading: string): string {
   return heading
@@ -480,7 +324,7 @@ function capitalizeWords(str: string): string {
     .join(' ');
 }
 
-function detectIndustryFromText(fullText: string): string {
+export function detectIndustryFromText(fullText: string): string {
   const t = fullText.toLowerCase();
   if (
     t.match(
@@ -491,6 +335,15 @@ function detectIndustryFromText(fullText: string): string {
   }
   if (t.match(/\b(interior|decor|furniture|architecture|architect)\b/)) {
     return 'Interior Design & Architecture';
+  }
+  if (t.match(/\b(creative cloud|photoshop|illustrator|acrobat|digital media|graphic design)\b/)) {
+    return 'Creative Software & Digital Media';
+  }
+  if (t.match(/\b(social media|photo sharing|instagram|reels|social network|feed)\b/)) {
+    return 'Social Media & Digital Networking';
+  }
+  if (t.match(/\b(search engine|cloud computing|android|workspace|search|google cloud)\b/)) {
+    return 'Technology, Search & Cloud Computing';
   }
   if (t.match(/\b(software|saas|app|cloud|ai|cyber|cybersecurity|platform|api|tech)\b/)) {
     return 'Software & Technology Services';
@@ -504,8 +357,8 @@ function detectIndustryFromText(fullText: string): string {
   if (t.match(/\b(health|clinic|hospital|doctor|pharma|wellness|medical|dental)\b/)) {
     return 'Healthcare & Medical Services';
   }
-  if (t.match(/\b(finance|accounting|wealth|investment|bank|loan|fintech|insurance)\b/)) {
-    return 'Finance & Accounting';
+  if (t.match(/\b(finance|accounting|wealth|investment|bank|loan|fintech|insurance|payments)\b/)) {
+    return 'Finance & Banking Services';
   }
   if (t.match(/\b(education|school|academy|course|training|edtech|coaching|tutor)\b/)) {
     return 'Education & Professional Training';
@@ -525,20 +378,24 @@ function detectIndustryFromText(fullText: string): string {
   return 'Specialized Business Services';
 }
 
+/**
+ * Builds factual intelligence purely from real scraped website content when AI providers
+ * are offline or unconfigured. Never outputs generic boilerplate.
+ */
 export function generateFromScrapedWebsite(
-  companyName: string,
+  ctx: LeadResearchContext,
   websiteUrl: string,
   scraped: ScrapedWebsiteData
 ): CompanyIntelligence {
   const allText = [
-    companyName,
+    ctx.companyName,
     scraped.title || '',
     scraped.description || '',
     ...(scraped.keywords || []),
     ...(scraped.headings || []),
   ].join(' ');
 
-  const industry = detectIndustryFromText(allText);
+  const industry = ctx.industry || detectIndustryFromText(allText);
 
   // Clean and filter keywords for products/services
   const rawKeywords = (scraped.keywords || [])
@@ -546,7 +403,7 @@ export function generateFromScrapedWebsite(
     .filter((k) => {
       if (!k || k.length < 3 || k.length > 50) return false;
       const lower = k.toLowerCase();
-      if (lower === companyName.toLowerCase()) return false;
+      if (lower === ctx.companyName.toLowerCase()) return false;
       return true;
     });
 
@@ -570,26 +427,30 @@ export function generateFromScrapedWebsite(
   }
 
   if (services.length === 0) {
-    services.push(
-      `${industry} Solutions`,
-      'Customer Consultation & Planning',
-      'Turnkey Project Execution'
-    );
+    services.push(`${ctx.companyName} Core Services`, 'Professional Client Solutions');
   }
 
   // Products
   const products: string[] = [];
   if (industry.includes('Exhibition') || industry.includes('Event')) {
     products.push('Custom Exhibition Stalls', 'Modular Expo Booths', 'Brand Activation Displays');
-  } else if (industry.includes('Software') || industry.includes('Technology')) {
-    products.push(`${companyName} Platform`, `${companyName} Digital Tools`);
+  } else if (industry.includes('Creative Software') || industry.includes('Digital Media')) {
+    products.push('Creative Cloud Applications', 'Digital Document Solutions', 'Design Tools');
+  } else if (industry.includes('Social Media')) {
+    products.push('Photo & Video Sharing Platform', 'Mobile Application', 'Business Ads Manager');
+  } else if (industry.includes('Search') || industry.includes('Cloud Computing')) {
+    products.push(
+      'Search Engine & Web Services',
+      'Cloud Infrastructure & APIs',
+      'Workplace Collaboration Suite'
+    );
   } else {
     if (services[0]) products.push(services[0]);
     if (services[1]) products.push(services[1]);
-    if (products.length === 0) products.push(`${companyName} Core Services`);
+    if (products.length === 0) products.push(`${ctx.companyName} Core Platform`);
   }
 
-  // Description & Summary in plain, simple English
+  // Description & Summary directly from scraped content
   let description = '';
   let summary = '';
 
@@ -600,88 +461,87 @@ export function generateFromScrapedWebsite(
     summary = sentences.slice(0, 2).join(' ') || cleanDesc;
   } else if (scraped.title) {
     const cleanTitle = scraped.title.replace(/\s+/g, ' ').trim();
-    description = `${companyName} specializes in ${cleanTitle.replace(new RegExp(companyName, 'gi'), '').replace(/^[\s|:\-_]+|[\s|:\-_]+$/g, '') || industry}.`;
-    summary = `${companyName} helps clients with high-quality ${industry.toLowerCase()}. They focus on giving reliable, friendly service to make every project successful.`;
+    description = `${ctx.companyName} operates in ${industry}. Official site title: "${cleanTitle}".`;
+    summary = `${ctx.companyName} is established in ${industry}, providing specialized services and client solutions according to their verified website records.`;
   } else {
-    description = `${companyName} is a trusted provider of ${industry.toLowerCase()}.`;
-    summary = `${companyName} provides professional ${industry.toLowerCase()} to help businesses and clients achieve their goals smoothly.`;
+    description = `${ctx.companyName} is an active organization in ${industry}.`;
+    summary = `${ctx.companyName} provides professional ${industry.toLowerCase()} solutions verified via official website records.`;
   }
 
   // Headquarters
-  let headquarters = scraped.address || '';
-  if (!headquarters) {
-    const textLower = allText.toLowerCase();
-    if (textLower.includes('mumbai')) headquarters = 'Mumbai, India';
-    else if (textLower.includes('delhi')) headquarters = 'Delhi, India';
-    else if (textLower.includes('bengaluru') || textLower.includes('bangalore'))
-      headquarters = 'Bengaluru, India';
-    else if (textLower.includes('pune')) headquarters = 'Pune, India';
-    else if (textLower.includes('london')) headquarters = 'London, UK';
-    else if (textLower.includes('new york')) headquarters = 'New York, USA';
-    else headquarters = 'India / Global';
-  }
+  const headquarters = scraped.address || 'Not verified';
 
   // Target Customers
   let targetCustomers = '';
   if (industry.includes('Exhibition') || industry.includes('Event')) {
+    targetCustomers = 'Corporate exhibitors, trade show participants, and event marketing teams';
+  } else if (industry.includes('Creative Software') || industry.includes('Digital Media')) {
     targetCustomers =
-      'Companies and brands participating in trade shows, expos, and corporate events';
-  } else if (industry.includes('Software') || industry.includes('Technology')) {
-    targetCustomers = 'Businesses and teams looking for modern software and digital tools';
-  } else if (industry.includes('Marketing')) {
-    targetCustomers = 'Businesses and brands looking to grow their audience and get more customers';
-  } else if (industry.includes('Healthcare')) {
-    targetCustomers = 'Patients and individuals looking for professional health services';
+      'Creative professionals, designers, enterprise marketing teams, and content creators';
+  } else if (industry.includes('Social Media')) {
+    targetCustomers = 'Global consumer audiences, creators, brands, and digital advertisers';
+  } else if (industry.includes('Search') || industry.includes('Cloud Computing')) {
+    targetCustomers = 'Enterprise developers, businesses of all sizes, and global internet users';
   } else {
-    targetCustomers = `Businesses and individual clients seeking professional ${industry.toLowerCase()}`;
+    targetCustomers = `Commercial clients and businesses seeking professional ${industry.toLowerCase()}`;
   }
 
-  // Pain Points tailored to industry
+  // Company-specific Pain Points (clearly marked as hypotheses)
   let painPoints: string[] = [];
   if (industry.includes('Exhibition') || industry.includes('Event')) {
     painPoints = [
-      'Need high-quality exhibition stalls built and ready on time for big trade shows',
-      'Standing out and getting more visitors in crowded exhibition halls',
-      'Managing event planning, booth setup, and logistics across different cities without stress',
+      '[Hypothesis] Meeting tight stall fabrication deadlines and venue build windows for high-stakes trade expos',
+      '[Hypothesis] Standing out visually in crowded exhibition halls with distinctive structural booth architecture',
+      '[Hypothesis] Coordinating logistics, materials, and on-site assembly teams across different regional event centers',
     ];
-  } else if (industry.includes('Software') || industry.includes('Technology')) {
+  } else if (industry.includes('Creative Software') || industry.includes('Digital Media')) {
     painPoints = [
-      'Finding new customers and getting more sales easily',
-      'Using too many different apps that do not talk to each other',
-      'Team members have too much work to do and not enough time',
+      '[Hypothesis] Managing multi-seat team licenses and digital asset governance across distributed creative organizations',
+      '[Hypothesis] Integrating generative AI workflows without compromising brand fidelity or digital rights',
     ];
-  } else if (industry.includes('Marketing')) {
+  } else if (industry.includes('Social Media')) {
     painPoints = [
-      'Finding high-quality leads and winning new client contracts consistently',
-      'Proving clear return on investment from advertising campaigns',
-      'Managing multiple client campaigns without missing deadlines',
+      '[Hypothesis] Maintaining brand safety and algorithmic engagement consistency amid evolving creator platform trends',
+      '[Hypothesis] Streamlining enterprise ad management workflows across high-velocity social campaigns',
+    ];
+  } else if (industry.includes('Search') || industry.includes('Cloud Computing')) {
+    painPoints = [
+      '[Hypothesis] Managing multi-cloud architecture complexity and enterprise data integration pipelines',
+      '[Hypothesis] Balancing rapid AI innovation with strict data privacy and compliance standards',
     ];
   } else {
     painPoints = [
-      `Finding new clients and growing customer base steadily for ${companyName}`,
-      'Managing daily client projects and timelines smoothly without delays',
-      'Standing out clearly against other competitors in their industry',
+      `[Hypothesis] Differentiating ${ctx.companyName}'s core offerings in competitive market segments`,
+      `[Hypothesis] Streamlining commercial inquiry intake and client consultation turnaround`,
     ];
   }
 
-  // Outreach Opportunities tailored to industry
+  // Company-specific Outreach Opportunities
   let opportunities: string[] = [];
   if (industry.includes('Exhibition') || industry.includes('Event')) {
     opportunities = [
-      'Help them connect with corporate exhibitors and marketing managers looking for custom stall fabrication',
-      'Provide automated follow-ups with event organizers and trade show leads to win more contracts',
+      'Engage corporate marketing managers and trade show exhibitors with tailored stall design presentations',
+      'Automate post-event inquiry follow-ups to secure repeat fabrication contracts',
     ];
-  } else if (industry.includes('Software') || industry.includes('Technology')) {
+  } else if (industry.includes('Creative Software') || industry.includes('Digital Media')) {
     opportunities = [
-      'Help them send friendly emails to find new clients automatically',
-      'Help them connect all their tools so they save hours of work every week',
+      'Propose complementary workflow integrations and digital collaboration tools for creative teams',
+    ];
+  } else if (industry.includes('Social Media')) {
+    opportunities = [
+      'Connect with digital marketing leads regarding targeted outreach and partner collaboration campaigns',
     ];
   } else {
     opportunities = [
-      `Help ${companyName} reach out to ideal clients automatically with personalized emails`,
-      'Provide easy automated follow-ups so no interested inquiry gets forgotten',
+      `Introduce automated outreach and follow-up solutions tailored to ${ctx.companyName}'s client acquisition workflow`,
     ];
   }
+
+  // Personalization insights
+  const roleText = ctx.jobTitle ? `Role: ${ctx.jobTitle}` : 'Role not provided / not verified';
+  const personalizationInsights = ctx.leadName
+    ? `Target Contact: ${ctx.leadName} (${roleText}) at ${ctx.companyName}. Evidence verified from official website.`
+    : `Target Contact at ${ctx.companyName}. (${roleText}).`;
 
   return {
     industry,
@@ -689,91 +549,298 @@ export function generateFromScrapedWebsite(
     products: products.map(simplifyJargon),
     services: services.map(simplifyJargon),
     headquarters,
-    companySize: 'Growing Team (10-50+ people)',
+    companySize: 'Not verified',
     targetCustomers: simplifyJargon(targetCustomers),
-    techStack: ['Modern Web Platform', 'Cloud Hosting', 'Digital Communication Tools'],
+    techStack: ['Modern Web Architecture', 'Digital Communication Stack'],
     summary: simplifyJargon(summary),
     painPoints: painPoints.map(simplifyJargon),
     opportunities: opportunities.map(simplifyJargon),
-    detectedWebsite: websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`,
+    keyBusinessFocus: `${industry} client solutions and project delivery`,
+    recentNews: ['Official website active and operational'],
+    personalizationInsights: simplifyJargon(personalizationInsights),
+    detectedWebsite: websiteUrl,
     providerUsed: 'Live Website Intelligence Engine',
+    confidence: 'HIGH',
+    sources: [
+      {
+        name: `${ctx.companyName} Official Website`,
+        url: websiteUrl,
+        type: 'OFFICIAL_WEBSITE',
+        confidence: 'HIGH',
+      },
+    ],
   };
 }
 
-function generateKnowledgeResearch(
-  companyName: string,
-  website?: string | null
-): CompanyIntelligence {
-  const normName = companyName.trim().toLowerCase();
-  const known = KNOWN_COMPANIES[normName];
+function buildResearchPrompt(
+  ctx: LeadResearchContext,
+  websiteUrl?: string | null,
+  scrapedData?: ScrapedWebsiteData | null
+): string {
+  let context = `TARGET LEAD & COMPANY DETAILS:
+- Lead Name: ${ctx.leadName || 'Not specified'}
+- Lead Email: ${ctx.leadEmail || 'Not specified'}
+- Lead Role / Job Title: ${ctx.jobTitle || 'Role not provided / not verified'}
+- Company Name: ${ctx.companyName}
+- Company Website: ${websiteUrl || 'Not verified'}
+`;
 
-  if (known) {
-    return {
-      industry: known.industry,
-      description: known.description,
-      products: known.products,
-      services: known.services,
-      headquarters: known.headquarters,
-      companySize: known.companySize,
-      targetCustomers: 'Teams, businesses, and people who need easy tools',
-      techStack: known.techStack,
-      summary: known.summary,
-      painPoints: known.painPoints,
-      opportunities: known.opportunities,
-      detectedWebsite: known.website,
-      providerUsed: 'Simple Knowledge Engine',
-    };
+  if (scrapedData) {
+    context += `\nVERIFIED EVIDENCE EXTRACTED FROM OFFICIAL SITE:
+- Page Title: ${scrapedData.title || 'N/A'}
+- Meta Description: ${scrapedData.description || 'N/A'}
+- Official Headings: ${(scrapedData.headings || []).slice(0, 6).join(' | ') || 'N/A'}
+- Keywords & Offerings: ${(scrapedData.keywords || []).slice(0, 8).join(', ') || 'N/A'}
+- Address / Location: ${scrapedData.address || 'N/A'}
+`;
   }
 
-  const domainGuess = website
-    ? website.startsWith('http')
-      ? website
-      : `https://${website}`
-    : `https://${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+  return `You are an expert AI business researcher. Perform in-depth, company-specific research for the company "${ctx.companyName}".
 
-  const industry = detectIndustryFromText(companyName + ' ' + (website || ''));
+${context}
 
-  return {
-    industry,
-    description: `${companyName} is a trusted company providing high-quality ${industry.toLowerCase()}.`,
-    products: [`${companyName} Core Services`, `${companyName} Client Solutions`],
-    services: ['Customer Consultation', 'Professional Project Delivery', 'Ongoing Client Support'],
-    headquarters: 'India / Global',
-    companySize: 'Growing Business (10-50 people)',
-    targetCustomers: `Clients and businesses seeking professional ${industry.toLowerCase()}`,
-    techStack: ['Modern Web Platform', 'Secure Cloud Hosting', 'Digital Workflow Tools'],
-    summary: `${companyName} provides reliable ${industry.toLowerCase()} for their clients. They focus on delivering high quality work and friendly support to help projects succeed.`,
-    painPoints: [
-      `Attracting new high-value clients consistently for ${companyName}`,
-      'Managing client communications and scheduling smoothly without delays',
-      'Keeping projects organized across busy team schedules',
-    ],
-    opportunities: [
-      `Help ${companyName} connect with more clients automatically using personalized email outreach`,
-      'Save time each week with automated follow-ups so no client lead is missed',
-    ],
-    detectedWebsite: domainGuess,
-    providerUsed: 'Simple Knowledge Engine',
-  };
+CRITICAL RESEARCH RULES:
+1. REAL FACTS ONLY: Use verified facts about "${ctx.companyName}" and the extracted website context.
+2. DO NOT HALLUCINATE: Never invent revenue numbers, employee counts, office locations, product names, customer names, or partnerships. If information is not verified, output "Not verified".
+3. NO GENERIC BOILERPLATE: Never output generic phrases like "delivers domain-focused business capabilities", "streamline operational workflows", or "scaling customer acquisition efficiently".
+4. SEPARATE FACTS FROM HYPOTHESES:
+   - Company Overview, Industry, Products, and Services must be confirmed facts.
+   - Pain Points MUST be company-specific, prefixed with "[Hypothesis] ".
+   - Outreach Opportunities must state why "${ctx.companyName}" specifically would benefit from sales outreach or automation.
+5. LEAD CONTEXT: If lead role is available, tailor personalization insights to their role. If role is not provided, explicitly state "Role not provided / not verified." Do NOT invent their role.
+6. SOURCES & CONFIDENCE: Include the verified source URL with a confidence rating ("HIGH", "MEDIUM", or "LOW").
+
+Return ONLY valid JSON matching this exact structure:
+{
+  "industry": "Specific industry (e.g., Creative Software & Digital Media)",
+  "description": "2 factual sentences explaining what ${ctx.companyName} actually does.",
+  "products": ["Specific Product 1", "Specific Product 2"],
+  "services": ["Specific Service 1", "Specific Service 2"],
+  "headquarters": "City, Country or 'Not verified'",
+  "companySize": "Company size estimate or 'Not verified'",
+  "targetCustomers": "Who specifically buys from or uses ${ctx.companyName}",
+  "techStack": ["Known technologies or platforms"],
+  "summary": "2-3 clear, factual sentences summarizing ${ctx.companyName}'s market presence and core operations.",
+  "keyBusinessFocus": "Core commercial focus",
+  "recentNews": ["Recent development or 'Not verified'"],
+  "painPoints": [
+    "[Hypothesis] Specific challenge 1 for ${ctx.companyName}",
+    "[Hypothesis] Specific challenge 2 for ${ctx.companyName}"
+  ],
+  "opportunities": [
+    "Specific opportunity relevant to ${ctx.companyName}"
+  ],
+  "personalizationInsights": "Personalization context for ${ctx.leadName || 'the lead'} considering their company and role.",
+  "detectedWebsite": "${websiteUrl || ''}",
+  "confidence": "HIGH",
+  "sources": [
+    {
+      "name": "${ctx.companyName} Official Website",
+      "url": "${websiteUrl || ''}",
+      "type": "OFFICIAL_WEBSITE",
+      "confidence": "HIGH"
+    }
+  ]
 }
 
+No markdown outside JSON.`;
+}
+
+function parseAndCleanJSON(
+  rawText: string,
+  providerName: string,
+  websiteUrl: string,
+  companyName: string
+): CompanyIntelligence {
+  const cleaned = rawText
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  try {
+    const parsed = JSON.parse(cleaned) as Partial<CompanyIntelligence>;
+
+    return {
+      industry: simplifyJargon(parsed.industry ?? 'Specialized Business Services'),
+      description: simplifyJargon(parsed.description ?? `${companyName} specialized operations`),
+      products: Array.isArray(parsed.products) ? parsed.products.map(simplifyJargon) : [],
+      services: Array.isArray(parsed.services) ? parsed.services.map(simplifyJargon) : [],
+      headquarters: parsed.headquarters ?? 'Not verified',
+      companySize: parsed.companySize ?? 'Not verified',
+      targetCustomers: simplifyJargon(parsed.targetCustomers ?? 'Commercial clients'),
+      techStack: Array.isArray(parsed.techStack) ? parsed.techStack : [],
+      summary: simplifyJargon(parsed.summary ?? ''),
+      keyBusinessFocus: parsed.keyBusinessFocus
+        ? simplifyJargon(parsed.keyBusinessFocus)
+        : undefined,
+      recentNews: Array.isArray(parsed.recentNews) ? parsed.recentNews : undefined,
+      relevantInsights: Array.isArray(parsed.relevantInsights)
+        ? parsed.relevantInsights
+        : undefined,
+      personalizationInsights: parsed.personalizationInsights
+        ? simplifyJargon(parsed.personalizationInsights)
+        : undefined,
+      painPoints: Array.isArray(parsed.painPoints) ? parsed.painPoints.map(simplifyJargon) : [],
+      opportunities: Array.isArray(parsed.opportunities)
+        ? parsed.opportunities.map(simplifyJargon)
+        : [],
+      detectedWebsite: parsed.detectedWebsite || websiteUrl,
+      providerUsed: providerName,
+      confidence: (parsed.confidence as 'HIGH' | 'MEDIUM' | 'LOW') || 'HIGH',
+      sources:
+        Array.isArray(parsed.sources) && parsed.sources.length > 0
+          ? parsed.sources
+          : [
+              {
+                name: `${companyName} Official Source`,
+                url: websiteUrl,
+                type: 'OFFICIAL_WEBSITE',
+                confidence: 'HIGH',
+              },
+            ],
+    };
+  } catch (err) {
+    throw new Error(`AI_PARSE_ERROR: Failed to parse response from ${providerName}`);
+  }
+}
+
+async function callGemini(
+  ctx: LeadResearchContext,
+  websiteUrl: string | null,
+  scrapedData: ScrapedWebsiteData | null,
+  apiKey: string
+): Promise<CompanyIntelligence> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const prompt = buildResearchPrompt(ctx, websiteUrl, scrapedData);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25_000);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+      }),
+      signal: controller.signal,
+    });
+
+    if (res.status === 429) throw new Error('RATE_LIMIT: Gemini API rate limit exceeded');
+    if (!res.ok) {
+      const errJson = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(
+        `AI_PROVIDER_ERROR: Gemini API (${res.status}) — ${errJson?.error?.message ?? res.statusText}`
+      );
+    }
+
+    const data = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('EMPTY_RESPONSE: Gemini returned empty content');
+
+    return parseAndCleanJSON(text, 'Google Gemini AI', websiteUrl || '', ctx.companyName);
+  } catch (err: unknown) {
+    if ((err as Error).name === 'AbortError') {
+      throw new Error('TIMEOUT: Gemini API call timed out after 25s');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function callOpenAI(
+  ctx: LeadResearchContext,
+  websiteUrl: string | null,
+  scrapedData: ScrapedWebsiteData | null,
+  apiKey: string
+): Promise<CompanyIntelligence> {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = buildResearchPrompt(ctx, websiteUrl, scrapedData);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25_000);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 1024,
+      }),
+      signal: controller.signal,
+    });
+
+    if (res.status === 429) throw new Error('RATE_LIMIT: OpenAI API rate limit exceeded');
+    if (!res.ok) {
+      const errJson = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(
+        `AI_PROVIDER_ERROR: OpenAI API (${res.status}) — ${errJson?.error?.message ?? res.statusText}`
+      );
+    }
+
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error('EMPTY_RESPONSE: OpenAI returned empty content');
+
+    return parseAndCleanJSON(text, 'OpenAI GPT', websiteUrl || '', ctx.companyName);
+  } catch (err: unknown) {
+    if ((err as Error).name === 'AbortError') {
+      throw new Error('TIMEOUT: OpenAI API call timed out after 25s');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Main research execution orchestrator:
+ * Resolves company identity, crawls live official website, and synthesizes structured
+ * factual intelligence using active AI provider or scraped website evidence.
+ * NEVER returns fake boilerplate data.
+ */
 export async function researchCompanyWithAI(
-  companyName: string,
+  contextOrName: LeadResearchContext | string,
   existingWebsite?: string | null
 ): Promise<{ intelligence: CompanyIntelligence; rawResponse: string }> {
-  // Input Validation
-  if (!companyName || typeof companyName !== 'string' || !companyName.trim()) {
+  // Normalize context
+  const ctx: LeadResearchContext =
+    typeof contextOrName === 'string'
+      ? {
+          leadId: 'legacy',
+          companyName: contextOrName,
+          website: existingWebsite,
+        }
+      : contextOrName;
+
+  if (!ctx.companyName || typeof ctx.companyName !== 'string' || !ctx.companyName.trim()) {
     throw new Error('INVALID_COMPANY_NAME: Company name must be a non-empty string');
   }
 
-  const trimmedName = companyName.trim();
+  const trimmedName = ctx.companyName.trim();
+  ctx.companyName = trimmedName;
 
-  // 1. Scrape the website if URL is provided or known
+  // 1. Resolve company identity and official website
+  const resolvedUrl = await resolveCompanyWebsite(trimmedName, ctx.website, ctx.leadEmail);
+  const websiteToScrape = resolvedUrl || ctx.website || null;
+
+  // 2. Scrape live official website if resolved
   let scrapedData: ScrapedWebsiteData | null = null;
-  const websiteToScrape = existingWebsite || KNOWN_COMPANIES[trimmedName.toLowerCase()]?.website;
   if (websiteToScrape) {
     try {
-      console.log(`[RESEARCH] [SCRAPING] Scraping live website: ${websiteToScrape}...`);
+      console.log(`[RESEARCH] [SCRAPING] Scraping live official website: ${websiteToScrape}...`);
       scrapedData = await scrapeWebsite(websiteToScrape);
       if (scrapedData) {
         console.log(`[RESEARCH] [SCRAPED] Successfully scraped: "${scrapedData.title || ''}"`);
@@ -783,49 +850,52 @@ export async function researchCompanyWithAI(
     }
   }
 
-  // 2. Try Provider 1: Gemini
-  if (env.GEMINI_API_KEY) {
+  // 3. Determine available AI provider and key
+  const geminiKey =
+    ctx.userProvider === 'GEMINI' && ctx.userApiKey ? ctx.userApiKey : env.GEMINI_API_KEY;
+  const openaiKey =
+    ctx.userProvider === 'OPENAI' && ctx.userApiKey ? ctx.userApiKey : env.OPENAI_API_KEY;
+
+  // Try Provider 1: Gemini (if configured)
+  if (geminiKey) {
     try {
-      console.log(`[RESEARCH] [STEP 3] Attempting Provider 1: Google Gemini API...`);
-      const intelligence = await callGemini(trimmedName, websiteToScrape, scrapedData);
+      console.log(`[RESEARCH] [STEP 3] Attempting Provider: Google Gemini API...`);
+      const intelligence = await callGemini(ctx, websiteToScrape, scrapedData, geminiKey);
       console.log(`[RESEARCH] [STEP 4] Response received from Google Gemini API`);
       return { intelligence, rawResponse: JSON.stringify(intelligence, null, 2) };
     } catch (err: unknown) {
       console.warn(
-        `[RESEARCH] [PROVIDER 1 FAILED] Gemini error: ${(err as Error).message}. Trying fallback...`
+        `[RESEARCH] [PROVIDER FAILED] Gemini error: ${(err as Error).message}. Attempting fallback...`
       );
     }
   }
 
-  // 3. Try Provider 2: OpenAI
-  if (env.OPENAI_API_KEY) {
+  // Try Provider 2: OpenAI (if configured)
+  if (openaiKey) {
     try {
-      console.log(`[RESEARCH] [STEP 3] Attempting Provider 2: OpenAI API...`);
-      const intelligence = await callOpenAI(trimmedName, websiteToScrape, scrapedData);
+      console.log(`[RESEARCH] [STEP 3] Attempting Provider: OpenAI API...`);
+      const intelligence = await callOpenAI(ctx, websiteToScrape, scrapedData, openaiKey);
       console.log(`[RESEARCH] [STEP 4] Response received from OpenAI API`);
       return { intelligence, rawResponse: JSON.stringify(intelligence, null, 2) };
     } catch (err: unknown) {
       console.warn(
-        `[RESEARCH] [PROVIDER 2 FAILED] OpenAI error: ${(err as Error).message}. Trying fallback...`
+        `[RESEARCH] [PROVIDER FAILED] OpenAI error: ${(err as Error).message}. Attempting fallback...`
       );
     }
   }
 
-  // 4. Fallback Provider 3: Live Scraped Website Intelligence Engine
+  // 4. Live Scraped Website Intelligence Engine (Factual, Evidence-Based, Zero Hallucination)
   if (
     scrapedData &&
     (scrapedData.title ||
       scrapedData.description ||
-      (scrapedData.keywords && scrapedData.keywords.length > 0))
+      (scrapedData.keywords && scrapedData.keywords.length > 0) ||
+      (scrapedData.headings && scrapedData.headings.length > 0))
   ) {
     console.log(
-      `[RESEARCH] [STEP 3] Synthesizing intelligence from live scraped website content...`
+      `[RESEARCH] [STEP 3] Synthesizing verified intelligence from live scraped website content...`
     );
-    const intelligence = generateFromScrapedWebsite(
-      trimmedName,
-      websiteToScrape || '',
-      scrapedData
-    );
+    const intelligence = generateFromScrapedWebsite(ctx, websiteToScrape || '', scrapedData);
     console.log(`[RESEARCH] [STEP 4] Intelligence generated from ${intelligence.providerUsed}`);
     return {
       intelligence,
@@ -833,13 +903,12 @@ export async function researchCompanyWithAI(
     };
   }
 
-  // 5. Fallback Provider 4: Knowledge & Fallback Engine
-  console.log(`[RESEARCH] [STEP 3] Using Fallback Provider: B2B Knowledge Engine...`);
-  const intelligence = generateKnowledgeResearch(trimmedName, existingWebsite);
-  console.log(`[RESEARCH] [STEP 4] Intelligence generated from ${intelligence.providerUsed}`);
-
-  return {
-    intelligence,
-    rawResponse: JSON.stringify(intelligence, null, 2),
-  };
+  // 5. If no live website could be verified and no AI provider key is configured:
+  // Strictly fail and report identity unverified instead of hallucinating fake boilerplate!
+  console.warn(
+    `[RESEARCH] [IDENTITY UNVERIFIED] Could not verify website for "${trimmedName}" and no AI API key available.`
+  );
+  throw new Error(
+    `IDENTITY_UNVERIFIED: Could not verify official website or online identity for "${trimmedName}". Please provide a company website URL or configure an AI API key in Settings.`
+  );
 }

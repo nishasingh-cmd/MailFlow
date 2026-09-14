@@ -433,16 +433,7 @@ export default function CampaignDetail() {
           </h2>
           <InfoRow label="Campaign Name">{campaign.name}</InfoRow>
           <InfoRow label="Outreach Channel">
-            <Badge
-              variant={
-                campaign.channel === 'WHATSAPP'
-                  ? 'success'
-                  : campaign.channel === 'EMAIL_AND_WHATSAPP'
-                    ? 'warning'
-                    : 'brand'
-              }
-              size="sm"
-            >
+            <Badge variant={campaign.channel === 'WHATSAPP' ? 'success' : 'brand'} size="sm">
               {campaign.channel === 'EMAIL_AND_WHATSAPP'
                 ? 'Email + WhatsApp'
                 : campaign.channel === 'WHATSAPP'

@@ -36,14 +36,14 @@ function MessageSnippetCell({
   const snippet = isLong && !expanded ? `${message.slice(0, LIMIT)}...` : message;
 
   return (
-    <div className="max-w-xs sm:max-w-sm text-xs space-y-1">
-      <div className="leading-relaxed text-[var(--content-secondary)]">
-        <span>{snippet}</span>
+    <div className="w-[280px] max-w-[280px] text-xs space-y-1">
+      <div className="leading-relaxed text-[var(--content-secondary)] break-words whitespace-normal">
+        <span className="break-words">{snippet}</span>
         {isLong && (
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="ml-1.5 font-bold text-brand-600 dark:text-brand-400 hover:underline inline-block cursor-pointer focus:outline-none"
+            className="ml-1.5 font-bold text-brand-600 dark:text-brand-400 hover:underline inline cursor-pointer focus:outline-none whitespace-nowrap"
           >
             {expanded ? 'Read less' : 'Read more'}
           </button>
@@ -530,7 +530,9 @@ export default function WhatsappPage() {
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Phone</th>
                       <th className="px-4 py-3 text-left">Message ID</th>
-                      <th className="px-4 py-3 text-left">Message Snippet</th>
+                      <th className="px-4 py-3 text-left w-[312px] min-w-[312px] max-w-[312px]">
+                        Message Snippet
+                      </th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Sent Time</th>
                       <th className="px-4 py-3 text-left">Provider</th>
@@ -565,7 +567,7 @@ export default function WhatsappPage() {
                           >
                             {log.messageId || '—'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 w-[312px] min-w-[312px] max-w-[312px]">
                             <MessageSnippetCell
                               message={log.message}
                               errorReason={log.errorReason}

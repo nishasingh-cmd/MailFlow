@@ -79,6 +79,7 @@ model Lead {
   lastInboundMessageAt DateTime?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+  research            CompanyResearch?
   emailDrafts         EmailDraft[]
   campaignLeads       CampaignLead[]
   emailQueues         EmailQueue[]
@@ -126,29 +127,50 @@ model Company {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   leads           Lead[]
-  research        CompanyResearch?
+  researches      CompanyResearch[]
 
   @@unique([userId, name])
   @@index([userId])
 }
 
 model CompanyResearch {
-  id             String         @id @default(cuid())
-  companyId      String         @unique
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  status         ResearchStatus @default(PENDING)
-  summary        String?        @db.Text
-  painPoints     Json?
-  opportunities  Json?
-  rawAiResponse  String?        @db.Text
-  errorMessage   String?
-  retryCount     Int            @default(0)
-  lastResearched DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  emailDrafts     EmailDraft[]
+  id                        String         @id @default(cuid())
+  leadId                    String?        @unique
+  lead                      Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  companyId                 String?
+  company                   Company?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId                    String?
+  companyNameAtResearchTime String?
+  companyDomain             String?
+  companyWebsite            String?
+  companyDescription        String?        @db.Text
+  industry                  String?
+  productsServices          Json?
+  targetAudience            String?        @db.Text
+  companySize               String?
+  location                  String?
+  painPoints                Json?
+  opportunities             Json?
+  recentNews                Json?
+  relevantInsights          Json?
+  personalizationInsights   Json?
+  sources                   Json?
+  confidence                String?
+  researchedAt              DateTime?
+  researchVersion           Int            @default(1)
+  status                    ResearchStatus @default(PENDING)
+  summary                   String?        @db.Text
+  rawAiResponse             String?        @db.Text
+  errorMessage              String?
+  retryCount                Int            @default(0)
+  lastResearched            DateTime?
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  emailDrafts               EmailDraft[]
 
+  @@index([leadId])
   @@index([companyId])
+  @@index([userId])
   @@index([status])
 }
 

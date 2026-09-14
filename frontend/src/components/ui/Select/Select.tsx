@@ -20,6 +20,7 @@ export interface SelectProps {
   searchable?: boolean;
   leftIcon?: ReactNode;
   className?: string;
+  triggerClassName?: string;
   id?: string;
 }
 
@@ -35,6 +36,7 @@ export function Select({
   searchable = false,
   leftIcon,
   className,
+  triggerClassName,
   id,
 }: SelectProps) {
   const autoId = useId();
@@ -86,7 +88,8 @@ export function Select({
             'input-base flex items-center justify-between gap-2 text-left cursor-pointer',
             !selected && 'text-[var(--content-tertiary)]',
             error && 'input-error',
-            disabled && 'input-disabled cursor-not-allowed'
+            disabled && 'input-disabled cursor-not-allowed',
+            triggerClassName
           )}
         >
           <span className="flex items-center gap-2 truncate">

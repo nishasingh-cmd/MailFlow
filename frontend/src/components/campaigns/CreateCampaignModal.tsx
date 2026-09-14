@@ -694,14 +694,17 @@ export function CreateCampaignModal({
                 className={cn(
                   'p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between text-left space-y-2',
                   channel === 'EMAIL_AND_WHATSAPP'
-                    ? 'border-amber-500 bg-amber-500/10 shadow-elevation-1'
-                    : 'border-[var(--surface-border)] bg-[var(--surface-card)] hover:border-amber-500/40'
+                    ? 'border-blue-600 bg-blue-500/10 shadow-elevation-1'
+                    : 'border-[var(--surface-border)] bg-[var(--surface-card)] hover:border-blue-500/40'
                 )}
               >
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <svg
-                      className="w-5 h-5 text-amber-500"
+                      className={cn(
+                        'w-5 h-5',
+                        channel === 'EMAIL_AND_WHATSAPP' ? 'text-blue-600' : 'text-blue-500/70'
+                      )}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -714,7 +717,7 @@ export function CreateCampaignModal({
                       />
                     </svg>
                     <Badge
-                      variant={channel === 'EMAIL_AND_WHATSAPP' ? 'warning' : 'neutral'}
+                      variant={channel === 'EMAIL_AND_WHATSAPP' ? 'brand' : 'neutral'}
                       size="sm"
                     >
                       Multi-Channel
@@ -727,7 +730,14 @@ export function CreateCampaignModal({
                     Combined outreach: Full personalized email + approved Meta WhatsApp template.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-[var(--surface-border)] text-xs text-amber-400/80">
+                <div
+                  className={cn(
+                    'pt-2 border-t border-[var(--surface-border)] text-xs',
+                    channel === 'EMAIL_AND_WHATSAPP'
+                      ? 'text-blue-600 dark:text-blue-400 font-medium'
+                      : 'text-slate-500'
+                  )}
+                >
                   Dual-touch channel pipeline
                 </div>
               </div>

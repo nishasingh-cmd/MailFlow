@@ -27,15 +27,12 @@ export class EmailGenerationService {
   ): Promise<GeneratedEmailResult> {
     const { leadId, template = 'Cold Outreach', customInstructions, userContext } = req;
 
-    // 1. Fetch Lead with company and research records
+    // 1. Fetch Lead with company and direct lead research record
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, userId },
       include: {
-        companyRef: {
-          include: {
-            research: true,
-          },
-        },
+        research: true,
+        companyRef: true,
       },
     });
 
@@ -44,7 +41,7 @@ export class EmailGenerationService {
     }
 
     const company = lead.companyRef;
-    const research = company?.research;
+    const research = lead.research;
 
     // Requirement 13: Prevent generation if company research has not been completed
     if (!research || research.status !== 'COMPLETED') {
@@ -61,17 +58,24 @@ export class EmailGenerationService {
 
     const bp = user?.businessProfile;
 
+    const companyName =
+      lead.company || research.companyNameAtResearchTime || company?.name || 'your company';
+
+    const products = (research.productsServices as string[]) || company?.products || [];
+    const painPoints = (research.painPoints as string[]) || [];
+    const opportunities = (research.opportunities as string[]) || [];
+
     const promptCtx: PromptContext = {
       leadName: lead.name,
       leadEmail: lead.email,
-      companyName: company.name,
-      companySummary: research.summary,
-      industry: company.industry || lead.industry,
-      products: company.products,
-      services: company.services,
-      painPoints: (research.painPoints as string[]) || [],
-      opportunities: (research.opportunities as string[]) || [],
-      companySize: company.companySize,
+      companyName,
+      companySummary: research.summary || research.companyDescription || '',
+      industry: research.industry || company?.industry || lead.industry || 'Business',
+      products,
+      services: company?.services || [],
+      painPoints,
+      opportunities,
+      companySize: research.companySize || company?.companySize,
       template,
       customInstructions: [
         customInstructions,
@@ -108,15 +112,13 @@ export class EmailGenerationService {
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, userId },
       include: {
-        companyRef: {
-          include: {
-            research: true,
-          },
-        },
+        research: true,
+        companyRef: true,
       },
     });
 
-    if (!lead || !lead.companyRef?.research || lead.companyRef.research.status !== 'COMPLETED') {
+    const research = lead?.research;
+    if (!lead || !research || research.status !== 'COMPLETED') {
       return [
         `Quick idea for ${lead?.company || 'your team'}`,
         `Helping ${lead?.company || 'your team'} automate outreach`,
@@ -130,8 +132,9 @@ export class EmailGenerationService {
 
     const promptCtx: PromptContext = {
       leadName: lead.name,
-      companyName: lead.companyRef.name,
-      industry: lead.companyRef.industry || lead.industry,
+      companyName:
+        lead.company || research.companyNameAtResearchTime || lead.companyRef?.name || 'Company',
+      industry: research.industry || lead.companyRef?.industry || lead.industry || 'Business',
       template,
       userContext: {
         userName: user?.name,

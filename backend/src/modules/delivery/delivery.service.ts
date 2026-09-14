@@ -7,6 +7,76 @@ import { TrackingService } from '../tracking/tracking.service';
 
 const prisma = new PrismaClient();
 
+function normalizeTemplateName(name?: string | null): string {
+  if (!name) return 'cold_outreach';
+  const clean = name.toLowerCase().replace(/[^a-z]/g, '');
+  if (clean.includes('follow')) return 'follow_up';
+  if (clean.includes('partner')) return 'partnership';
+  if (clean.includes('demo')) return 'product_demo';
+  if (clean.includes('custom')) return 'custom_template';
+  return 'cold_outreach';
+}
+
+interface LeadWithDrafts {
+  emailDrafts?: Array<{
+    template?: string | null;
+    subject?: string | null;
+    body?: string | null;
+  }>;
+}
+
+function resolveCampaignEmailContent(
+  campaignTemplateId: string | null | undefined,
+  lead: LeadWithDrafts
+): { subject: string; body: string } {
+  const normCampaign = normalizeTemplateName(campaignTemplateId);
+
+  // 1. If lead has drafts, check if any draft matches the current campaign template
+  if (Array.isArray(lead.emailDrafts) && lead.emailDrafts.length > 0) {
+    const matchingDraft = lead.emailDrafts.find(
+      (d) => normalizeTemplateName(d.template) === normCampaign
+    );
+    if (matchingDraft && matchingDraft.subject && matchingDraft.body) {
+      return {
+        subject: matchingDraft.subject,
+        body: matchingDraft.body,
+      };
+    }
+  }
+
+  const company = lead.company || lead.companyRef?.name || 'your company';
+  const industry = lead.industry || lead.companyRef?.industry || 'your industry';
+
+  switch (normCampaign) {
+    case 'follow_up':
+      return {
+        subject: `Re: Thoughts for ${company}`,
+        body: `Hi {{firstName}},\n\nCircling back on my previous note — I know how full schedules get while driving initiatives at ${company}.\n\nJust wanted to share a quick benchmark: peers in ${industry} recently saw a 3.4x bump in reply rates after switching to automated account research. The setup is completely frictionless with no workflow disruption.\n\nWould you have 5 minutes this Thursday afternoon for a quick check-in, or should I circle back next month?\n\nBest regards,\nMailFlow Team`,
+      };
+    case 'partnership':
+      return {
+        subject: `Strategic collaboration idea between MailFlow and ${company}`,
+        body: `Hi {{firstName}},\n\nGiven ${company}'s strong standing and footprint in the ${industry} space, I wanted to reach out regarding a potential mutual partnership.\n\nWe frequently work with forward-thinking leaders at teams like ${company} who want to broaden their service capabilities and unlock new client revenue streams without additional overhead. Our partner ecosystem empowers teams to embed AI-driven prospect intelligence directly into their offering.\n\nWould you or your team be open to exploring potential synergies over a brief introductory call this week?\n\nBest regards,\nMailFlow Team`,
+      };
+    case 'product_demo':
+      return {
+        subject: `10-minute interactive walkthrough for ${company}`,
+        body: `Hi {{firstName}},\n\nI noticed ${company}'s ongoing efforts to streamline outreach performance across ${industry}.\n\nMost teams are exhausted by juggling disjointed tools for prospect lists, AI copywriting, and multi-channel delivery. I've assembled a tailored live walkthrough demonstrating how MailFlow solves this by unifying lead enrichment, email generation, and WhatsApp outreach for ${company}.\n\nCan I send across a quick 1-click link to schedule a 10-minute demo customized for ${company}?\n\nBest regards,\nMailFlow Team`,
+      };
+    case 'custom_template':
+      return {
+        subject: `Tailored outreach initiative for ${company}`,
+        body: `Hi {{firstName}},\n\nReaching out specifically regarding ${company}'s strategic initiatives in ${industry}.\n\nEvery campaign has unique requirements, brand voice guidelines, and conversion triggers. MailFlow's AI adapts directly to your custom instructions, producing bespoke messaging tuned to your business profile.\n\nLet me know if you'd be interested in reviewing how we can tailor this for your goals.\n\nBest regards,\nMailFlow Team`,
+      };
+    case 'cold_outreach':
+    default:
+      return {
+        subject: `Quick idea regarding ${company}'s growth pipeline`,
+        body: `Hi {{firstName}},\n\nI came across ${company}'s work in ${industry} and was really impressed by your team's positioning.\n\nMany teams at ${company}'s scale find it challenging to scale outbound messaging without losing deep account personalization. At MailFlow, we built an AI engine that researches each lead and drafts high-converting outreach in seconds.\n\nWould you be open to a brief 10-minute chat next Tuesday to explore if this fits ${company}'s current workflow?\n\nBest regards,\nMailFlow Team`,
+      };
+  }
+}
+
 export class DeliveryService {
   /**
    * Get preview of personalized email for a campaign lead
@@ -20,12 +90,11 @@ export class DeliveryService {
           include: {
             lead: {
               include: {
-                companyRef: {
-                  include: { research: true },
-                },
+                research: true,
+                companyRef: true,
                 emailDrafts: {
                   orderBy: { updatedAt: 'desc' },
-                  take: 1,
+                  take: 5,
                 },
               },
             },
@@ -44,15 +113,10 @@ export class DeliveryService {
       : campaign.campaignLeads[0];
 
     const lead = selectedCl.lead;
-    const draft = lead.emailDrafts?.[0];
+    const rawContent = resolveCampaignEmailContent(campaign.templateId, lead);
 
-    const rawSubject = draft?.subject || `Outreach for ${lead.company || lead.name}`;
-    const rawBody =
-      draft?.body ||
-      `Hi {{firstName}},\n\nI noticed your work at {{company}} in {{industry}}.\n\nBest regards,\nMailFlow Team`;
-
-    const personalizedSubject = personalizeText(rawSubject, lead);
-    const personalizedBody = personalizeText(rawBody, lead);
+    const personalizedSubject = personalizeText(rawContent.subject, lead);
+    const personalizedBody = personalizeText(rawContent.body, lead);
 
     let whatsappPreview = null;
     const channel = campaign.channel || 'EMAIL';
@@ -71,7 +135,7 @@ export class DeliveryService {
       campaignId: campaign.id,
       campaignName: campaign.name,
       channel,
-      template: draft?.template || campaign.templateId || 'Cold Outreach',
+      template: campaign.templateId || 'Cold Outreach',
       lead: {
         id: lead.id,
         name: lead.name,
@@ -103,12 +167,11 @@ export class DeliveryService {
           include: {
             lead: {
               include: {
-                companyRef: {
-                  include: { research: true },
-                },
+                research: true,
+                companyRef: true,
                 emailDrafts: {
                   orderBy: { updatedAt: 'desc' },
-                  take: 1,
+                  take: 5,
                 },
               },
             },
@@ -160,15 +223,10 @@ export class DeliveryService {
       if (newLeads.length > 0) {
         const queueEntries = newLeads.map((cl) => {
           const lead = cl.lead;
-          const draft = lead.emailDrafts?.[0];
+          const rawContent = resolveCampaignEmailContent(campaign.templateId, lead);
 
-          const rawSubject = draft?.subject || `Outreach for ${lead.company || lead.name}`;
-          const rawBody =
-            draft?.body ||
-            `Hi {{firstName}},\n\nI noticed your work at {{company}} in {{industry}}.\n\nBest regards,\nMailFlow Team`;
-
-          const subject = personalizeText(rawSubject, lead);
-          const htmlBody = personalizeText(rawBody, lead);
+          const subject = personalizeText(rawContent.subject, lead);
+          const htmlBody = personalizeText(rawContent.body, lead);
 
           return {
             userId,

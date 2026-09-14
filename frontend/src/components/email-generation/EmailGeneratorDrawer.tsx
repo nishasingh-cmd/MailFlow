@@ -7,7 +7,12 @@ import {
   type ReactNode,
   type ErrorInfo,
 } from 'react';
-import { Company, EmailDraft, EmailTemplateType, GeneratedEmailResult } from '@mailflow/shared';
+import {
+  EmailDraft,
+  EmailTemplateType,
+  GeneratedEmailResult,
+  LeadResearchResult,
+} from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
 import { emailGenerationService } from '../../services/email-generation.service';
 import { deliveryService } from '../../services/delivery.service';
@@ -89,7 +94,7 @@ function EmailGeneratorDrawerInner({
 }: EmailGeneratorDrawerProps) {
   const { toast } = useToast();
 
-  const [company, setCompany] = useState<Company | null>(null);
+  const [company, setCompany] = useState<LeadResearchResult | null>(null);
   const [loadingCompany, setLoadingCompany] = useState(false);
 
   const [template, setTemplate] = useState<EmailTemplateType>('Cold Outreach');
@@ -323,7 +328,8 @@ function EmailGeneratorDrawerInner({
           >
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-black uppercase tracking-wider">
-                Intelligence Context ({company.name})
+                Intelligence Context (
+                {company.companyName || company.company?.name || companyName || 'Company'})
               </h4>
 
               <Badge
@@ -335,7 +341,10 @@ function EmailGeneratorDrawerInner({
             </div>
 
             <p className="text-xs text-black leading-relaxed">
-              {research?.summary ?? company.description ?? 'No summary available.'}
+              {research?.summary ??
+                research?.companyDescription ??
+                company.company?.description ??
+                'No summary available.'}
             </p>
 
             {painPoints.length > 0 && (

@@ -45,9 +45,8 @@ export class WhatsappGeneratorService {
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, userId },
       include: {
-        companyRef: {
-          include: { research: true },
-        },
+        research: true,
+        companyRef: true,
       },
     });
 
@@ -58,8 +57,8 @@ export class WhatsappGeneratorService {
     const phone = lead.phone || '—';
 
     let painPointsStr = '';
-    if (Array.isArray(lead.companyRef?.research?.painPoints)) {
-      painPointsStr = (lead.companyRef?.research?.painPoints as string[]).join(', ');
+    if (Array.isArray(lead.research?.painPoints)) {
+      painPointsStr = (lead.research?.painPoints as string[]).join(', ');
     }
 
     const ctaText = customCta || 'Would you be open to a brief 5-min chat this week?';
@@ -159,9 +158,8 @@ ${ctaText}`;
         ? await prisma.lead.findFirst({
             where: { id: leadId, userId },
             include: {
-              companyRef: {
-                include: { research: true },
-              },
+              research: true,
+              companyRef: true,
             },
           })
         : null;
@@ -170,9 +168,8 @@ ${ctaText}`;
       lead = await prisma.lead.findFirst({
         where: { userId },
         include: {
-          companyRef: {
-            include: { research: true },
-          },
+          research: true,
+          companyRef: true,
         },
       });
     }
@@ -276,8 +273,8 @@ ${ctaText}`;
 
     if (env.GEMINI_API_KEY) {
       let painPointsStr = '';
-      if (Array.isArray(lead?.companyRef?.research?.painPoints)) {
-        painPointsStr = (lead?.companyRef?.research?.painPoints as string[]).join(', ');
+      if (Array.isArray(lead?.research?.painPoints)) {
+        painPointsStr = (lead?.research?.painPoints as string[]).join(', ');
       }
 
       const prompt = `You are a B2B sales personalization AI. Your task is to extract exact, concise values for WhatsApp template variables.

@@ -170,9 +170,34 @@ export interface Company {
   research?: CompanyResearch | null;
 }
 
+export interface ResearchSource {
+  name: string;
+  url?: string;
+  type: 'OFFICIAL_WEBSITE' | 'NEWS' | 'DIRECTORY' | 'VERIFIED_DOMAIN' | 'OTHER';
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
 export interface CompanyResearch {
   id: string;
-  companyId: string;
+  leadId?: string | null;
+  companyId?: string | null;
+  userId?: string | null;
+  companyNameAtResearchTime?: string | null;
+  companyDomain?: string | null;
+  companyWebsite?: string | null;
+  companyDescription?: string | null;
+  industry?: string | null;
+  productsServices?: string[] | null;
+  targetAudience?: string | null;
+  companySize?: string | null;
+  location?: string | null;
+  keyBusinessFocus?: string | null;
+  recentNews?: string[] | null;
+  relevantInsights?: string[] | null;
+  personalizationInsights?: string | string[] | null;
+  sources?: ResearchSource[] | null;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW' | string | null;
+  researchVersion?: number;
   status: ResearchStatus;
   summary?: string | null;
   painPoints?: string[] | null;
@@ -180,8 +205,25 @@ export interface CompanyResearch {
   errorMessage?: string | null;
   retryCount: number;
   lastResearched?: string | null;
+  researchedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LeadResearchResult {
+  leadId: string;
+  leadName?: string;
+  leadEmail?: string;
+  companyName: string;
+  website?: string | null;
+  industry?: string | null;
+  status: ResearchStatus | 'IDENTITY_UNVERIFIED' | 'RESEARCH_FAILED';
+  research: CompanyResearch | null;
+  company?: Company | null;
+  sources?: ResearchSource[];
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  researchedAt?: string | null;
+  error?: string | null;
 }
 
 export interface ResearchSingleRequest {

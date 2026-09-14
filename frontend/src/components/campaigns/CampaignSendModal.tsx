@@ -106,7 +106,7 @@ export function CampaignSendModal({
           </div>
         ) : preview ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
               <span>
                 Total Leads:{' '}
                 <strong className="text-[var(--content-primary)] font-bold">
@@ -118,7 +118,7 @@ export function CampaignSendModal({
             {isWhatsappOnly ? (
               <div className="space-y-3">
                 {/* WHATSAPP ARCHITECTURE REVIEW CARD */}
-                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/8 text-emerald-200 text-xs space-y-2.5">
+                <div className="p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-emerald-500/8 text-emerald-200 text-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-emerald-300 text-sm">
                       WhatsApp Campaign Review
@@ -156,7 +156,7 @@ export function CampaignSendModal({
 
                 {/* VARIABLE MAPPING DISPLAY */}
                 {preview.whatsappPreview?.variables && (
-                  <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] space-y-1.5">
+                  <div className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-[var(--surface-elevated)] space-y-1.5">
                     <span className="text-2xs font-semibold uppercase text-[var(--content-tertiary)] block">
                       Resolved Template Variables:
                     </span>
@@ -175,8 +175,8 @@ export function CampaignSendModal({
                 )}
 
                 {/* FINAL WHATSAPP RESOLVED MESSAGE */}
-                <div className="rounded-xl border border-emerald-500/30 overflow-hidden bg-[var(--surface-card)]">
-                  <div className="p-3 border-b border-emerald-500/20 bg-emerald-500/10 flex items-center justify-between">
+                <div className="rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden bg-[var(--surface-card)]">
+                  <div className="p-3 border-b border-slate-300 dark:border-slate-700 bg-emerald-500/10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-emerald-300">
                         Preview — This is what the recipient will receive on WhatsApp
@@ -192,8 +192,8 @@ export function CampaignSendModal({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden bg-[var(--surface-card)]">
-                  <div className="p-4 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+                <div className="rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden bg-[var(--surface-card)]">
+                  <div className="p-4 border-b border-slate-300 dark:border-slate-700 bg-[var(--surface-elevated)]">
                     <p className="text-2xs uppercase font-semibold text-[var(--content-tertiary)]">
                       Subject
                     </p>
@@ -209,7 +209,7 @@ export function CampaignSendModal({
             )}
 
             {isMultiChannel && (
-              <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/8 text-amber-200 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-amber-500/8 text-amber-200 text-xs flex items-center gap-2">
                 <span>
                   <strong>WhatsApp Enabled:</strong> Approved Meta WhatsApp template dispatches will
                   also be queued simultaneously for all target leads with valid phone numbers.
@@ -224,12 +224,13 @@ export function CampaignSendModal({
                 value={speed}
                 onChange={(val) => setSpeed(val as SendingSpeed)}
                 options={SPEED_OPTIONS}
+                triggerClassName="border-slate-300 dark:border-slate-700"
               />
             </div>
 
             {/* CONFIRMATION STATEMENT & BUTTONS */}
             <div className="pt-4 border-t border-[var(--surface-border)] space-y-3">
-              <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
+              <div className="p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-[var(--surface-elevated)] text-xs text-[var(--content-secondary)]">
                 {isWhatsappOnly ? (
                   <p>
                     You are about to send the approved Meta WhatsApp template{' '}

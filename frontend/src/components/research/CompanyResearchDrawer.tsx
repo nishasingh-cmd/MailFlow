@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Company, ResearchStatus } from '@mailflow/shared';
+import { LeadResearchResult, ResearchStatus, ResearchSource } from '@mailflow/shared';
 import { researchService } from '../../services/research.service';
 import { Drawer, Button, Card, Badge } from '../ui';
 import { ResearchStatusBadge } from './ResearchStatusBadge';
@@ -13,67 +13,11 @@ interface CompanyResearchDrawerProps {
   onGenerateEmail?: (leadId: string, companyName?: string) => void;
 }
 
-function simplifyToPlainEnglish(text: string): string {
-  if (!text) return '';
-  let s = text;
-
-  // Exact boilerplate replacements from earlier generations
-  s = s.replace(
-    /delivers domain-focused business capabilities designed to streamline operational workflows and increase business performance\. Their portfolio combines modern technology offerings with dedicated customer support\./gi,
-    'helps businesses run smoothly. They give friendly customer help and easy-to-use tools so teams can get their work done quickly without stress.'
-  );
-  s = s.replace(
-    /Scaling customer acquisition and outbound pipeline generation efficiently/gi,
-    'Finding new customers and getting more sales easily'
-  );
-  s = s.replace(
-    /Integrating disconnected operational tools into unified workflows/gi,
-    'Using too many different apps that do not talk to each other'
-  );
-  s = s.replace(
-    /Optimizing internal team bandwidth and resource management/gi,
-    'Team members have too much work to do and not enough time'
-  );
-  s = s.replace(
-    /Propose automated cold outreach and lead enrichment solutions/gi,
-    'Help them send friendly emails to find new clients automatically'
-  );
-  s = s.replace(
-    /Offer workflow integration and process optimization consulting/gi,
-    'Help them connect all their tools so they save hours of work every week'
-  );
-  s = s.replace(
-    /is an established company providing specialized business solutions and products to commercial clients\./gi,
-    'is a company that helps other businesses do their daily work faster and better.'
-  );
-
-  // Common corporate buzzwords
-  s = s.replace(/\bdomain-focused business capabilities\b/gi, 'helpful tools and services');
-  s = s.replace(/\bstreamline operational workflows\b/gi, 'make daily work easier and faster');
-  s = s.replace(/\bstreamlining operational workflows\b/gi, 'making daily work easier and faster');
-  s = s.replace(/\bincrease business performance\b/gi, 'help businesses grow');
-  s = s.replace(/\bscalable customer acquisition\b/gi, 'finding new customers');
-  s = s.replace(/\boutbound pipeline generation\b/gi, 'getting more sales meetings');
-  s = s.replace(/\bdisconnected operational tools\b/gi, 'different apps that do not work together');
-  s = s.replace(/\bunified workflows\b/gi, 'working smoothly together');
-  s = s.replace(
-    /\bteam bandwidth and resource management\b/gi,
-    'having enough time and team members'
-  );
-  s = s.replace(/\bdedicated customer support\b/gi, 'friendly customer support');
-  s = s.replace(/\bleverage\b/gi, 'use');
-  s = s.replace(/\bleveraging\b/gi, 'using');
-  s = s.replace(/\butilize\b/gi, 'use');
-  s = s.replace(/\butilizing\b/gi, 'using');
-  s = s.replace(/\bfrictionless\b/gi, 'simple and easy');
-  s = s.replace(/\bdisparate tools\b/gi, 'different apps');
-
-  return s;
-}
-
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="text-xs font-bold text-black uppercase tracking-widest mb-2">{children}</h4>
+    <h4 className="text-xs font-bold text-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+      {children}
+    </h4>
   );
 }
 
@@ -88,12 +32,15 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 function PointerList({ items }: { items: string[] }) {
-  if (!items?.length) return <p className="text-sm text-black italic">None identified</p>;
+  if (!items?.length) return <p className="text-sm text-black/60 italic">None identified</p>;
   return (
     <ul className="space-y-2 pl-1">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1.5" aria-hidden="true" />
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 mt-1.5"
+            aria-hidden="true"
+          />
           <span className="text-black leading-snug">{item}</span>
         </li>
       ))}
@@ -104,7 +51,7 @@ function PointerList({ items }: { items: string[] }) {
 function PainPointIcon() {
   return (
     <svg
-      className="w-4 h-4 text-amber-400 shrink-0 mt-0.5"
+      className="w-4 h-4 text-amber-500 shrink-0 mt-0.5"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -122,7 +69,7 @@ function PainPointIcon() {
 function OpportunityIcon() {
   return (
     <svg
-      className="w-4 h-4 text-green-400 shrink-0 mt-0.5"
+      className="w-4 h-4 text-green-600 shrink-0 mt-0.5"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -130,6 +77,25 @@ function OpportunityIcon() {
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence?: string | null }) {
+  if (!confidence) return null;
+  const upper = confidence.toUpperCase();
+  const colors: Record<string, string> = {
+    HIGH: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+    MEDIUM: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    LOW: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  };
+  return (
+    <span
+      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+        colors[upper] || colors.MEDIUM
+      }`}
+    >
+      {upper} CONFIDENCE
+    </span>
   );
 }
 
@@ -141,31 +107,32 @@ export function CompanyResearchDrawer({
   onResearchComplete,
   onGenerateEmail,
 }: CompanyResearchDrawerProps) {
-  const [company, setCompany] = useState<Company | null>(null);
+  const [researchData, setResearchData] = useState<LeadResearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isResearching, setIsResearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchResearch = useCallback(async () => {
-    if (!leadId) return;
+  // Fetch lead-isolated research data
+  const fetchResearch = useCallback(async (targetLeadId: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await researchService.getResearch(leadId);
-      setCompany(data);
+      const data = await researchService.getResearch(targetLeadId);
+      setResearchData(data);
     } catch {
       setError('Failed to load research data');
     } finally {
       setIsLoading(false);
     }
-  }, [leadId]);
+  }, []);
 
+  // Strict per-lead isolation: reset state immediately when target changes
   useEffect(() => {
+    setResearchData(null);
+    setError(null);
+
     if (isOpen && leadId) {
-      fetchResearch();
-    } else {
-      setCompany(null);
-      setError(null);
+      fetchResearch(leadId);
     }
   }, [isOpen, leadId, fetchResearch]);
 
@@ -178,7 +145,7 @@ export function CompanyResearchDrawer({
       if (res.status === 'FAILED') {
         setError(res.error ?? 'Research failed for this company.');
       }
-      await fetchResearch();
+      await fetchResearch(leadId);
       onResearchComplete?.();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
@@ -188,50 +155,106 @@ export function CompanyResearchDrawer({
     }
   };
 
-  const researchStatus = company?.research?.status as ResearchStatus | undefined;
-  const hasResearch = researchStatus === 'COMPLETED';
-  const research = company?.research;
+  const status =
+    (researchData?.status ?? (researchData?.research?.status as ResearchStatus)) || 'PENDING';
+  const hasResearch = status === 'COMPLETED';
+  const research = researchData?.research;
+  const company = researchData?.company;
+
+  const resolvedCompanyName =
+    researchData?.companyName ||
+    research?.companyNameAtResearchTime ||
+    company?.name ||
+    companyName ||
+    'Unknown Company';
+
+  const resolvedWebsite =
+    researchData?.website ||
+    research?.companyWebsite ||
+    research?.companyDomain ||
+    company?.website ||
+    null;
+
+  const resolvedIndustry =
+    researchData?.industry || research?.industry || company?.industry || null;
+
+  const productsServices = research?.productsServices || [
+    ...(company?.products || []),
+    ...(company?.services || []),
+  ];
+
+  const painPoints = research?.painPoints || [];
+  const opportunities = research?.opportunities || [];
+  const personalizationInsights: string[] = Array.isArray(research?.personalizationInsights)
+    ? research.personalizationInsights
+    : research?.personalizationInsights
+      ? [research.personalizationInsights]
+      : [];
+
+  const rawSources = researchData?.sources || (research?.sources as ResearchSource[]) || [];
+  const sources: ResearchSource[] = (Array.isArray(rawSources) ? rawSources : []).filter(
+    (s: unknown): s is ResearchSource =>
+      Boolean(s && typeof s === 'object' && ('url' in s || 'name' in s))
+  );
+
+  const badgeStatus: ResearchStatus | null =
+    status === 'COMPLETED' || status === 'PROCESSING' || status === 'PENDING'
+      ? status
+      : status
+        ? 'FAILED'
+        : null;
 
   return (
-    <Drawer open={isOpen} onClose={onClose} title="Company Research" width="w-[480px]">
+    <Drawer open={isOpen} onClose={onClose} title="Company Research" width="w-[520px]">
       <div className="space-y-5">
+        {/* Header with Lead & Company Isolation Details */}
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-[var(--surface-border)]">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center shrink-0">
-              <span className="text-brand-400 font-bold text-xl">
-                {(company?.name ?? companyName ?? '?').charAt(0).toUpperCase()}
+              <span className="text-brand-600 font-bold text-xl">
+                {resolvedCompanyName.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-[var(--content-primary)] leading-tight">
-                {company?.name ?? companyName ?? 'Unknown Company'}
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold text-[var(--content-primary)] leading-tight truncate">
+                {resolvedCompanyName}
               </h3>
-              {company?.website && (
-                <a
-                  href={
-                    company.website.startsWith('http')
-                      ? company.website
-                      : `https://${company.website}`
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-brand-400 hover:underline"
-                >
-                  {company.website}
-                </a>
+              {researchData?.leadName && (
+                <p className="text-xs text-[var(--content-secondary)] truncate">
+                  Lead:{' '}
+                  <span className="font-medium text-[var(--content-primary)]">
+                    {researchData.leadName}
+                  </span>
+                </p>
               )}
-              {company?.industry && (
-                <div className="mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {resolvedWebsite && (
+                  <a
+                    href={
+                      resolvedWebsite.startsWith('http')
+                        ? resolvedWebsite
+                        : `https://${resolvedWebsite}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-brand-600 hover:underline truncate max-w-[200px]"
+                  >
+                    {resolvedWebsite}
+                  </a>
+                )}
+                {resolvedIndustry && (
                   <Badge variant="brand" size="sm">
-                    {company.industry}
+                    {resolvedIndustry}
                   </Badge>
-                </div>
-              )}
+                )}
+                <ConfidenceBadge confidence={researchData?.confidence || research?.confidence} />
+              </div>
             </div>
           </div>
-          <ResearchStatusBadge status={researchStatus ?? null} className="shrink-0" />
+          <ResearchStatusBadge status={badgeStatus} className="shrink-0" />
         </div>
 
+        {/* Loading shimmer */}
         {isLoading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -240,17 +263,19 @@ export function CompanyResearchDrawer({
           </div>
         )}
 
+        {/* Error notification */}
         {error && !isLoading && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-500">
             {error}
           </div>
         )}
 
+        {/* Empty state / Not researched */}
         {!isLoading && !hasResearch && (
           <Card variant="elevated" className="p-4 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-brand-500/10 border border-brand-500/20 mx-auto flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-brand-400"
+                className="w-5 h-5 text-brand-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -265,12 +290,14 @@ export function CompanyResearchDrawer({
             </div>
             <div>
               <p className="text-sm font-medium text-[var(--content-primary)]">
-                {researchStatus === 'FAILED' ? 'Research Failed' : 'No Research Yet'}
+                {status === 'FAILED' ? 'Research Failed' : 'No Research Yet'}
               </p>
               <p className="text-xs text-[var(--content-secondary)] mt-1">
-                {researchStatus === 'FAILED'
-                  ? (research?.errorMessage ?? 'An error occurred during research. You can retry.')
-                  : 'Click below to run AI company research for this lead.'}
+                {status === 'FAILED'
+                  ? research?.errorMessage ||
+                    researchData?.error ||
+                    'An error occurred during research. You can retry.'
+                  : 'Click below to run genuine, evidence-based AI research for this lead.'}
               </p>
             </div>
             <Button onClick={handleResearch} disabled={isResearching} className="w-full">
@@ -289,7 +316,7 @@ export function CompanyResearchDrawer({
                   </svg>
                   Researching...
                 </span>
-              ) : researchStatus === 'FAILED' ? (
+              ) : status === 'FAILED' ? (
                 'Retry Research'
               ) : (
                 'Research Company'
@@ -298,17 +325,18 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {hasResearch && research?.summary && (
+        {/* AI Company Summary */}
+        {hasResearch && (research?.summary || research?.companyDescription) && (
           <Card
             variant="elevated"
-            className="p-4 space-y-2 border border-[var(--surface-border)] bg-[var(--surface-card)]"
+            className="p-4 space-y-2 border border-slate-300 dark:border-slate-700 bg-[var(--surface-card)]"
           >
-            <SectionHeading>AI Company Summary</SectionHeading>
+            <SectionHeading>Company Summary & Mission</SectionHeading>
             <p className="text-sm text-black font-medium leading-relaxed">
-              {simplifyToPlainEnglish(research.summary)}
+              {research.summary || research.companyDescription}
             </p>
             {research.lastResearched && (
-              <p className="text-xs text-black/70">
+              <p className="text-xs text-black/60 pt-1">
                 Last updated:{' '}
                 {new Date(research.lastResearched).toLocaleDateString('en-IN', {
                   day: 'numeric',
@@ -320,78 +348,110 @@ export function CompanyResearchDrawer({
           </Card>
         )}
 
-        {hasResearch && (research?.painPoints as string[] | null)?.length ? (
-          <Card variant="default" className="p-4 space-y-2">
+        {/* Key Products & Services */}
+        {hasResearch && productsServices.length > 0 && (
+          <Card
+            variant="default"
+            className="p-4 space-y-2 border border-slate-300 dark:border-slate-700"
+          >
+            <SectionHeading>Core Products & Services</SectionHeading>
+            <PointerList items={productsServices} />
+          </Card>
+        )}
+
+        {/* Company Profile Details */}
+        {hasResearch && (
+          <Card
+            variant="default"
+            className="p-4 space-y-3 border border-slate-300 dark:border-slate-700"
+          >
+            <SectionHeading>Company Profile</SectionHeading>
+            <InfoRow label="Headquarters" value={research?.location || company?.headquarters} />
+            <InfoRow label="Company Size" value={research?.companySize || company?.companySize} />
+            <InfoRow
+              label="Target Audience"
+              value={research?.targetAudience || company?.targetCustomers}
+            />
+            <InfoRow label="Domain" value={research?.companyDomain} />
+          </Card>
+        )}
+
+        {/* Likely Pain Points */}
+        {hasResearch && painPoints.length > 0 && (
+          <Card
+            variant="default"
+            className="p-4 space-y-2 border border-slate-300 dark:border-slate-700"
+          >
             <SectionHeading>Likely Pain Points</SectionHeading>
             <ul className="space-y-2">
-              {(research?.painPoints as string[]).map((point, i) => (
+              {painPoints.map((point, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <PainPointIcon />
-                  <span className="text-black leading-snug">{simplifyToPlainEnglish(point)}</span>
+                  <span className="text-black leading-snug">{point}</span>
                 </li>
               ))}
             </ul>
           </Card>
-        ) : null}
+        )}
 
-        {hasResearch && (research?.opportunities as string[] | null)?.length ? (
-          <Card variant="default" className="p-4 space-y-2">
-            <SectionHeading>Outreach Opportunities</SectionHeading>
+        {/* Outreach Opportunities */}
+        {hasResearch && opportunities.length > 0 && (
+          <Card
+            variant="default"
+            className="p-4 space-y-2 border border-slate-300 dark:border-slate-700"
+          >
+            <SectionHeading>Outreach Angles & Opportunities</SectionHeading>
             <ul className="space-y-2">
-              {(research?.opportunities as string[]).map((opp, i) => (
+              {opportunities.map((opp, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-black font-medium">
                   <OpportunityIcon />
-                  <span className="text-black leading-snug">{simplifyToPlainEnglish(opp)}</span>
+                  <span className="text-black leading-snug">{opp}</span>
                 </li>
               ))}
             </ul>
           </Card>
-        ) : null}
+        )}
 
-        {hasResearch && company && (
-          <Card variant="default" className="p-4 space-y-3">
-            <SectionHeading>Company Details</SectionHeading>
-            <InfoRow label="Headquarters" value={company.headquarters} />
-            <InfoRow label="Company Size" value={company.companySize} />
-            <InfoRow
-              label="Target Customers"
-              value={
-                company.targetCustomers ? simplifyToPlainEnglish(company.targetCustomers) : null
-              }
-            />
-            <InfoRow
-              label="Description"
-              value={company.description ? simplifyToPlainEnglish(company.description) : null}
-            />
+        {/* Personalization Insights */}
+        {hasResearch && personalizationInsights.length > 0 && (
+          <Card
+            variant="default"
+            className="p-4 space-y-2 border border-slate-300 dark:border-slate-700"
+          >
+            <SectionHeading>Personalization Angles</SectionHeading>
+            <PointerList items={personalizationInsights} />
           </Card>
         )}
 
-        {hasResearch &&
-          company &&
-          (company.products?.length > 0 || company.services?.length > 0) && (
-            <Card variant="default" className="p-4 space-y-4">
-              {company.products?.length > 0 && (
-                <div className="space-y-2">
-                  <SectionHeading>Products</SectionHeading>
-                  <PointerList items={company.products.map(simplifyToPlainEnglish)} />
+        {/* Verified Sources & Audit Trail */}
+        {hasResearch && sources.length > 0 && (
+          <Card
+            variant="default"
+            className="p-4 space-y-2 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30"
+          >
+            <SectionHeading>Verified Sources</SectionHeading>
+            <div className="space-y-1.5">
+              {sources.map((src, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <a
+                    href={src.url || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-600 hover:underline truncate max-w-[280px]"
+                    title={src.name || src.url || 'Source'}
+                  >
+                    {src.name || src.url || 'Official Source'}
+                  </a>
+                  <span className="text-[10px] text-black/60 uppercase font-mono">
+                    {src.type || 'web'}
+                  </span>
                 </div>
-              )}
-              {company.services?.length > 0 && (
-                <div className="space-y-2">
-                  <SectionHeading>Services</SectionHeading>
-                  <PointerList items={company.services.map(simplifyToPlainEnglish)} />
-                </div>
-              )}
-            </Card>
-          )}
-
-        {hasResearch && company && (company.techStack ?? []).length > 0 && (
-          <Card variant="default" className="p-4 space-y-2">
-            <SectionHeading>Technology Stack</SectionHeading>
-            <PointerList items={company.techStack ?? []} />
+              ))}
+            </div>
           </Card>
         )}
 
+        {/* Action Buttons */}
         {hasResearch && (
           <div className="space-y-2 pt-2">
             {onGenerateEmail && leadId && (
@@ -400,11 +460,11 @@ export function CompanyResearchDrawer({
                 size="sm"
                 onClick={() => {
                   onClose();
-                  onGenerateEmail(leadId, companyName || undefined);
+                  onGenerateEmail(leadId, resolvedCompanyName);
                 }}
                 className="w-full shadow-lg shadow-brand-500/20 font-semibold"
               >
-                Generate AI Email
+                Generate AI Email for {resolvedCompanyName}
               </Button>
             )}
 
@@ -415,7 +475,7 @@ export function CompanyResearchDrawer({
               disabled={isResearching}
               className="w-full text-xs"
             >
-              {isResearching ? 'Re-researching...' : 'Refresh Research'}
+              {isResearching ? 'Re-researching...' : 'Refresh Research (Force Live Update)'}
             </Button>
           </div>
         )}

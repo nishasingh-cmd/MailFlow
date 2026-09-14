@@ -7,6 +7,10 @@ interface LeadData {
   website?: string | null;
   linkedin?: string | null;
   customFields?: unknown;
+  research?: {
+    summary?: string | null;
+    painPoints?: unknown;
+  } | null;
   companyRef?: {
     name?: string | null;
     industry?: string | null;
@@ -27,10 +31,11 @@ export function personalizeText(templateText: string, lead: LeadData): string {
   const industry = lead.industry || lead.companyRef?.industry || 'your industry';
 
   let painPointsStr = '';
-  if (Array.isArray(lead.companyRef?.research?.painPoints)) {
-    painPointsStr = (lead.companyRef?.research?.painPoints as string[]).join(', ');
-  } else if (typeof lead.companyRef?.research?.painPoints === 'string') {
-    painPointsStr = lead.companyRef?.research?.painPoints;
+  const painPoints = lead.research?.painPoints || lead.companyRef?.research?.painPoints;
+  if (Array.isArray(painPoints)) {
+    painPointsStr = (painPoints as string[]).join(', ');
+  } else if (typeof painPoints === 'string') {
+    painPointsStr = painPoints;
   }
 
   const replacements: Record<string, string> = {
