@@ -36,6 +36,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [templateId, setTemplateId] = useState('');
+  const [channel, setChannel] = useState<'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP'>('EMAIL');
   const [status, setStatus] = useState('DRAFT');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [nameError, setNameError] = useState('');
@@ -48,6 +49,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
       setName(campaign.name);
       setDescription(campaign.description ?? '');
       setTemplateId(campaign.templateId ?? '');
+      setChannel(campaign.channel ?? 'EMAIL');
       setStatus(campaign.status);
       setTab('details');
       setNameError('');
@@ -90,6 +92,7 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
         name: name.trim(),
         description: description.trim() || undefined,
         leadIds: selectedLeadIds,
+        channel,
         templateId: templateId || undefined,
         status: status as Campaign['status'],
       });
@@ -163,6 +166,57 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
             rows={3}
             placeholder="What is this campaign about?"
           />
+
+          <div className="space-y-1.5 pt-1">
+            <label className="text-xs font-semibold text-[var(--content-secondary)] uppercase tracking-wider">
+              Outreach Channel
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setChannel('EMAIL')}
+                className={cn(
+                  'px-3 py-2 rounded-lg border text-xs font-medium transition-all text-center',
+                  channel === 'EMAIL'
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-400 font-semibold ring-1 ring-brand-500/50'
+                    : 'border-[var(--surface-border)] text-[var(--content-secondary)] hover:border-[var(--surface-hover)]'
+                )}
+              >
+                Email
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannel('WHATSAPP')}
+                className={cn(
+                  'px-3 py-2 rounded-lg border text-xs font-medium transition-all text-center',
+                  channel === 'WHATSAPP'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 font-semibold ring-1 ring-emerald-500/50'
+                    : 'border-[var(--surface-border)] text-[var(--content-secondary)] hover:border-[var(--surface-hover)]'
+                )}
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannel('EMAIL_AND_WHATSAPP')}
+                className={cn(
+                  'px-3 py-2 rounded-lg border text-xs font-medium transition-all text-center',
+                  channel === 'EMAIL_AND_WHATSAPP'
+                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-semibold ring-1 ring-indigo-500/50'
+                    : 'border-[var(--surface-border)] text-[var(--content-secondary)] hover:border-[var(--surface-hover)]'
+                )}
+              >
+                Multi-Channel
+              </button>
+            </div>
+            <p className="text-2xs text-[var(--content-tertiary)] mt-1">
+              {channel === 'EMAIL_AND_WHATSAPP'
+                ? 'Dispatches both personalized Email and Meta WhatsApp templates.'
+                : channel === 'WHATSAPP'
+                  ? 'Dispatches approved WhatsApp Meta Cloud templates with AI variable personalization.'
+                  : 'Dispatches personalized email sequences via connected SMTP.'}
+            </p>
+          </div>
         </div>
       )}
 
@@ -178,7 +232,48 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
 
       {tab === 'settings' && (
         <div className="space-y-4">
-          {campaign?.channel === 'WHATSAPP' ? (
+          {channel === 'EMAIL_AND_WHATSAPP' ? (
+            <div className="space-y-4 p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]/50">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-indigo-400">
+                  Multi-Channel Configuration
+                </span>
+                <p className="text-2xs text-[var(--content-tertiary)]">
+                  Leads receive dual outreach across both Email & WhatsApp.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Select
+                  id="edit-campaign-wa-template"
+                  label="Meta WhatsApp Template"
+                  value={templateId}
+                  onChange={(val) => setTemplateId(val)}
+                  options={
+                    waTemplates.length > 0
+                      ? waTemplates.map((t) => ({
+                          value: t.name,
+                          label: `${t.name} (Meta Status: ✓ ${t.status}, Lang: ${t.language})`,
+                        }))
+                      : [
+                          {
+                            value: templateId || 'cold_outreach',
+                            label: `${templateId || 'cold_outreach'} (Meta Approved ✓)`,
+                          },
+                        ]
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Select
+                  id="edit-campaign-email-template"
+                  label="Email Template Framework"
+                  value={templateId}
+                  onChange={(val) => setTemplateId(val)}
+                  options={EMAIL_TEMPLATE_OPTIONS}
+                />
+              </div>
+            </div>
+          ) : channel === 'WHATSAPP' ? (
             <div className="space-y-2">
               <Select
                 id="edit-campaign-template"

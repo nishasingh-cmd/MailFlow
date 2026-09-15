@@ -3,6 +3,7 @@ import { AppRoutes } from './routes';
 import { useTheme } from './hooks/useTheme';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/ui/Toast/Toast';
 
 function App() {
   useTheme();
@@ -12,6 +13,7 @@ function App() {
       <ToastProvider>
         <AuthProvider>
           <AppRoutes />
+          <ToastContainer />
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

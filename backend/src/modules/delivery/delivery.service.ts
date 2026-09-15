@@ -18,6 +18,10 @@ function normalizeTemplateName(name?: string | null): string {
 }
 
 interface LeadWithDrafts {
+  company?: string | null;
+  industry?: string | null;
+  companyRef?: { name?: string | null; industry?: string | null } | null;
+  research?: { industry?: string | null; summary?: string | null } | null;
   emailDrafts?: Array<{
     template?: string | null;
     subject?: string | null;
@@ -45,34 +49,35 @@ function resolveCampaignEmailContent(
   }
 
   const company = lead.company || lead.companyRef?.name || 'your company';
-  const industry = lead.industry || lead.companyRef?.industry || 'your industry';
+  const industry =
+    lead.research?.industry || lead.companyRef?.industry || lead.industry || 'your industry';
 
   switch (normCampaign) {
     case 'follow_up':
       return {
         subject: `Re: Thoughts for ${company}`,
-        body: `Hi {{firstName}},\n\nCircling back on my previous note — I know how full schedules get while driving initiatives at ${company}.\n\nJust wanted to share a quick benchmark: peers in ${industry} recently saw a 3.4x bump in reply rates after switching to automated account research. The setup is completely frictionless with no workflow disruption.\n\nWould you have 5 minutes this Thursday afternoon for a quick check-in, or should I circle back next month?\n\nBest regards,\nMailFlow Team`,
+        body: `Hi {{firstName}},\n\nCircling back on my previous note regarding ${company}'s outreach workflow in ${industry}.\n\nMailFlow helps teams streamline prospect research and keep communication personalized without manual bottlenecks.\n\nWould you be open to a brief 10-minute check-in sometime this week?\n\nBest regards,\nMailFlow Team`,
       };
     case 'partnership':
       return {
         subject: `Strategic collaboration idea between MailFlow and ${company}`,
-        body: `Hi {{firstName}},\n\nGiven ${company}'s strong standing and footprint in the ${industry} space, I wanted to reach out regarding a potential mutual partnership.\n\nWe frequently work with forward-thinking leaders at teams like ${company} who want to broaden their service capabilities and unlock new client revenue streams without additional overhead. Our partner ecosystem empowers teams to embed AI-driven prospect intelligence directly into their offering.\n\nWould you or your team be open to exploring potential synergies over a brief introductory call this week?\n\nBest regards,\nMailFlow Team`,
+        body: `Hi {{firstName}},\n\nGiven ${company}'s standing in ${industry}, I wanted to reach out regarding a potential mutual partnership.\n\nOur platform empowers teams to combine AI-driven prospect intelligence and omni-channel automation into a unified workflow.\n\nWould you or your team be open to exploring potential synergies over a brief introductory chat?\n\nBest regards,\nMailFlow Team`,
       };
     case 'product_demo':
       return {
         subject: `10-minute interactive walkthrough for ${company}`,
-        body: `Hi {{firstName}},\n\nI noticed ${company}'s ongoing efforts to streamline outreach performance across ${industry}.\n\nMost teams are exhausted by juggling disjointed tools for prospect lists, AI copywriting, and multi-channel delivery. I've assembled a tailored live walkthrough demonstrating how MailFlow solves this by unifying lead enrichment, email generation, and WhatsApp outreach for ${company}.\n\nCan I send across a quick 1-click link to schedule a 10-minute demo customized for ${company}?\n\nBest regards,\nMailFlow Team`,
+        body: `Hi {{firstName}},\n\nI noticed ${company}'s work in ${industry} and wanted to reach out regarding your outreach workflow.\n\nI have assembled a brief live walkthrough demonstrating how MailFlow solves this by unifying lead enrichment, email generation, and multi-channel outreach for ${company}.\n\nWould you be open to a brief 10-minute preview to see if this aligns with your workflow?\n\nBest regards,\nMailFlow Team`,
       };
     case 'custom_template':
       return {
         subject: `Tailored outreach initiative for ${company}`,
-        body: `Hi {{firstName}},\n\nReaching out specifically regarding ${company}'s strategic initiatives in ${industry}.\n\nEvery campaign has unique requirements, brand voice guidelines, and conversion triggers. MailFlow's AI adapts directly to your custom instructions, producing bespoke messaging tuned to your business profile.\n\nLet me know if you'd be interested in reviewing how we can tailor this for your goals.\n\nBest regards,\nMailFlow Team`,
+        body: `Hi {{firstName}},\n\nReaching out specifically regarding ${company}'s strategic initiatives in ${industry}.\n\nMailFlow adapts directly to your custom instructions, producing bespoke messaging tuned to your business profile.\n\nLet me know if you would be interested in reviewing how we can tailor this for your goals.\n\nBest regards,\nMailFlow Team`,
       };
     case 'cold_outreach':
     default:
       return {
         subject: `Quick idea regarding ${company}'s growth pipeline`,
-        body: `Hi {{firstName}},\n\nI came across ${company}'s work in ${industry} and was really impressed by your team's positioning.\n\nMany teams at ${company}'s scale find it challenging to scale outbound messaging without losing deep account personalization. At MailFlow, we built an AI engine that researches each lead and drafts high-converting outreach in seconds.\n\nWould you be open to a brief 10-minute chat next Tuesday to explore if this fits ${company}'s current workflow?\n\nBest regards,\nMailFlow Team`,
+        body: `Hi {{firstName}},\n\nI came across ${company}'s work in ${industry} and wanted to reach out directly.\n\nMailFlow helps teams research leads and create personalized outreach faster from a single workflow.\n\nWould you be open to a brief 10-minute chat to explore if this fits ${company}'s current workflow?\n\nBest regards,\nMailFlow Team`,
       };
   }
 }
@@ -85,8 +90,8 @@ export class DeliveryService {
     const campaign = await prisma.campaign.findFirst({
       where: { id: campaignId, userId },
       include: {
+        _count: { select: { campaignLeads: true } },
         campaignLeads: {
-          take: 5,
           include: {
             lead: {
               include: {
@@ -107,6 +112,15 @@ export class DeliveryService {
     if (campaign.campaignLeads.length === 0) {
       throw new Error('No leads in this campaign to preview.');
     }
+
+    const allLeads = campaign.campaignLeads.map((cl) => ({
+      id: cl.lead.id,
+      name: cl.lead.name,
+      email: cl.lead.email,
+      company: cl.lead.company,
+      industry:
+        cl.lead.research?.industry || cl.lead.companyRef?.industry || cl.lead.industry || null,
+    }));
 
     const selectedCl = leadId
       ? campaign.campaignLeads.find((cl) => cl.leadId === leadId) || campaign.campaignLeads[0]
@@ -144,10 +158,11 @@ export class DeliveryService {
         company: lead.company,
         industry: lead.industry,
       },
+      leads: allLeads,
       subject: personalizedSubject,
       htmlBody: personalizedBody,
       whatsappPreview,
-      totalLeads: campaign.campaignLeads.length,
+      totalLeads: campaign._count?.campaignLeads ?? campaign.campaignLeads.length,
     };
   }
 
@@ -355,6 +370,9 @@ export class DeliveryService {
   static async getCampaignProgress(userId: string, campaignId: string) {
     const campaign = await prisma.campaign.findFirst({
       where: { id: campaignId, userId },
+      include: {
+        _count: { select: { campaignLeads: true } },
+      },
     });
 
     if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
@@ -372,18 +390,56 @@ export class DeliveryService {
       }),
     ]);
 
-    let total = 0;
-    let sent = 0;
-    let failed = 0;
-    let pending = 0;
+    let emailTotal = 0;
+    let emailSent = 0;
+    let emailFailed = 0;
+    let emailPending = 0;
 
-    [...emailCounts, ...waCounts].forEach((c) => {
+    emailCounts.forEach((c) => {
       const cnt = c._count.id;
-      total += cnt;
-      if (c.status === 'SENT') sent += cnt;
-      else if (c.status === 'FAILED') failed += cnt;
-      else if (c.status === 'PENDING' || c.status === 'PROCESSING') pending += cnt;
+      emailTotal += cnt;
+      if (c.status === 'SENT') emailSent += cnt;
+      else if (c.status === 'FAILED') emailFailed += cnt;
+      else if (c.status === 'PENDING' || c.status === 'PROCESSING') emailPending += cnt;
     });
+
+    let waTotal = 0;
+    let waSent = 0;
+    let waFailed = 0;
+    let waPending = 0;
+
+    waCounts.forEach((c) => {
+      const cnt = c._count.id;
+      waTotal += cnt;
+      if (c.status === 'SENT') waSent += cnt;
+      else if (c.status === 'FAILED') waFailed += cnt;
+      else if (c.status === 'PENDING' || c.status === 'PROCESSING') waPending += cnt;
+    });
+
+    // Fallback if queues were cleared but logs exist
+    if (
+      emailTotal === 0 &&
+      waTotal === 0 &&
+      (campaign.status === 'COMPLETED' || campaign.status === 'COMPLETED_WITH_ERRORS')
+    ) {
+      const [emailLogsCount, waLogsCount] = await Promise.all([
+        prisma.emailLog.count({
+          where: { campaignId, userId, status: { in: ['SENT', 'OPENED'] } },
+        }),
+        prisma.whatsappLog.count({ where: { campaignId, userId, status: 'DELIVERED' } }),
+      ]);
+      if (emailLogsCount > 0 || waLogsCount > 0) {
+        emailSent = emailLogsCount;
+        emailTotal = emailLogsCount;
+        waSent = waLogsCount;
+        waTotal = waLogsCount;
+      }
+    }
+
+    const total = emailTotal + waTotal;
+    const sent = emailSent + waSent;
+    const failed = emailFailed + waFailed;
+    const pending = emailPending + waPending;
 
     const percentage = total > 0 ? Math.round(((sent + failed) / total) * 100) : 0;
     const successRate = sent + failed > 0 ? Math.round((sent / (sent + failed)) * 100) : 100;
@@ -403,6 +459,8 @@ export class DeliveryService {
     return {
       campaignId: campaign.id,
       campaignName: campaign.name,
+      channel: campaign.channel,
+      totalLeads: campaign._count?.campaignLeads ?? 0,
       status: campaign.status,
       total,
       sent,
@@ -415,6 +473,18 @@ export class DeliveryService {
       completedAt: campaign.completedAt?.toISOString() || null,
       timeTaken,
       successRate,
+      emailStats: {
+        total: emailTotal,
+        sent: emailSent,
+        failed: emailFailed,
+        pending: emailPending,
+      },
+      whatsappStats: {
+        total: waTotal,
+        sent: waSent,
+        failed: waFailed,
+        pending: waPending,
+      },
     };
   }
 
@@ -545,15 +615,19 @@ export class DeliveryService {
       where.id = { in: jobIds };
     }
 
-    const updated = await prisma.emailQueue.updateMany({
-      where,
-      data: {
-        status: 'PENDING',
-        attempts: 0,
-        errorMessage: null,
-        scheduledAt: new Date(),
-      },
-    });
+    const failedJobs = await prisma.emailQueue.findMany({ where });
+    for (const job of failedJobs) {
+      await prisma.emailQueue.update({
+        where: { id: job.id },
+        data: {
+          status: 'PENDING',
+          // Preserve attempts so every retry is counted in attempts, and expand maxRetries to allow manual user retries
+          maxRetries: Math.max(job.maxRetries, job.attempts + 2),
+          errorMessage: null,
+          scheduledAt: new Date(),
+        },
+      });
+    }
 
     // Re-open associated campaign status to SENDING
     const affectedJobs = await prisma.emailQueue.findMany({
@@ -573,8 +647,8 @@ export class DeliveryService {
     }
 
     return {
-      message: `${updated.count} failed email job(s) re-queued for sending.`,
-      count: updated.count,
+      message: `${failedJobs.length} failed email job(s) re-queued for sending.`,
+      count: failedJobs.length,
     };
   }
 

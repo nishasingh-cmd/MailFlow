@@ -214,24 +214,19 @@ export default function BusinessOnboarding() {
         </div>
 
         {serverError && (
-          <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm flex items-start gap-3">
-            <svg
-              className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-semibold text-red-200">Unable to save profile</p>
-              <p className="text-xs text-red-300/90 mt-0.5">{serverError}</p>
+          <div className="w-full rounded-lg p-3.5 text-xs font-medium text-white flex items-center justify-between gap-3 animate-fade-in shadow-sm bg-red-600 border border-red-500">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-bold text-sm leading-none shrink-0">✕</span>
+              <span>{serverError}</span>
             </div>
+            <button
+              type="button"
+              onClick={() => setServerError(null)}
+              className="text-white/80 hover:text-white p-1 rounded transition-colors cursor-pointer shrink-0"
+              aria-label="Dismiss alert"
+            >
+              ✕
+            </button>
           </div>
         )}
 

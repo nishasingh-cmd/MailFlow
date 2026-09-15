@@ -90,9 +90,9 @@ async function runTests() {
     assert(resGoogle.status === 'COMPLETED', 'Google research status is COMPLETED');
 
     console.log('\n--- TEST 2: Company-Specific Accuracy & Distinction ---');
-    const summaryAdobe = resAdobe.research?.summary || '';
-    const summaryElite = resElite.research?.summary || '';
-    const summaryGoogle = resGoogle.research?.summary || '';
+    const summaryAdobe = (resAdobe.research as { summary?: string })?.summary || '';
+    const summaryElite = (resElite.research as { summary?: string })?.summary || '';
+    const summaryGoogle = (resGoogle.research as { summary?: string })?.summary || '';
 
     assert(summaryAdobe !== summaryElite, 'Adobe summary must NOT match Elite Eventure summary');
     assert(summaryElite !== summaryGoogle, 'Elite Eventure summary must NOT match Google summary');

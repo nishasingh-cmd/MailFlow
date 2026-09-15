@@ -200,6 +200,7 @@ export class CampaignsService {
       where: { id, userId },
       include: {
         campaignLeads: { select: { leadId: true } },
+        whatsappDrafts: true,
       },
     });
 
@@ -211,7 +212,9 @@ export class CampaignsService {
         name: `${source.name} (Copy)`,
         description: source.description,
         status: 'DRAFT',
+        channel: source.channel,
         templateId: source.templateId,
+        sendingSpeed: source.sendingSpeed,
         campaignLeads:
           source.campaignLeads.length > 0
             ? {
@@ -223,6 +226,31 @@ export class CampaignsService {
         _count: { select: { campaignLeads: true } },
       },
     });
+
+    // If source campaign had WhatsApp drafts, duplicate them for the new campaign in clean DRAFT state
+    if (source.whatsappDrafts && source.whatsappDrafts.length > 0) {
+      await prisma.whatsappDraft.createMany({
+        data: source.whatsappDrafts.map((d) => ({
+          userId,
+          leadId: d.leadId,
+          campaignId: copy.id,
+          message: d.message,
+          status: 'DRAFT',
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    console.log(
+      `[CampaignDuplicate] sourceCampaignId: ${source.id}, sourceChannel: ${source.channel}, duplicateChannel: ${copy.channel}`
+    );
+
+    if (copy.channel !== source.channel) {
+      await prisma.campaign.delete({ where: { id: copy.id } }).catch(() => {});
+      throw new Error(
+        `DUPLICATE_CHANNEL_MISMATCH: Expected duplicate channel "${source.channel}", but received "${copy.channel}".`
+      );
+    }
 
     return copy;
   }

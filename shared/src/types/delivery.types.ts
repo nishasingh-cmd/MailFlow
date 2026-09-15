@@ -101,9 +101,18 @@ export interface EmailLogItem {
   };
 }
 
+export interface ChannelStats {
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+}
+
 export interface CampaignProgress {
   campaignId: string;
   campaignName: string;
+  channel?: 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
+  totalLeads?: number;
   status: string;
   total: number;
   sent: number;
@@ -116,16 +125,22 @@ export interface CampaignProgress {
   completedAt?: string | null;
   timeTaken?: string | null;
   successRate?: number;
+  emailStats?: ChannelStats;
+  whatsappStats?: ChannelStats;
 }
 
 export interface CompletionSummaryData {
   campaignId: string;
   campaignName: string;
+  channel?: 'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
+  totalLeads?: number;
   total: number;
   sent: number;
   failed: number;
   timeTaken: string;
   successRate: number;
+  emailStats?: ChannelStats;
+  whatsappStats?: ChannelStats;
 }
 
 export interface DeliveryLogsQuery {

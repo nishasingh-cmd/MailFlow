@@ -24,7 +24,7 @@ export function DashboardLayout() {
         <AppNavbar onMobileMenuToggle={() => setMobileOpen(true)} />
 
         <main className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-4 scrollbar-none animate-fade-in relative">
-          <div className="max-w-7xl mx-auto w-full pb-16">
+          <div className="max-w-7xl mx-auto w-full pb-16 space-y-4">
             <Outlet />
           </div>
         </main>

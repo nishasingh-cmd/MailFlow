@@ -2,7 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { deliveryService } from '../../services/delivery.service';
 import { EmailQueueItem, FailedQueueQuery } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
-import { Input, Button, Badge, EmptyState, Skeleton, Modal } from '../../components/ui';
+import {
+  Input,
+  Button,
+  Badge,
+  EmptyState,
+  Skeleton,
+  Modal,
+  ExpandableText,
+} from '../../components/ui';
+import { resolveDeliveryError } from '../../utils/errorDiagnostics';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -13,6 +22,31 @@ function formatDateTime(dateStr?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function ErrorDiagnosticsCell({ errorMessage }: { errorMessage?: string | null }) {
+  const diagnostic = resolveDeliveryError(errorMessage);
+  return (
+    <div className="w-full min-w-0 space-y-1.5 py-1">
+      <span className="inline-block px-1.5 py-0.5 rounded text-2xs font-bold font-mono bg-red-500/15 text-red-400 border border-red-500/30 whitespace-nowrap">
+        {diagnostic.badge}
+      </span>
+      <ExpandableText
+        text={errorMessage || 'Delivery failed'}
+        limit={55}
+        textClassName="text-red-300"
+      />
+      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-1.5">
+        <span className="font-bold text-amber-400 shrink-0 text-xs mt-0.5">💡 Fix:</span>
+        <ExpandableText
+          text={diagnostic.solution}
+          limit={55}
+          textClassName="text-amber-100"
+          className="flex-1 min-w-0"
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function FailedQueuePage() {
@@ -245,7 +279,24 @@ export default function FailedQueuePage() {
       ) : jobs.length > 0 ? (
         <div className="rounded-xl border border-[var(--surface-border)] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/* table-layout:fixed: column widths never change on expand */}
+            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                {/* Checkbox */}
+                <col style={{ width: '18%' }} />
+                {/* Recipient */}
+                <col style={{ width: '17%' }} />
+                {/* Subject & Campaign */}
+                <col style={{ width: '35%' }} />
+                {/* Error Diagnostics */}
+                <col style={{ width: '10%' }} />
+                {/* Attempts */}
+                <col style={{ width: '10%' }} />
+                {/* Last Attempt */}
+                <col style={{ width: '5%' }} />
+                {/* Action */}
+              </colgroup>
               <thead className="bg-[var(--surface-elevated)]">
                 <tr>
                   <th className="w-10 px-3 py-3">
@@ -264,7 +315,7 @@ export default function FailedQueuePage() {
                     Subject & Campaign
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
-                    Failure Reason
+                    Error Diagnostics
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider hidden sm:table-cell">
                     Attempts
@@ -311,16 +362,13 @@ export default function FailedQueuePage() {
                           {job.campaign?.name || 'Campaign'}
                         </p>
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="text-xs text-red-400 font-mono bg-red-500/10 px-2 py-1 rounded inline-block max-w-xs truncate"
-                          title={job.errorMessage || undefined}
-                        >
-                          {job.errorMessage || 'SMTP Connection Error'}
-                        </span>
+                      <td className="px-4 py-3 overflow-hidden">
+                        <ErrorDiagnosticsCell errorMessage={job.errorMessage} />
                       </td>
-                      <td className="px-4 py-3 text-xs text-[var(--content-secondary)] hidden sm:table-cell font-mono">
-                        {job.attempts} / {job.maxRetries}
+                      <td className="px-4 py-3 text-xs hidden sm:table-cell">
+                        <span className="px-2 py-1 rounded-md text-xs font-semibold bg-[var(--surface-elevated)] text-[var(--content-primary)] border border-[var(--surface-border)] whitespace-nowrap font-mono">
+                          {job.attempts} / {job.maxRetries}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--content-tertiary)] hidden md:table-cell">
                         {formatDateTime(job.lastAttemptAt || job.updatedAt)}

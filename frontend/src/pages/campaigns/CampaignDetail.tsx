@@ -69,7 +69,9 @@ export default function CampaignDetail() {
     try {
       const data = await campaignService.getCampaignById(id);
       setCampaign(data);
-      if (['QUEUED', 'SENDING', 'PAUSED'].includes(data.status)) {
+      if (
+        ['QUEUED', 'SENDING', 'PAUSED', 'COMPLETED', 'COMPLETED_WITH_ERRORS'].includes(data.status)
+      ) {
         const p = await deliveryService.getProgress(id);
         setProgress(p);
       }
@@ -103,11 +105,15 @@ export default function CampaignDetail() {
           setSummaryData({
             campaignId: campaign.id,
             campaignName: campaign.name,
+            channel: campaign.channel,
+            totalLeads: campaign.campaignLeads.length,
             total: p.total,
             sent: p.sent,
             failed: p.failed,
             timeTaken: p.timeTaken || '—',
             successRate: p.successRate ?? 100,
+            emailStats: p.emailStats,
+            whatsappStats: p.whatsappStats,
           });
           setSummaryOpen(true);
           loadCampaign();
@@ -176,6 +182,32 @@ export default function CampaignDetail() {
     }
   };
 
+  const handleOpenSummary = () => {
+    if (!campaign) return;
+    setSummaryData({
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      channel: campaign.channel,
+      totalLeads: campaign.campaignLeads.length,
+      total:
+        progress?.total ??
+        (campaign.channel === 'EMAIL_AND_WHATSAPP'
+          ? campaign.campaignLeads.length * 2
+          : campaign.campaignLeads.length),
+      sent:
+        progress?.sent ??
+        (campaign.channel === 'EMAIL_AND_WHATSAPP'
+          ? campaign.campaignLeads.length * 2
+          : campaign.campaignLeads.length),
+      failed: progress?.failed ?? 0,
+      timeTaken: progress?.timeTaken || '—',
+      successRate: progress?.successRate ?? 100,
+      emailStats: progress?.emailStats,
+      whatsappStats: progress?.whatsappStats,
+    });
+    setSummaryOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -226,6 +258,31 @@ export default function CampaignDetail() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {(campaign.status === 'COMPLETED' || campaign.status === 'COMPLETED_WITH_ERRORS') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenSummary}
+                leftIcon={
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                }
+              >
+                View Summary
+              </Button>
+            )}
+
             {!isQueueActive &&
               campaign.status !== 'COMPLETED' &&
               campaign.status !== 'COMPLETED_WITH_ERRORS' && (
@@ -315,7 +372,11 @@ export default function CampaignDetail() {
                 </h3>
                 <p className="text-xs text-[var(--content-secondary)]">
                   {progress.status === 'SENDING'
-                    ? 'Processing email queue in real time...'
+                    ? campaign.channel === 'EMAIL_AND_WHATSAPP'
+                      ? 'Processing Email & WhatsApp multi-channel dispatches in real time...'
+                      : campaign.channel === 'WHATSAPP'
+                        ? 'Processing WhatsApp queue in real time...'
+                        : 'Processing email queue in real time...'
                     : `Status: ${progress.status}`}
                 </p>
               </div>
@@ -334,10 +395,23 @@ export default function CampaignDetail() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-              <span className="text-[var(--content-tertiary)] uppercase font-semibold">Sent</span>
-              <p className="text-lg font-bold text-green-400 mt-0.5">
+              <span className="text-[var(--content-tertiary)] uppercase font-semibold">
+                {campaign.channel === 'EMAIL_AND_WHATSAPP'
+                  ? 'Dispatches Sent'
+                  : campaign.channel === 'WHATSAPP'
+                    ? 'Messages Sent'
+                    : 'Emails Sent'}
+              </span>
+              <p className="text-lg font-bold text-brand-400 mt-0.5">
                 {progress.sent} / {progress.total}
               </p>
+              {campaign.channel === 'EMAIL_AND_WHATSAPP' && (
+                <div className="flex items-center gap-1.5 mt-1 text-2xs text-[var(--content-tertiary)]">
+                  <span>✉️ {progress.emailStats?.sent ?? Math.round(progress.sent / 2)}</span>
+                  <span>•</span>
+                  <span>💬 {progress.whatsappStats?.sent ?? Math.round(progress.sent / 2)}</span>
+                </div>
+              )}
             </div>
             <div className="p-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)]">
               <span className="text-[var(--content-tertiary)] uppercase font-semibold">
@@ -371,18 +445,58 @@ export default function CampaignDetail() {
           </p>
         </div>
 
-        {campaign.channel === 'WHATSAPP' ? (
+        {campaign.channel === 'EMAIL_AND_WHATSAPP' ? (
           <>
-            <div className="rounded-xl border border-emerald-500/30 bg-[var(--surface-card)] p-4">
+            <div className="rounded-xl border border-blue-500/30 bg-[var(--surface-card)] p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">
+                <p className="text-xs font-semibold uppercase text-blue-400 tracking-wider">
+                  Email Channel
+                </p>
+                <Badge variant="brand" size="sm">
+                  {campaign.templateId || 'Cold Outreach'}
+                </Badge>
+              </div>
+              <p className="text-xl font-bold text-blue-300 mt-1">
+                {
+                  campaign.campaignLeads.filter((cl) => (cl.lead?.emailDrafts?.length ?? 0) > 0)
+                    .length
+                }{' '}
+                / {campaign.campaignLeads.length}
+              </p>
+              <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
+                AI Email drafts ready
+              </p>
+            </div>
+            <div className="rounded-xl border border-brand-500/30 bg-[var(--surface-card)] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase text-brand-400 tracking-wider">
+                  WhatsApp Channel
+                </p>
+                <Badge variant="brand" size="sm">
+                  Meta Approved ✓
+                </Badge>
+              </div>
+              <p className="text-xl font-bold text-brand-300 mt-1">
+                {campaign.campaignLeads.filter((cl) => Boolean(cl.lead?.phone)).length} /{' '}
+                {campaign.campaignLeads.length}
+              </p>
+              <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">
+                Leads with phone & variables
+              </p>
+            </div>
+          </>
+        ) : campaign.channel === 'WHATSAPP' ? (
+          <>
+            <div className="rounded-xl border border-brand-500/30 bg-[var(--surface-card)] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase text-brand-400 tracking-wider">
                   Approved Meta Template
                 </p>
-                <Badge variant="success" size="sm">
+                <Badge variant="brand" size="sm">
                   ✓ Approved
                 </Badge>
               </div>
-              <p className="text-xl font-mono font-bold text-emerald-300 mt-1 truncate">
+              <p className="text-xl font-mono font-bold text-brand-300 mt-1 truncate">
                 {campaign.templateId || 'cold_outreach'}
               </p>
               <p className="text-2xs text-[var(--content-tertiary)] mt-0.5">Meta Cloud API</p>
@@ -414,7 +528,7 @@ export default function CampaignDetail() {
               <p className="text-xs font-semibold uppercase text-[var(--content-tertiary)] tracking-wider">
                 AI Full Email Drafts
               </p>
-              <p className="text-2xl font-bold text-green-400 mt-1">
+              <p className="text-2xl font-bold text-brand-400 mt-1">
                 {
                   campaign.campaignLeads.filter((cl) => (cl.lead?.emailDrafts?.length ?? 0) > 0)
                     .length
@@ -433,7 +547,7 @@ export default function CampaignDetail() {
           </h2>
           <InfoRow label="Campaign Name">{campaign.name}</InfoRow>
           <InfoRow label="Outreach Channel">
-            <Badge variant={campaign.channel === 'WHATSAPP' ? 'success' : 'brand'} size="sm">
+            <Badge variant={campaign.channel === 'WHATSAPP' ? 'brand' : 'brand'} size="sm">
               {campaign.channel === 'EMAIL_AND_WHATSAPP'
                 ? 'Email + WhatsApp'
                 : campaign.channel === 'WHATSAPP'
@@ -444,15 +558,25 @@ export default function CampaignDetail() {
           <InfoRow label="Status">
             <CampaignStatusBadge status={campaign.status} size="sm" />
           </InfoRow>
-          {campaign.channel === 'WHATSAPP' ? (
+          {campaign.channel === 'EMAIL_AND_WHATSAPP' ? (
+            <>
+              <InfoRow label="Email Template">{campaign.templateId || 'Cold Outreach'}</InfoRow>
+              <InfoRow label="WhatsApp Template">
+                <span className="font-mono text-brand-400 text-xs font-bold">cold_outreach</span>
+              </InfoRow>
+              <InfoRow label="Delivery Provider">
+                <span className="text-xs text-[var(--content-primary)]">SMTP + Meta Cloud API</span>
+              </InfoRow>
+            </>
+          ) : campaign.channel === 'WHATSAPP' ? (
             <>
               <InfoRow label="Approved Template">
-                <span className="font-mono text-emerald-400 text-xs font-bold">
+                <span className="font-mono text-brand-400 text-xs font-bold">
                   {campaign.templateId || 'cold_outreach'}
                 </span>
               </InfoRow>
               <InfoRow label="Meta Template Status">
-                <span className="text-emerald-400 text-xs font-semibold">✓ Approved</span>
+                <span className="text-brand-400 text-xs font-semibold">✓ Approved</span>
               </InfoRow>
               <InfoRow label="AI Personalization">
                 <span className="text-xs text-[var(--content-secondary)]">

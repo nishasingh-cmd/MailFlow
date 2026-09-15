@@ -441,7 +441,8 @@ export class WhatsappService {
           templateName,
           templateParams,
           status: 'PENDING',
-          attempts: 0,
+          // Preserve attempts so every retry is counted in attempts, and expand maxRetries to allow manual user retries
+          maxRetries: Math.max(job.maxRetries, job.attempts + 2),
           errorMessage: null,
           scheduledAt: new Date(),
         },

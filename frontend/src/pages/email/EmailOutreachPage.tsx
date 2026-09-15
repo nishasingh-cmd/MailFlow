@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { deliveryService } from '../../services/delivery.service';
 import { EmailLogItem, EmailQueueItem, EmailStats } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
-import { Button, Input, Select, Badge, Skeleton, Modal } from '../../components/ui';
+import { Button, Input, Select, Badge, Skeleton, Modal, ExpandableText } from '../../components/ui';
 import { Link } from 'react-router-dom';
+import { resolveDeliveryError } from '../../utils/errorDiagnostics';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -13,6 +14,31 @@ function formatDateTime(dateStr?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function ErrorDiagnosticsCell({ errorMessage }: { errorMessage?: string | null }) {
+  const diagnostic = resolveDeliveryError(errorMessage);
+  return (
+    <div className="w-full min-w-0 space-y-1.5 py-1">
+      <span className="inline-block px-1.5 py-0.5 rounded text-2xs font-bold font-mono bg-red-500/15 text-red-400 border border-red-500/30 whitespace-nowrap">
+        {diagnostic.badge}
+      </span>
+      <ExpandableText
+        text={errorMessage || 'Delivery failed'}
+        limit={55}
+        textClassName="text-red-300"
+      />
+      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-1.5">
+        <span className="font-bold text-amber-400 shrink-0 text-xs mt-0.5">💡 Fix:</span>
+        <ExpandableText
+          text={diagnostic.solution}
+          limit={55}
+          textClassName="text-amber-100"
+          className="flex-1 min-w-0"
+        />
+      </div>
+    </div>
+  );
 }
 
 const STATUS_OPTIONS = [
@@ -82,17 +108,20 @@ export default function EmailOutreachPage() {
     [search, statusFilter, page, toast]
   );
 
-  const fetchFailedQueue = useCallback(async () => {
-    setFailedLoading(true);
-    try {
-      const res = await deliveryService.getFailedQueue({ page: 1, limit: 50 });
-      setFailedJobs(res.jobs);
-    } catch {
-      toast.error('Failed to load email failed queue.');
-    } finally {
-      setFailedLoading(false);
-    }
-  }, [toast]);
+  const fetchFailedQueue = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setFailedLoading(true);
+      try {
+        const res = await deliveryService.getFailedQueue({ page: 1, limit: 50 });
+        setFailedJobs(res.jobs);
+      } catch {
+        if (!isSilent) toast.error('Failed to load email failed queue.');
+      } finally {
+        if (!isSilent) setFailedLoading(false);
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     fetchStats();
@@ -102,19 +131,19 @@ export default function EmailOutreachPage() {
     if (activeTab === 'history') {
       fetchHistory(false);
     } else if (activeTab === 'failed') {
-      fetchFailedQueue();
+      fetchFailedQueue(false);
     }
 
-    // Auto-refresh interval (polling every 3.5s for real-time delivery status updates)
+    // Auto-refresh interval (silent polling for real-time delivery status updates without UI flickering)
     const interval = setInterval(() => {
       if (activeTab === 'history') {
         fetchHistory(true);
         fetchStats();
       } else if (activeTab === 'failed') {
-        fetchFailedQueue();
+        fetchFailedQueue(true);
         fetchStats();
       }
-    }, 3500);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [activeTab, fetchHistory, fetchFailedQueue, fetchStats]);
@@ -485,7 +514,25 @@ export default function EmailOutreachPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-[var(--content-secondary)]">
+                {/* table-layout:fixed: column widths never change on expand */}
+                <table
+                  className="w-full text-left text-sm text-[var(--content-secondary)]"
+                  style={{ tableLayout: 'fixed' }}
+                >
+                  <colgroup>
+                    <col style={{ width: '20%' }} />
+                    {/* Recipient */}
+                    <col style={{ width: '20%' }} />
+                    {/* Email Address */}
+                    <col style={{ width: '25%' }} />
+                    {/* Subject / Snippet */}
+                    <col style={{ width: '12%' }} />
+                    {/* Status */}
+                    <col style={{ width: '13%' }} />
+                    {/* Sent Time */}
+                    <col style={{ width: '10%' }} />
+                    {/* Provider */}
+                  </colgroup>
                   <thead className="bg-[var(--surface-elevated)] text-2xs uppercase font-semibold text-[var(--content-tertiary)] border-b border-[var(--surface-border)]">
                     <tr>
                       <th className="px-4 py-3 text-left">Recipient</th>
@@ -675,7 +722,25 @@ export default function EmailOutreachPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-[var(--content-secondary)]">
+                {/* table-layout:fixed: column widths never change on expand */}
+                <table
+                  className="w-full text-left text-sm text-[var(--content-secondary)]"
+                  style={{ tableLayout: 'fixed' }}
+                >
+                  <colgroup>
+                    <col style={{ width: '5%' }} />
+                    {/* Checkbox */}
+                    <col style={{ width: '22%' }} />
+                    {/* Recipient */}
+                    <col style={{ width: '18%' }} />
+                    {/* Subject */}
+                    <col style={{ width: '35%' }} />
+                    {/* Error Diagnostics */}
+                    <col style={{ width: '10%' }} />
+                    {/* Attempts */}
+                    <col style={{ width: '10%' }} />
+                    {/* Action */}
+                  </colgroup>
                   <thead className="bg-[var(--surface-elevated)] text-2xs uppercase font-semibold text-[var(--content-tertiary)] border-b border-[var(--surface-border)]">
                     <tr>
                       <th className="px-4 py-3 w-8">
@@ -690,7 +755,7 @@ export default function EmailOutreachPage() {
                       </th>
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Subject</th>
-                      <th className="px-4 py-3 text-left">Error Reason</th>
+                      <th className="px-4 py-3 text-left">Error Diagnostics</th>
                       <th className="px-4 py-3 text-left">Attempts</th>
                       <th className="px-4 py-3 text-left">Action</th>
                     </tr>
@@ -718,11 +783,8 @@ export default function EmailOutreachPage() {
                         <td className="px-4 py-3 text-xs text-[var(--content-primary)] max-w-xs truncate">
                           {job.subject}
                         </td>
-                        <td
-                          className="px-4 py-3 text-xs text-red-400 max-w-sm truncate"
-                          title={job.errorMessage || 'Unknown failure'}
-                        >
-                          {job.errorMessage || 'Connection timeout or invalid credentials'}
+                        <td className="px-4 py-3 overflow-hidden">
+                          <ErrorDiagnosticsCell errorMessage={job.errorMessage} />
                         </td>
                         <td className="px-4 py-3 text-xs text-[var(--content-tertiary)]">
                           {job.attempts} / {job.maxRetries}

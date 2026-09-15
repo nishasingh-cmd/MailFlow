@@ -4,6 +4,7 @@
  *
  * Orchestrates email generation, subject line creation, validation,
  * and draft CRUD persistence in PostgreSQL via Prisma.
+ * Strictly grounds email generation in lead-specific company research.
  */
 import { prisma } from '../../config/db';
 import {
@@ -19,7 +20,7 @@ import { PromptContext } from '../../services/email-prompt.service';
 
 export class EmailGenerationService {
   /**
-   * Validate lead & company research, then generate AI Email & Subject Lines.
+   * Validate lead & company research strictly, then generate AI Email & Subject Lines.
    */
   static async generateEmailForLead(
     userId: string,
@@ -27,7 +28,7 @@ export class EmailGenerationService {
   ): Promise<GeneratedEmailResult> {
     const { leadId, template = 'Cold Outreach', customInstructions, userContext } = req;
 
-    // 1. Fetch Lead with company and direct lead research record
+    // 1. Fetch Lead with company and direct lead research record (strict tenant isolation)
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, userId },
       include: {
@@ -43,14 +44,63 @@ export class EmailGenerationService {
     const company = lead.companyRef;
     const research = lead.research;
 
-    // Requirement 13: Prevent generation if company research has not been completed
-    if (!research || research.status !== 'COMPLETED') {
+    // 2. Strict Lead-to-Research contract validation
+    if (!research) {
       throw new Error(
-        'RESEARCH_NOT_COMPLETED: Company research must be completed before generating a personalized email'
+        'RESEARCH_MISSING: Company research is required before generating a personalized email. Please complete research first.'
       );
     }
 
-    // Fetch user for default sender info + business profile context
+    if (research.status === 'PENDING' || research.status === 'PROCESSING') {
+      throw new Error(
+        'RESEARCH_IN_PROGRESS: Research is still in progress. Please wait until completed.'
+      );
+    }
+
+    if (research.status === 'FAILED') {
+      throw new Error('RESEARCH_FAILED: Research failed for this company. Please retry research.');
+    }
+
+    if (research.status !== 'COMPLETED') {
+      throw new Error(
+        'RESEARCH_NOT_COMPLETED: Company research must be completed before generating a personalized email.'
+      );
+    }
+
+    // Verify research.leadId === lead.id
+    if (research.leadId !== lead.id) {
+      console.error(
+        `[EmailGeneration] RESEARCH_MISMATCH! lead.id (${lead.id}) !== research.leadId (${research.leadId})`
+      );
+      throw new Error(
+        'RESEARCH_MISMATCH: Lead research mismatch. Please refresh the research before generating the email.'
+      );
+    }
+
+    // Verify company name context
+    const leadCompany = (lead.company || '').trim().toLowerCase();
+    const researchCompany = (research.companyNameAtResearchTime || '').trim().toLowerCase();
+    if (leadCompany && researchCompany && leadCompany !== researchCompany) {
+      console.warn(
+        `[EmailGeneration] Potential company name divergence: lead.company="${leadCompany}" vs research.company="${researchCompany}"`
+      );
+    }
+
+    // 3. Resolve AI Key from user's Settings integration if available
+    let userApiKey: string | null = null;
+    let userProvider: 'OPENAI' | 'GEMINI' | null = null;
+    try {
+      const aiConfig = await prisma.aiConfig.findUnique({ where: { userId } });
+      if (aiConfig?.apiKey) {
+        const { decrypt } = await import('../../utils/crypto');
+        userApiKey = decrypt(aiConfig.apiKey);
+        userProvider = aiConfig.provider as 'OPENAI' | 'GEMINI';
+      }
+    } catch {
+      // Fall back to environment keys
+    }
+
+    // Fetch user for sender info + business profile context
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { businessProfile: true },
@@ -59,23 +109,41 @@ export class EmailGenerationService {
     const bp = user?.businessProfile;
 
     const companyName =
-      lead.company || research.companyNameAtResearchTime || company?.name || 'your company';
+      lead.company || research.companyNameAtResearchTime || company?.name || 'Company';
 
     const products = (research.productsServices as string[]) || company?.products || [];
     const painPoints = (research.painPoints as string[]) || [];
     const opportunities = (research.opportunities as string[]) || [];
+    const verifiedIndustry = research.industry || company?.industry || lead.industry || null;
+
+    // Debug logging for auditing grounding integrity
+    console.log(`[EmailGeneration] Grounded generation starting:`, {
+      leadId: lead.id,
+      leadName: lead.name,
+      companyName,
+      researchId: research.id,
+      researchCompanyName: research.companyNameAtResearchTime,
+      researchIndustry: verifiedIndustry,
+      researchStatus: research.status,
+      researchVersion: research.researchVersion,
+    });
 
     const promptCtx: PromptContext = {
+      leadId: lead.id,
       leadName: lead.name,
       leadEmail: lead.email,
       companyName,
+      jobTitle: null,
       companySummary: research.summary || research.companyDescription || '',
-      industry: research.industry || company?.industry || lead.industry || 'Business',
+      industry: verifiedIndustry,
       products,
       services: company?.services || [],
       painPoints,
       opportunities,
-      companySize: research.companySize || company?.companySize,
+      targetAudience: research.targetAudience || null,
+      companySize: research.companySize || company?.companySize || null,
+      location: research.location || null,
+      personalizationInsights: (research.personalizationInsights as string) || null,
       template,
       customInstructions: [
         customInstructions,
@@ -87,14 +155,16 @@ export class EmailGenerationService {
         .join(' | '),
       regenerate: req.regenerate,
       regenSeed: req.regenSeed || Date.now(),
+      userApiKey,
+      userProvider,
       userContext: {
-        userName: userContext?.userName || user?.name || 'Sales Specialist',
+        userName: userContext?.userName || user?.name || 'Nisha Singh',
         userCompany: userContext?.userCompany || bp?.businessName || 'MailFlow',
         userProductService:
           userContext?.userProductService ||
           bp?.productsOrServices ||
           bp?.valueProposition ||
-          'AI Outreach Automation Platform',
+          'Lead Outreach Automation Platform',
       },
     };
 
@@ -102,7 +172,7 @@ export class EmailGenerationService {
   }
 
   /**
-   * Generate 5 subject line suggestions for a lead.
+   * Generate 5 subject line suggestions for a lead grounded in company research.
    */
   static async generateSubjectLinesForLead(
     userId: string,
@@ -121,21 +191,37 @@ export class EmailGenerationService {
     if (!lead || !research || research.status !== 'COMPLETED') {
       return [
         `Quick idea for ${lead?.company || 'your team'}`,
-        `Helping ${lead?.company || 'your team'} automate outreach`,
-        `Reducing manual sales work at ${lead?.company || 'your team'}`,
-        `AI workflow for ${lead?.company || 'your team'}`,
+        `Outreach workflow for ${lead?.company || 'your team'}`,
+        `Streamlining outreach at ${lead?.company || 'your team'}`,
+        `Connecting with ${lead?.company || 'your team'}`,
         `Outreach ideas for ${lead?.company || 'your team'}`,
       ];
+    }
+
+    let userApiKey: string | null = null;
+    let userProvider: 'OPENAI' | 'GEMINI' | null = null;
+    try {
+      const aiConfig = await prisma.aiConfig.findUnique({ where: { userId } });
+      if (aiConfig?.apiKey) {
+        const { decrypt } = await import('../../utils/crypto');
+        userApiKey = decrypt(aiConfig.apiKey);
+        userProvider = aiConfig.provider as 'OPENAI' | 'GEMINI';
+      }
+    } catch {
+      // Fall back
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     const promptCtx: PromptContext = {
+      leadId: lead.id,
       leadName: lead.name,
       companyName:
         lead.company || research.companyNameAtResearchTime || lead.companyRef?.name || 'Company',
-      industry: research.industry || lead.companyRef?.industry || lead.industry || 'Business',
+      industry: research.industry || lead.companyRef?.industry || lead.industry || null,
       template,
+      userApiKey,
+      userProvider,
       userContext: {
         userName: user?.name,
       },

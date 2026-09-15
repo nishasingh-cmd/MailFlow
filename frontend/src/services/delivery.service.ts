@@ -27,6 +27,13 @@ export interface CampaignPreview {
     company?: string | null;
     industry?: string | null;
   };
+  leads?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    company?: string | null;
+    industry?: string | null;
+  }>;
   subject: string;
   htmlBody: string;
   whatsappPreview?: {
@@ -35,6 +42,7 @@ export interface CampaignPreview {
     variables?: Record<string, string>;
     templateParams?: string[];
     previewText: string;
+    bodyText?: string;
   } | null;
   totalLeads: number;
 }

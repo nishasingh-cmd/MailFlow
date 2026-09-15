@@ -341,43 +341,47 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
         {step === 'VALIDATION' && validationResult && (
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-3">
-              <Card variant="default" className="p-3 text-center">
-                <span className="text-xs text-[var(--content-tertiary)]">Total Rows</span>
-                <p className="text-xl font-bold text-[var(--content-primary)]">
+              <Card variant="default" className="p-3 text-center border-grey dark:border-white/30">
+                <span className="text-xs text-black dark:text-white">Total Rows</span>
+                <p className="text-xl font-bold text-black dark:text-white">
                   {validationResult.totalRows}
                 </p>
               </Card>
-              <Card variant="default" className="p-3 text-center border-green-500/30">
-                <span className="text-xs text-green-400">Valid Leads</span>
-                <p className="text-xl font-bold text-green-400">{validationResult.validCount}</p>
+              <Card variant="default" className="p-3 text-center border-grey dark:border-white/30">
+                <span className="text-xs text-black dark:text-white">Valid Leads</span>
+                <p className="text-xl font-bold text-black dark:text-white">
+                  {validationResult.validCount}
+                </p>
               </Card>
-              <Card variant="default" className="p-3 text-center border-amber-500/30">
-                <span className="text-xs text-amber-400">Duplicates (Skipped)</span>
-                <p className="text-xl font-bold text-amber-400">
+              <Card variant="default" className="p-3 text-center border-grey dark:border-white/30">
+                <span className="text-xs text-black dark:text-white">Duplicates (Skipped)</span>
+                <p className="text-xl font-bold text-black dark:text-white">
                   {validationResult.duplicateCount}
                 </p>
               </Card>
-              <Card variant="default" className="p-3 text-center border-red-500/30">
-                <span className="text-xs text-red-400">Invalid Rows</span>
-                <p className="text-xl font-bold text-red-400">{validationResult.invalidCount}</p>
+              <Card variant="default" className="p-3 text-center border-grey dark:border-white/30">
+                <span className="text-xs text-black dark:text-white">Invalid Rows</span>
+                <p className="text-xl font-bold text-black dark:text-white">
+                  {validationResult.invalidCount}
+                </p>
               </Card>
             </div>
 
             {validationResult.invalidRows.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-red-400">
+                <h4 className="text-xs font-semibold text-black dark:text-white">
                   Invalid Rows Detected ({validationResult.invalidRows.length})
                 </h4>
-                <div className="max-h-36 overflow-y-auto border border-red-500/30 rounded-lg p-2 space-y-1 bg-red-500/5">
+                <div className="max-h-36 overflow-y-auto border border-black dark:border-white/30 rounded-lg p-2 space-y-1 bg-black/5 dark:bg-white/5">
                   {validationResult.invalidRows.map((inv, idx) => (
                     <div
                       key={idx}
-                      className="text-xs flex items-center justify-between border-b border-red-500/10 pb-1 last:border-0"
+                      className="text-xs flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-1 last:border-0"
                     >
-                      <span className="text-[var(--content-primary)] font-mono">
+                      <span className="text-black dark:text-white font-mono">
                         Row #{inv.rowNumber}
                       </span>
-                      <span className="text-red-400">{inv.reasons.join(', ')}</span>
+                      <span className="text-black dark:text-white">{inv.reasons.join(', ')}</span>
                     </div>
                   ))}
                 </div>
@@ -402,7 +406,7 @@ export function ImportLeadsModal({ isOpen, onClose, onSuccess }: ImportLeadsModa
 
         {step === 'COMPLETE' && importSummary && (
           <div className="text-center py-6 space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-3xl mx-auto">
+            <div className="w-16 h-16 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-3xl mx-auto">
               ✓
             </div>
             <h3 className="text-xl font-bold text-[var(--content-primary)]">Import Successful!</h3>

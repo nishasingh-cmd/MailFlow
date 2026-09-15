@@ -34,12 +34,12 @@ async function main() {
         const result = await ResearchService.researchCompany(user.id, lead.id, true);
         console.log(`  -> New Status: ${result.status}`);
         console.log(`  -> Company: ${result.companyName}`);
-        const r = result.research;
+        const r = result.research as Record<string, unknown>;
         console.log(`  -> Summary: ${r?.summary?.slice(0, 120)}...`);
         console.log(`  -> Products:`, r?.productsServices);
         console.log(
           `  -> Sources:`,
-          r?.sources?.map((s) => s.url || s.name)
+          r?.sources?.map((s: { url?: string; name?: string }) => s.url || s.name)
         );
       } catch (err) {
         console.error(`  -> Failed:`, err);

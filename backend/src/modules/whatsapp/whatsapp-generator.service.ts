@@ -351,6 +351,7 @@ INSTRUCTIONS:
       variables,
       templateParams,
       previewText,
+      bodyText: resolvedBodyText,
     };
   }
 }

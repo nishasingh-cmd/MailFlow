@@ -1,5 +1,4 @@
 import { createContext, useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import { ToastContainer } from '../components/ui/Toast/Toast';
 
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 
@@ -87,7 +86,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, removeToast, clearAll, toast: toastHelpers }}>
       {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
   );
 }

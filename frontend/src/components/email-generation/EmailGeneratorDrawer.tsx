@@ -188,12 +188,20 @@ function EmailGeneratorDrawerInner({
       const msg = (err as Error)?.message ?? 'Failed to generate email';
       console.error('[EmailGenerator] Generation error:', msg);
 
-      if (msg.includes('RESEARCH_NOT_COMPLETED')) {
-        toast.error('Please complete company research for this lead first.');
+      if (msg.includes('RESEARCH_MISSING') || msg.includes('RESEARCH_NOT_COMPLETED')) {
+        toast.error('Company research is required before generating a personalized email.');
+      } else if (msg.includes('RESEARCH_IN_PROGRESS')) {
+        toast.error('Research is still in progress. Please wait until completed.');
+      } else if (msg.includes('RESEARCH_FAILED')) {
+        toast.error('Research failed for this company. Please retry research.');
+      } else if (msg.includes('RESEARCH_MISMATCH')) {
+        toast.error(
+          'Lead research mismatch. Please refresh the research before generating the email.'
+        );
       } else if (msg.includes('LEAD_NOT_FOUND')) {
         toast.error('Lead not found. Please refresh the page and try again.');
       } else {
-        toast.error(`Regeneration failed: ${msg}. Keeping current draft.`);
+        toast.error(msg);
       }
     } finally {
       isGeneratingRef.current = false;

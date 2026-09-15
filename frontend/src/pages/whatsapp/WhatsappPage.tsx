@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { whatsappService } from '../../services/whatsapp.service';
 import { WhatsappLogItem, WhatsappQueueItem, WhatsappStats } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
-import { Button, Input, Select, Badge, Skeleton, Modal } from '../../components/ui';
-import { Link } from 'react-router-dom';
+import { Button, Input, Select, Badge, Skeleton, Modal, ExpandableText } from '../../components/ui';
+import { Link, useSearchParams } from 'react-router-dom';
+import { resolveDeliveryError } from '../../utils/errorDiagnostics';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -23,40 +24,41 @@ const STATUS_OPTIONS = [
   { value: 'FAILED', label: 'Failed' },
 ];
 
-function MessageSnippetCell({
-  message,
-  errorReason,
-}: {
-  message: string;
-  errorReason?: string | null;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const LIMIT = 45;
-  const isLong = Boolean(message && message.length > LIMIT);
-  const snippet = isLong && !expanded ? `${message.slice(0, LIMIT)}...` : message;
-
+function MessageSnippetCell({ message }: { message: string }) {
   return (
-    <div className="w-[280px] max-w-[280px] text-xs space-y-1">
-      <div className="leading-relaxed text-[var(--content-secondary)] break-words whitespace-normal">
-        <span className="break-words">{snippet}</span>
-        {isLong && (
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            className="ml-1.5 font-bold text-brand-600 dark:text-brand-400 hover:underline inline cursor-pointer focus:outline-none whitespace-nowrap"
-          >
-            {expanded ? 'Read less' : 'Read more'}
-          </button>
-        )}
-      </div>
-      {errorReason && (
-        <p
-          className="text-2xs text-red-500 dark:text-red-400 font-sans break-words bg-red-500/10 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-500/20"
-          title={errorReason}
-        >
-          {errorReason}
-        </p>
-      )}
+    /* w-full + min-w-0: never drives column wider; text wraps inside fixed col */
+    <div className="w-full min-w-0">
+      <ExpandableText
+        text={message || '—'}
+        limit={45}
+        textClassName="text-[var(--content-secondary)]"
+      />
+    </div>
+  );
+}
+
+function ErrorDiagnosticsCell({ errorMessage }: { errorMessage?: string | null }) {
+  const diagnostic = resolveDeliveryError(errorMessage);
+  return (
+    <div className="w-full min-w-0">
+      <ExpandableText
+        text={diagnostic.summary}
+        limit={45}
+        textClassName="text-[var(--content-primary)]"
+      />
+    </div>
+  );
+}
+
+function SolutionCell({ errorMessage }: { errorMessage?: string | null }) {
+  const diagnostic = resolveDeliveryError(errorMessage);
+  return (
+    <div className="w-full min-w-0">
+      <ExpandableText
+        text={diagnostic.solution}
+        limit={45}
+        textClassName="text-[var(--content-primary)]"
+      />
     </div>
   );
 }
@@ -64,7 +66,21 @@ function MessageSnippetCell({
 export default function WhatsappPage() {
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'setup' | 'history' | 'failed'>('setup');
+  // Persist active tab in URL so refresh keeps the user on the same tab
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab: 'setup' | 'history' | 'failed' =
+    rawTab === 'history' || rawTab === 'failed' ? rawTab : 'setup';
+  const setActiveTab = (tab: 'setup' | 'history' | 'failed') => {
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', tab);
+        return prev;
+      },
+      { replace: true }
+    );
+  };
+
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [tutorialModal, setTutorialModal] = useState<string | null>(null);
 
@@ -91,6 +107,7 @@ export default function WhatsappPage() {
   const [failedLoading, setFailedLoading] = useState(false);
   const [selectedFailedIds, setSelectedFailedIds] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -126,17 +143,20 @@ export default function WhatsappPage() {
     [search, statusFilter, page, toast]
   );
 
-  const fetchFailedQueue = useCallback(async () => {
-    setFailedLoading(true);
-    try {
-      const res = await whatsappService.getFailedQueue({ page: 1, limit: 50 });
-      setFailedJobs(res.jobs);
-    } catch {
-      toast.error('Failed to load WhatsApp failed queue.');
-    } finally {
-      setFailedLoading(false);
-    }
-  }, [toast]);
+  const fetchFailedQueue = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setFailedLoading(true);
+      try {
+        const res = await whatsappService.getFailedQueue({ page: 1, limit: 50 });
+        setFailedJobs(res.jobs);
+      } catch {
+        if (!isSilent) toast.error('Failed to load WhatsApp failed queue.');
+      } finally {
+        if (!isSilent) setFailedLoading(false);
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     fetchStats();
@@ -145,36 +165,44 @@ export default function WhatsappPage() {
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory(false);
-    } else {
-      fetchFailedQueue();
+    } else if (activeTab === 'failed') {
+      fetchFailedQueue(false);
     }
 
-    // Auto-refresh interval (polling every 3.5s for real-time status updates from Meta)
+    // Auto-refresh interval (silent polling for real-time status updates from Meta without UI flickering)
     const interval = setInterval(() => {
       if (activeTab === 'history') {
         fetchHistory(true);
         fetchStats();
-      } else {
-        fetchFailedQueue();
+      } else if (activeTab === 'failed') {
+        fetchFailedQueue(true);
         fetchStats();
       }
-    }, 3500);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [activeTab, fetchHistory, fetchFailedQueue, fetchStats]);
 
   const handleRetry = async (jobIds?: string[]) => {
+    if (jobIds && jobIds.length === 1) {
+      setRetryingJobId(jobIds[0]);
+    }
     setActionLoading(true);
     try {
       const res = await whatsappService.retryFailedJobs(jobIds);
       toast.success(res.message);
-      setSelectedFailedIds([]);
+      if (jobIds && jobIds.length > 0) {
+        setSelectedFailedIds((prev) => prev.filter((id) => !jobIds.includes(id)));
+      } else {
+        setSelectedFailedIds([]);
+      }
       fetchFailedQueue();
       fetchStats();
     } catch {
       toast.error('Failed to retry WhatsApp jobs.');
     } finally {
       setActionLoading(false);
+      setRetryingJobId(null);
     }
   };
 
@@ -361,12 +389,6 @@ export default function WhatsappPage() {
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       Add Payment Method
                     </h3>
-                    <button
-                      onClick={() => setTutorialModal('payment')}
-                      className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
-                    >
-                      Watch tutorial
-                    </button>
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                     Add a payment method in Facebook Business Manager to send template messages and
@@ -413,12 +435,6 @@ export default function WhatsappPage() {
                     <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                       Optional
                     </span>
-                    <button
-                      onClick={() => setTutorialModal('verification')}
-                      className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
-                    >
-                      Watch tutorial
-                    </button>
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                     Verify your Facebook business to display your brand name instead of your phone
@@ -524,15 +540,30 @@ export default function WhatsappPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                {/* table-layout:fixed keeps column widths stable when ExpandableText expands */}
+                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '18%' }} />
+                    {/* Recipient */}
+                    <col style={{ width: '12%' }} />
+                    {/* Phone */}
+                    <col style={{ width: '10%' }} />
+                    {/* Message ID */}
+                    <col style={{ width: '25%' }} />
+                    {/* Message Snippet */}
+                    <col style={{ width: '10%' }} />
+                    {/* Status */}
+                    <col style={{ width: '13%' }} />
+                    {/* Sent Time */}
+                    <col style={{ width: '12%' }} />
+                    {/* Provider */}
+                  </colgroup>
                   <thead className="bg-[var(--surface-elevated)] text-2xs uppercase text-[var(--content-tertiary)] font-semibold">
                     <tr>
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Phone</th>
                       <th className="px-4 py-3 text-left">Message ID</th>
-                      <th className="px-4 py-3 text-left w-[312px] min-w-[312px] max-w-[312px]">
-                        Message Snippet
-                      </th>
+                      <th className="px-4 py-3 text-left">Message Snippet</th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Sent Time</th>
                       <th className="px-4 py-3 text-left">Provider</th>
@@ -567,11 +598,8 @@ export default function WhatsappPage() {
                           >
                             {log.messageId || '—'}
                           </td>
-                          <td className="px-4 py-3 w-[312px] min-w-[312px] max-w-[312px]">
-                            <MessageSnippetCell
-                              message={log.message}
-                              errorReason={log.errorReason}
-                            />
+                          <td className="px-4 py-3 overflow-hidden">
+                            <MessageSnippetCell message={log.message} />
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant={statusVariant} size="sm">
@@ -674,7 +702,24 @@ export default function WhatsappPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                {/* table-layout:fixed keeps column widths stable when ExpandableText expands */}
+                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '5%' }} />
+                    {/* Checkbox */}
+                    <col style={{ width: '18%' }} />
+                    {/* Recipient */}
+                    <col style={{ width: '13%' }} />
+                    {/* Phone */}
+                    <col style={{ width: '26%' }} />
+                    {/* Error */}
+                    <col style={{ width: '26%' }} />
+                    {/* Solution */}
+                    <col style={{ width: '8%' }} />
+                    {/* Attempts */}
+                    <col style={{ width: '8%' }} />
+                    {/* Retry */}
+                  </colgroup>
                   <thead className="bg-[var(--surface-elevated)] text-2xs uppercase text-[var(--content-tertiary)] font-semibold">
                     <tr>
                       <th className="px-4 py-3 text-left w-10">
@@ -689,8 +734,10 @@ export default function WhatsappPage() {
                       </th>
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Phone</th>
-                      <th className="px-4 py-3 text-left">Error Diagnostics</th>
+                      <th className="px-4 py-3 text-left">Error</th>
+                      <th className="px-4 py-3 text-left">Solution</th>
                       <th className="px-4 py-3 text-left">Attempts</th>
+                      <th className="px-4 py-3 text-right">Retry</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--surface-border)]">
@@ -712,11 +759,43 @@ export default function WhatsappPage() {
                           </p>
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-brand-400">{job.phone}</td>
-                        <td className="px-4 py-3 text-xs text-red-400 max-w-sm truncate">
-                          {job.errorMessage || 'Unknown network error'}
+                        <td className="px-4 py-3 overflow-hidden">
+                          <ErrorDiagnosticsCell errorMessage={job.errorMessage} />
                         </td>
-                        <td className="px-4 py-3 text-xs text-[var(--content-tertiary)]">
-                          {job.attempts} / {job.maxRetries}
+                        <td className="px-4 py-3 overflow-hidden">
+                          <SolutionCell errorMessage={job.errorMessage} />
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-[var(--surface-elevated)] text-[var(--content-primary)] border border-[var(--surface-border)] whitespace-nowrap">
+                            {job.attempts} / {job.maxRetries}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetry([job.id])}
+                            loading={actionLoading && retryingJobId === job.id}
+                            disabled={actionLoading}
+                            className="text-xs hover:border-brand-500 hover:text-brand-500 font-medium"
+                            leftIcon={
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                              </svg>
+                            }
+                          >
+                            Retry
+                          </Button>
                         </td>
                       </tr>
                     ))}

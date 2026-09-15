@@ -5,6 +5,7 @@ import { LeadPickerTable } from './LeadPickerTable';
 import { campaignService } from '../../services/campaign.service';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { leadService } from '../../services/lead.service';
+import { researchService } from '../../services/research.service';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -66,30 +67,30 @@ const EMAIL_FRAMEWORK_DETAILS: Record<string, EmailFrameworkDetails> = {
     goal: 'Value-First Account Introduction & Discovery',
     tone: 'Consultative, Professional & Relevant',
     bestFor: 'Net-new outbound prospect outreach',
-    subject: ({ company }) => `Quick idea regarding ${company}'s growth pipeline`,
+    subject: ({ company }) => `Quick idea regarding ${company}'s growth initiatives`,
     intro: ({ company, industry }) =>
-      `I came across ${company}'s work in ${industry} and was really impressed by your team's positioning.`,
-    painPoint: ({ company }) =>
-      `Many teams at ${company}'s scale find it challenging to scale outbound messaging without losing deep account personalization.`,
+      `I came across ${company}'s work in ${industry} and wanted to reach out directly.`,
+    painPoint: () =>
+      `Scaling outbound messaging while maintaining authentic personalization is a key priority for outreach teams.`,
     solution: () =>
-      `At MailFlow, we built an AI-native engine that researches each lead and drafts high-converting outreach in seconds, saving teams 15+ hours weekly.`,
+      `MailFlow helps teams research leads and create personalized outreach faster from one unified workflow.`,
     cta: ({ company }) =>
-      `Are you open to a brief 10-minute chat next Tuesday to explore if this fits ${company}'s current workflow?`,
+      `Would you be open to a brief 10-minute chat to explore if this fits ${company}'s current workflow?`,
   },
   Partnership: {
     label: 'Partnership',
     goal: 'Strategic Co-Marketing, Channel Distribution & Synergy',
     tone: 'Executive, High-Trust & Peer-to-Peer',
     bestFor: 'Agencies, strategic partners, and ecosystem alliances',
-    subject: ({ company }) => `Strategic collaboration idea between MailFlow and ${company}`,
+    subject: ({ company }) => `Strategic collaboration idea for ${company}`,
     intro: ({ company, industry }) =>
-      `Given ${company}'s strong standing and footprint in the ${industry} space, I wanted to reach out regarding a potential mutual partnership.`,
-    painPoint: ({ company }) =>
-      `We frequently work with forward-thinking leaders at teams like ${company} who want to broaden their service capabilities and unlock new client revenue streams without additional overhead.`,
+      `Given ${company}'s standing in ${industry}, I wanted to reach out regarding a potential mutual partnership.`,
+    painPoint: () =>
+      `We frequently collaborate with forward-thinking leaders who want to broaden their service capabilities without additional operational overhead.`,
     solution: () =>
-      `Our partner ecosystem empowers teams to embed AI-driven prospect intelligence and omni-channel automation directly into their offering.`,
+      `Our platform empowers teams to combine prospect intelligence and omni-channel automation directly into their existing workflow.`,
     cta: () =>
-      `Would you or your team be open to exploring potential synergies over a brief introductory call this week?`,
+      `Would you or your team be open to exploring potential synergies over a brief introductory chat?`,
   },
   'Follow-up': {
     label: 'Follow-up',
@@ -98,13 +99,12 @@ const EMAIL_FRAMEWORK_DETAILS: Record<string, EmailFrameworkDetails> = {
     bestFor: 'Unresponsive prospects after initial touchpoint',
     subject: ({ company }) => `Re: Thoughts for ${company}`,
     intro: ({ company }) =>
-      `Circling back on my previous note — I know how full schedules get while driving initiatives at ${company}.`,
+      `Circling back on my previous note regarding ${company}'s outreach workflow.`,
     painPoint: ({ industry }) =>
-      `Just wanted to share a quick benchmark: peers in ${industry} recently saw a 3.4x bump in reply rates after switching to automated account research.`,
+      `Teams in ${industry} often spend significant manual effort on prospect research that could be streamlined.`,
     solution: () =>
-      `The setup is completely frictionless with no workflow disruption or tedious setup required.`,
-    cta: () =>
-      `Would you have 5 minutes this Thursday afternoon for a quick check-in, or should I circle back next month?`,
+      `MailFlow eliminates manual research friction and helps teams launch authentic outreach faster.`,
+    cta: () => `Would you have 10 minutes sometime this week for a quick check-in?`,
   },
   'Product Demo': {
     label: 'Product Demo',
@@ -113,13 +113,13 @@ const EMAIL_FRAMEWORK_DETAILS: Record<string, EmailFrameworkDetails> = {
     bestFor: 'High-intent prospects, qualified leads, and software evaluators',
     subject: ({ company }) => `10-minute interactive walkthrough for ${company}`,
     intro: ({ company, industry }) =>
-      `I noticed ${company}'s ongoing efforts to streamline outreach performance across ${industry}.`,
+      `I noticed ${company}'s work in ${industry} and wanted to connect regarding your outreach workflow.`,
     painPoint: () =>
-      `Most teams are exhausted by juggling disjointed tools for prospect lists, AI copywriting, and multi-channel delivery.`,
+      `Most teams find it challenging to balance high lead volume with truly tailored individual messaging.`,
     solution: ({ company }) =>
-      `I've assembled a tailored live walkthrough demonstrating how MailFlow solves this by unifying lead enrichment, email generation, and WhatsApp outreach for ${company}.`,
+      `I have assembled a tailored live walkthrough demonstrating how MailFlow solves this by unifying lead intelligence and personalized outreach for ${company}.`,
     cta: ({ company }) =>
-      `Can I send across a quick 1-click link to schedule a 10-minute demo customized for ${company}?`,
+      `Would you be open to a brief 10-minute demonstration customized for ${company}?`,
   },
   'Custom Template': {
     label: 'Custom Template',
@@ -202,6 +202,9 @@ export function CreateCampaignModal({
 
   // Leads tracking and AI personalization preview state
   const [leadsMap, setLeadsMap] = useState<Record<string, Lead>>({});
+  const [leadResearches, setLeadResearches] = useState<
+    Record<string, { industry?: string | null }>
+  >({});
 
   const handleLeadsLoaded = useCallback((loadedLeads: Lead[]) => {
     setLeadsMap((prev) => {
@@ -298,7 +301,6 @@ export function CreateCampaignModal({
   // Fetch lead records for selected leads if not in leadsMap
   useEffect(() => {
     if (!open || step !== 2) return;
-    if (channel === 'EMAIL') return;
 
     const missingIds = selectedLeadIds.filter((id) => !leadsMap[id]);
     if (
@@ -324,6 +326,24 @@ export function CreateCampaignModal({
         .catch(() => {});
     }
   }, [open, step, channel, selectedLeadIds, leadsMap, previewLeadId]);
+
+  // Fetch verified research for preview lead
+  useEffect(() => {
+    if (!open || step !== 2 || !previewLeadId) return;
+    if (leadResearches[previewLeadId]) return;
+
+    researchService
+      .getResearch(previewLeadId)
+      .then((res) => {
+        if (res?.research?.industry) {
+          setLeadResearches((prev) => ({
+            ...prev,
+            [previewLeadId]: { industry: res.research?.industry },
+          }));
+        }
+      })
+      .catch(() => {});
+  }, [open, step, previewLeadId, leadResearches]);
 
   // Trigger AI lead analysis preview whenever template or preview lead changes
   useEffect(() => {
@@ -480,11 +500,15 @@ export function CreateCampaignModal({
     .filter((l): l is Lead => Boolean(l));
 
   const previewLead = previewLeadId ? leadsMap[previewLeadId] : selectedLeadsList[0] || null;
-  const leadDisplayName = previewLead?.name || previewData?.leadName || 'Dr. Alex Rivera';
+  const leadDisplayName = previewLead?.name || previewData?.leadName || 'Contact';
   const leadFirstName = leadDisplayName.split(' ')[0] || leadDisplayName;
-  const leadDisplayCompany = previewLead?.company || previewData?.companyName || 'Novatech Labs';
-  const leadDisplayIndustry = previewLead?.industry || previewData?.industry || 'Healthcare Tech';
-  const leadDisplayEmail = previewLead?.email || 'alex.rivera@novatech.io';
+  const leadDisplayCompany = previewLead?.company || previewData?.companyName || 'your company';
+  const leadDisplayIndustry =
+    leadResearches[previewLead?.id || '']?.industry ||
+    previewLead?.industry ||
+    previewData?.industry ||
+    'your domain';
+  const leadDisplayEmail = previewLead?.email || 'contact@example.com';
 
   const effectiveEmailFramework = emailTemplate || 'Cold Outreach';
   const currentEmailFramework =
@@ -585,7 +609,7 @@ export function CreateCampaignModal({
           <Input
             id="campaign-name"
             label="Campaign Name *"
-            placeholder="e.g. Q3 Healthcare Outreach"
+            placeholder="e.g. Q3 Outbound Outreach"
             value={name}
             onChange={(e) => {
               setName(e.target.value);

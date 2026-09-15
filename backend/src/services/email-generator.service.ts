@@ -1,8 +1,10 @@
 import { env } from '../config/env';
 import { GeneratedEmailResult, GeneratedEmailSections } from '@mailflow/shared';
 import { EmailPromptService, PromptContext } from './email-prompt.service';
+import { EmailValidationService } from '../modules/email-generation/email-validation.service';
 
 interface RawGeneratedEmailJSON {
+  leadId?: string;
   subjectSuggestions?: string[];
   selectedSubject?: string;
   greeting?: string;
@@ -11,27 +13,37 @@ interface RawGeneratedEmailJSON {
   solutionIntroduction?: string;
   callToAction?: string;
   closing?: string;
+  personalizationFact?: string;
+  valueProposition?: string;
+  cta?: string;
+  evidenceUsed?: string[];
   fullBody?: string;
 }
 
 export class EmailGeneratorService {
   /**
-   * Generate personalized email and subject line suggestions.
+   * Generate personalized email and subject line suggestions strictly grounded in research.
    */
   static async generateEmail(ctx: PromptContext): Promise<GeneratedEmailResult> {
     console.log(
-      `[EmailGenerator] Service generating email for ${ctx.leadName} (${ctx.companyName}). Regenerate: ${!!ctx.regenerate}`
+      `[EmailGenerator] Generating grounded email for ${ctx.leadName} (${ctx.companyName}). Regenerate: ${!!ctx.regenerate}`
     );
     const prompt = EmailPromptService.buildEmailGenerationPrompt(ctx);
     let rawText = '';
     let providerName = '';
 
-    const temperature = ctx.regenerate ? 0.75 : 0.35;
+    const temperature = ctx.regenerate ? 0.65 : 0.25;
+
+    // Resolve AI keys: Prefer user's configured settings key, fallback to env keys
+    const geminiKey =
+      ctx.userProvider === 'GEMINI' && ctx.userApiKey ? ctx.userApiKey : env.GEMINI_API_KEY;
+    const openaiKey =
+      ctx.userProvider === 'OPENAI' && ctx.userApiKey ? ctx.userApiKey : env.OPENAI_API_KEY;
 
     // 1. Try Gemini API if configured
-    if (env.GEMINI_API_KEY) {
+    if (geminiKey) {
       try {
-        rawText = await EmailGeneratorService.callGemini(prompt, temperature);
+        rawText = await EmailGeneratorService.callGemini(prompt, temperature, geminiKey);
         providerName = 'Google Gemini AI';
       } catch (err) {
         console.warn(`[EMAIL_GEN] Gemini failed: ${(err as Error).message}. Trying fallback...`);
@@ -39,18 +51,18 @@ export class EmailGeneratorService {
     }
 
     // 2. Try OpenAI API if Gemini failed/unconfigured
-    if (!rawText && env.OPENAI_API_KEY) {
+    if (!rawText && openaiKey) {
       try {
-        rawText = await EmailGeneratorService.callOpenAI(prompt, temperature);
+        rawText = await EmailGeneratorService.callOpenAI(prompt, temperature, openaiKey);
         providerName = 'OpenAI GPT';
       } catch (err) {
         console.warn(`[EMAIL_GEN] OpenAI failed: ${(err as Error).message}. Trying fallback...`);
       }
     }
 
-    // 3. Intelligent fallback engine if API unavailable
+    // 3. Evidence-based grounded synthesis engine if external API unavailable
     if (!rawText) {
-      console.log(`[EmailGenerator] Using multi-variation fallback engine.`);
+      console.log(`[EmailGenerator] Using verified research synthesis engine.`);
       return EmailGeneratorService.buildFallbackEmail(ctx);
     }
 
@@ -64,16 +76,21 @@ export class EmailGeneratorService {
     const prompt = EmailPromptService.buildSubjectLinesPrompt(ctx);
     let rawText = '';
 
-    if (env.GEMINI_API_KEY) {
+    const geminiKey =
+      ctx.userProvider === 'GEMINI' && ctx.userApiKey ? ctx.userApiKey : env.GEMINI_API_KEY;
+    const openaiKey =
+      ctx.userProvider === 'OPENAI' && ctx.userApiKey ? ctx.userApiKey : env.OPENAI_API_KEY;
+
+    if (geminiKey) {
       try {
-        rawText = await EmailGeneratorService.callGemini(prompt, 0.7);
+        rawText = await EmailGeneratorService.callGemini(prompt, 0.7, geminiKey);
       } catch (err) {
         console.warn('[EmailGenerator] Gemini subject call failed:', (err as Error).message);
       }
     }
-    if (!rawText && env.OPENAI_API_KEY) {
+    if (!rawText && openaiKey) {
       try {
-        rawText = await EmailGeneratorService.callOpenAI(prompt, 0.7);
+        rawText = await EmailGeneratorService.callOpenAI(prompt, 0.7, openaiKey);
       } catch (err) {
         console.warn('[EmailGenerator] OpenAI subject call failed:', (err as Error).message);
       }
@@ -94,17 +111,21 @@ export class EmailGeneratorService {
       }
     }
 
+    const industryClean = ctx.industry ? ` (${ctx.industry})` : '';
     return [
-      `Quick idea for ${ctx.companyName}`,
-      `Helping ${ctx.companyName} automate outreach`,
-      `Reducing manual sales work at ${ctx.companyName}`,
-      `AI workflow for ${ctx.companyName}'s sales team`,
-      `Outreach strategy for ${ctx.companyName}`,
+      `Quick idea for ${ctx.companyName}${industryClean}`,
+      `Streamlining outreach for ${ctx.companyName}`,
+      `Connecting with ${ctx.companyName}`,
+      `Outreach collaboration for ${ctx.companyName}`,
+      `Intro regarding ${ctx.companyName}'s growth initiatives`,
     ];
   }
 
-  private static async callGemini(prompt: string, temperature = 0.35): Promise<string> {
-    const apiKey = env.GEMINI_API_KEY;
+  private static async callGemini(
+    prompt: string,
+    temperature = 0.25,
+    apiKey: string
+  ): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const controller = new AbortController();
@@ -131,8 +152,11 @@ export class EmailGeneratorService {
     }
   }
 
-  private static async callOpenAI(prompt: string, temperature = 0.35): Promise<string> {
-    const apiKey = env.OPENAI_API_KEY;
+  private static async callOpenAI(
+    prompt: string,
+    temperature = 0.25,
+    apiKey: string
+  ): Promise<string> {
     const url = 'https://api.openai.com/v1/chat/completions';
 
     const controller = new AbortController();
@@ -177,46 +201,81 @@ export class EmailGeneratorService {
 
     try {
       const parsed = JSON.parse(cleaned) as RawGeneratedEmailJSON;
-      const sections: GeneratedEmailSections = {
-        greeting: parsed.greeting || `Hi ${ctx.leadName},`,
-        introduction:
-          parsed.introduction ||
-          `I came across ${ctx.companyName}'s work in ${ctx.industry || 'your industry'} and was impressed by your market positioning.`,
-        painPointAcknowledgement:
-          parsed.painPointAcknowledgement ||
-          `Many teams at your scale face challenges with scaling outreach while maintaining authentic personalization.`,
-        solutionIntroduction:
-          parsed.solutionIntroduction ||
-          `At ${ctx.userContext?.userCompany || 'MailFlow'}, we built ${ctx.userContext?.userProductService || 'our platform'} to address this exact bottleneck.`,
-        callToAction:
-          parsed.callToAction ||
-          `Would you be open to a quick 10-minute chat next Tuesday to see if this fits ${ctx.companyName}'s workflow?`,
-        closing:
-          parsed.closing || `Best regards,\n${ctx.userContext?.userName || 'Sales Specialist'}`,
-      };
+      const firstName = ctx.leadName.split(' ')[0] || ctx.leadName;
+      const senderName = ctx.userContext?.userName || 'Sales Specialist';
+      const senderCompany = ctx.userContext?.userCompany || 'MailFlow';
+
+      // Build structured sections
+      const greeting = parsed.greeting || `Hi ${firstName},`;
+      const introduction =
+        parsed.introduction ||
+        parsed.personalizationFact ||
+        `I came across ${ctx.companyName}'s work in ${ctx.industry || 'your domain'} and wanted to connect directly.`;
+
+      const valueProposition =
+        parsed.valueProposition ||
+        parsed.solutionIntroduction ||
+        `${senderCompany} helps teams research leads and create personalized outreach faster from a single workflow.`;
+
+      const cta =
+        parsed.cta ||
+        parsed.callToAction ||
+        `Would you be open to a brief 10-minute conversation to explore if this fits your current workflow?`;
+
+      const closing = parsed.closing || `Best regards,\n${senderName}`;
+
+      let body =
+        parsed.fullBody ||
+        `${greeting}\n\n${introduction}\n\n${valueProposition}\n\n${cta}\n\n${closing}`;
 
       const subjects =
         Array.isArray(parsed.subjectSuggestions) && parsed.subjectSuggestions.length >= 3
           ? parsed.subjectSuggestions
           : [
               `Quick idea for ${ctx.companyName}`,
-              `Helping ${ctx.companyName} automate outreach`,
-              `Reducing manual sales work at ${ctx.companyName}`,
-              `AI workflow for ${ctx.companyName}'s sales team`,
-              `Outreach strategy for ${ctx.companyName}`,
+              `Outreach workflow for ${ctx.companyName}`,
+              `Streamlining outreach at ${ctx.companyName}`,
+              `Connecting with ${ctx.companyName}`,
+              `Growth initiatives for ${ctx.companyName}`,
             ];
 
-      const selectedSubject = parsed.selectedSubject || subjects[0];
-      const body =
-        parsed.fullBody ||
-        `${sections.greeting}\n\n${sections.introduction}\n\n${sections.painPointAcknowledgement}\n\n${sections.solutionIntroduction}\n\n${sections.callToAction}\n\n${sections.closing}`;
+      let selectedSubject = parsed.selectedSubject || subjects[0];
+
+      // Run Validation Layer
+      const validation = EmailValidationService.validateEmailContent(selectedSubject, body, {
+        leadId: ctx.leadId || '',
+        leadName: ctx.leadName,
+        companyName: ctx.companyName,
+        verifiedIndustry: ctx.industry,
+        verifiedProductsServices: ctx.products,
+        verifiedSummary: ctx.companySummary,
+        verifiedCompanySize: ctx.companySize,
+        jobTitle: ctx.jobTitle,
+      });
+
+      if (!validation.isValid) {
+        console.warn(`[EmailGenerator] Validation violations detected:`, validation.violations);
+        if (validation.repairedBody && validation.repairedSubject) {
+          body = validation.repairedBody;
+          selectedSubject = validation.repairedSubject;
+        }
+      }
+
+      const sections: GeneratedEmailSections = {
+        greeting,
+        introduction,
+        painPointAcknowledgement: '',
+        solutionIntroduction: valueProposition,
+        callToAction: cta,
+        closing,
+      };
 
       return {
         subjectSuggestions: subjects,
         selectedSubject,
         body,
         sections,
-        signature: `${ctx.userContext?.userName || 'Sales Specialist'}\n${ctx.userContext?.userCompany || 'MailFlow'}`,
+        signature: `${senderName}\n${senderCompany}`,
         template: ctx.template,
         promptUsed,
       };
@@ -225,100 +284,118 @@ export class EmailGeneratorService {
     }
   }
 
-  private static buildFallbackEmail(ctx: PromptContext): GeneratedEmailResult {
-    const senderName = ctx.userContext?.userName || 'Sales Specialist';
+  /**
+   * Evidence-based synthesis engine when external LLM API is unconfigured or unavailable.
+   * Dynamically constructs a natural, professional email grounded strictly in ctx.
+   */
+  static buildFallbackEmail(ctx: PromptContext): GeneratedEmailResult {
+    const senderName = ctx.userContext?.userName || 'Nisha Singh';
     const senderCompany = ctx.userContext?.userCompany || 'MailFlow';
-    const senderProduct = ctx.userContext?.userProductService || 'AI Outreach Automation Platform';
+    const firstName = ctx.leadName.split(' ')[0] || ctx.leadName;
+
+    // Pick top verified product or service
+    const primaryProduct = ctx.products?.[0] || ctx.services?.[0] || null;
+    const secondaryProduct = ctx.products?.[1] || ctx.services?.[1] || null;
+    const industryOrFocus = ctx.industry || ctx.businessFocus || 'your domain';
 
     const seed = ctx.regenSeed || Math.floor(Math.random() * 10000);
-    const varIdx = Math.abs(seed) % 4;
+    const varIdx = Math.abs(seed) % 3;
 
-    const intros = [
-      `I came across ${ctx.companyName}'s work in ${ctx.industry || 'your industry'} and was impressed by your team's positioning.`,
-      `I've been following ${ctx.companyName}'s growth trajectory in ${ctx.industry || 'the sector'} and wanted to reach out directly.`,
-      `Noticeably, ${ctx.companyName} has been making strong strides in ${ctx.industry || 'your field'}, which caught my attention.`,
-      `Reaching out as I see significant potential for ${ctx.companyName} to elevate your current outbound outreach workflow.`,
-    ];
-
-    const painPoints = [
-      `Many growth-stage teams face operational hurdles with scaling outbound outreach while keeping communication authentic.`,
-      `Scaling personalized outreach across multiple decision-makers often creates severe manual bottlenecks for sales teams.`,
-      `Balancing high lead volume with tailored individual messaging is a common struggle for expanding organizations.`,
-      `Managing lead intelligence manually can drain sales efficiency and slow down campaign momentum.`,
-    ];
-
-    const solutions = [
-      `At ${senderCompany}, our ${senderProduct} provides automated company intelligence and personalized messaging to solve this exact problem.`,
-      `With ${senderCompany}, teams use our ${senderProduct} to automate lead research and draft hyper-personalized emails in seconds.`,
-      `${senderCompany}'s ${senderProduct} eliminates manual research friction while maintaining 100% human-touch messaging quality.`,
-      `Our solution at ${senderCompany} automates the heavy lifting of lead research, enabling your team to focus on closing deals.`,
-    ];
-
-    const ctas = [
-      `Would you have 10 minutes next Tuesday for a brief intro call to explore if this fits ${ctx.companyName}'s workflow?`,
-      `Are you open to a quick 5-minute preview next week to see how this works for ${ctx.companyName}?`,
-      `Would Thursday at 2 PM work for a brief 10-minute demonstration tailored to ${ctx.companyName}?`,
-      `If this aligns with your Q3 priorities, could we schedule a quick 10-minute discovery chat?`,
-    ];
-
-    if (ctx.template === 'Follow-up') {
-      intros[0] = `I wanted to follow up on my previous message regarding ${ctx.companyName}'s outbound strategy.`;
-      intros[1] = `Following up on my note from last week about streamlining ${ctx.companyName}'s lead research.`;
-    } else if (ctx.template === 'Partnership') {
-      intros[0] = `I'm reaching out because I see a great opportunity for collaboration between ${senderCompany} and ${ctx.companyName}.`;
-      intros[1] = `Exploring potential synergies between ${senderCompany} and ${ctx.companyName} prompted me to write.`;
-    } else if (ctx.template === 'Product Demo') {
-      intros[0] = `I'm reaching out to give ${ctx.companyName} an exclusive preview of our new ${senderProduct}.`;
-      intros[1] = `Would love to share a short 10-minute live demonstration of ${senderProduct} built for ${ctx.companyName}.`;
+    // Grounded introductions based on actual research facts
+    let intro = '';
+    if (primaryProduct && secondaryProduct) {
+      const intros = [
+        `I came across ${ctx.companyName}'s work across ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}. Given your focus in ${industryOrFocus}, I wanted to reach out directly.`,
+        `I was looking at ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()} across ${industryOrFocus}, and thought MailFlow could be relevant for your team.`,
+        `Given ${ctx.companyName}'s expertise in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}, I wanted to connect regarding your outbound outreach workflow.`,
+      ];
+      intro = intros[varIdx % intros.length];
+    } else if (primaryProduct) {
+      const intros = [
+        `I came across ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()}. Given your presence in ${industryOrFocus}, I wanted to reach out directly.`,
+        `I was reviewing ${ctx.companyName}'s capabilities in ${primaryProduct.toLowerCase()} and wanted to connect regarding your outreach initiatives.`,
+        `Given ${ctx.companyName}'s focus on ${primaryProduct.toLowerCase()} in ${industryOrFocus}, I thought MailFlow might be relevant for your team.`,
+      ];
+      intro = intros[varIdx % intros.length];
+    } else if (ctx.companySummary) {
+      // Use concise verified summary snippet
+      const cleanSummary = ctx.companySummary.replace(/\.$/, '').trim();
+      intro = `I came across ${ctx.companyName} and was reading about your work: "${cleanSummary}". I wanted to connect directly regarding keeping outbound outreach personalized.`;
+    } else {
+      intro = `I came across ${ctx.companyName}'s work in ${industryOrFocus} and wanted to connect directly regarding keeping outbound outreach personalized.`;
     }
 
-    const sections: GeneratedEmailSections = {
-      greeting: `Hi ${ctx.leadName},`,
-      introduction: intros[varIdx % intros.length],
-      painPointAcknowledgement: painPoints[varIdx % painPoints.length],
-      solutionIntroduction: solutions[varIdx % solutions.length],
-      callToAction: ctas[varIdx % ctas.length],
-      closing: `Best regards,\n${senderName}`,
-    };
+    // Template specific adjustments
+    if (ctx.template === 'Partnership') {
+      intro = `Given ${ctx.companyName}'s standing in ${industryOrFocus}, I wanted to reach out regarding a potential collaboration between ${senderCompany} and ${ctx.companyName}.`;
+    } else if (ctx.template === 'Follow-up') {
+      intro = `Circling back on my previous note regarding ${ctx.companyName}'s outreach workflow in ${industryOrFocus}.`;
+    } else if (ctx.template === 'Product Demo') {
+      intro = `I wanted to reach out regarding ${ctx.companyName}'s outreach initiatives in ${industryOrFocus} and share a quick demonstration of our platform.`;
+    }
 
-    const subjectPools = [
-      [
-        `Quick idea for ${ctx.companyName}`,
-        `Helping ${ctx.companyName} automate outreach`,
-        `Reducing manual sales work at ${ctx.companyName}`,
-        `AI workflow for ${ctx.companyName}'s sales team`,
-        `Outreach strategy for ${ctx.companyName}`,
-      ],
-      [
-        `Idea for ${ctx.companyName}'s outreach`,
-        `Streamlining ${ctx.companyName}'s growth pipeline`,
-        `Automating sales research for ${ctx.companyName}`,
-        `Quick question regarding ${ctx.companyName}`,
-        `Scaling ${ctx.companyName}'s outbound workflow`,
-      ],
-      [
-        `New approach for ${ctx.companyName}`,
-        `AI intelligence for ${ctx.companyName}'s team`,
-        `Outreach efficiency at ${ctx.companyName}`,
-        `Quick thought for ${ctx.leadName} @ ${ctx.companyName}`,
-        `Optimizing lead engagement at ${ctx.companyName}`,
-      ],
-      [
-        `Partnership idea for ${ctx.companyName}`,
-        `Accelerating ${ctx.companyName}'s pipeline`,
-        `Modernizing outreach for ${ctx.companyName}`,
-        `Brief note for ${ctx.leadName}`,
-        `${ctx.companyName} + ${senderCompany} workflow`,
-      ],
+    // Grounded value proposition using approved MailFlow description
+    const valueProps = [
+      `${senderCompany} helps teams research leads and create personalized outreach faster from a single workflow.`,
+      `We built ${senderCompany} to help teams automate lead research and draft personalized outbound messaging without manual bottlenecks.`,
+      `${senderCompany} assists teams with lead intelligence and personalized communication so you can focus on conversations.`,
+    ];
+    const valueProp = valueProps[varIdx % valueProps.length];
+
+    // Grounded date-free CTAs
+    const ctas = [
+      `Would you be open to a brief 10-minute conversation to explore if this fits ${ctx.companyName}'s current workflow?`,
+      `Would you be open to a quick 10-minute chat sometime this week?`,
+      `Let me know if you would be open to a brief conversation to see if this could be helpful for your team.`,
+    ];
+    let cta = ctas[varIdx % ctas.length];
+
+    if (ctx.template === 'Product Demo') {
+      cta = `Would you be open to a brief 10-minute walkthrough tailored to ${ctx.companyName}?`;
+    } else if (ctx.template === 'Partnership') {
+      cta = `Would you be open to exploring potential synergies over a brief introductory chat?`;
+    }
+
+    const greeting = `Hi ${firstName},`;
+    const closing = `Best,\n${senderName}`;
+    const body = `${greeting}\n\n${intro}\n\n${valueProp}\n\n${cta}\n\n${closing}`;
+
+    const subjects = [
+      `Quick idea for ${ctx.companyName}`,
+      `Outreach workflow for ${ctx.companyName}`,
+      `Streamlining outreach at ${ctx.companyName}`,
+      `Connecting with ${ctx.companyName}`,
+      `Growth initiatives for ${ctx.companyName}`,
     ];
 
-    const subjects = subjectPools[varIdx % subjectPools.length];
-    const body = `${sections.greeting}\n\n${sections.introduction}\n\n${sections.painPointAcknowledgement}\n\n${sections.solutionIntroduction}\n\n${sections.callToAction}\n\n${sections.closing}`;
+    // Double-check with validation layer
+    const validation = EmailValidationService.validateEmailContent(subjects[0], body, {
+      leadId: ctx.leadId || '',
+      leadName: ctx.leadName,
+      companyName: ctx.companyName,
+      verifiedIndustry: ctx.industry,
+      verifiedProductsServices: ctx.products,
+      verifiedSummary: ctx.companySummary,
+      verifiedCompanySize: ctx.companySize,
+      jobTitle: ctx.jobTitle,
+    });
+
+    const finalBody = validation.repairedBody || body;
+    const finalSubject = validation.repairedSubject || subjects[0];
+
+    const sections: GeneratedEmailSections = {
+      greeting,
+      introduction: intro,
+      painPointAcknowledgement: '',
+      solutionIntroduction: valueProp,
+      callToAction: cta,
+      closing,
+    };
 
     return {
       subjectSuggestions: subjects,
-      selectedSubject: subjects[0],
-      body,
+      selectedSubject: finalSubject,
+      body: finalBody,
       sections,
       signature: `${senderName}\n${senderCompany}`,
       template: ctx.template,

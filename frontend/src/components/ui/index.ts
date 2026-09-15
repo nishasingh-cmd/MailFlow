@@ -54,3 +54,6 @@ export type { AlertState } from './AlertBanner/AlertBanner';
 
 export { Logo, LogoIcon } from './Logo/Logo';
 export type { LogoProps } from './Logo/Logo';
+
+export { ExpandableText } from './ExpandableText/ExpandableText';
+export type { ExpandableTextProps } from './ExpandableText/ExpandableText';

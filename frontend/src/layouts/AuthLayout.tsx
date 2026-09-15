@@ -142,7 +142,7 @@ export function AuthLayout() {
           <Logo size="lg" />
         </div>
 
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md space-y-4">
           <Outlet />
         </div>
       </div>
