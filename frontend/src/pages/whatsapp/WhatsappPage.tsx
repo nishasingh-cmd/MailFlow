@@ -5,6 +5,7 @@ import { useToast } from '../../hooks/useToast';
 import { Button, Input, Select, Badge, Skeleton, Modal, ExpandableText } from '../../components/ui';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resolveDeliveryError } from '../../utils/errorDiagnostics';
+import { ConnectWhatsAppModal } from '../../components/whatsapp/ConnectWhatsAppModal';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -234,9 +235,6 @@ export default function WhatsappPage() {
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
-
-  const isMetaActive = stats.provider === 'META_CLOUD';
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -807,67 +805,16 @@ export default function WhatsappPage() {
         </div>
       )}
 
-      {/* Connect WhatsApp Modal */}
-      <Modal
+      {/* Connect WhatsApp Business API Modal */}
+      <ConnectWhatsAppModal
         open={connectModalOpen}
         onClose={() => setConnectModalOpen(false)}
-        title="Connect WhatsApp Business API"
-        size="md"
-      >
-        <div className="space-y-4 py-2">
-          <p className="text-sm text-[var(--content-secondary)]">
-            MailFlow communicates directly with Meta Cloud API. Connect your Meta Developer App to
-            enable live WhatsApp dispatches and real-time read receipts.
-          </p>
-
-          <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[var(--content-tertiary)] uppercase tracking-wider">
-                Current Engine Status
-              </span>
-              <Badge variant={isMetaActive ? 'success' : 'neutral'} size="sm" dot>
-                {isMetaActive ? 'Meta Cloud API Live' : 'Mock Mode Active'}
-              </Badge>
-            </div>
-            <p className="text-xs text-[var(--content-secondary)]">
-              {isMetaActive
-                ? 'Your Meta credentials are configured. WhatsApp template messages are sent via your official Phone Number ID.'
-                : 'Configure your Phone Number ID and System User Access Token in Settings to start sending live WhatsApp messages.'}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-[var(--content-primary)]">Helpful Links:</p>
-            <div className="flex flex-col gap-1.5 text-xs">
-              <a
-                href="https://developers.facebook.com/apps"
-                target="_blank"
-                rel="noreferrer"
-                className="text-brand-600 hover:underline flex items-center gap-1"
-              >
-                Meta for Developers Portal ↗
-              </a>
-              <a
-                href="https://business.facebook.com/settings/whatsapp-business-accounts"
-                target="_blank"
-                rel="noreferrer"
-                className="text-brand-600 hover:underline flex items-center gap-1"
-              >
-                Meta WhatsApp Business Accounts Manager ↗
-              </a>
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-[var(--surface-border)]">
-            <Button variant="secondary" onClick={() => setConnectModalOpen(false)}>
-              Close
-            </Button>
-            <Link to="/settings">
-              <Button variant="primary">Open Settings</Button>
-            </Link>
-          </div>
-        </div>
-      </Modal>
+        onSuccess={() => {
+          fetchStats();
+          fetchHistory(true);
+          toast.success('WhatsApp Business connected successfully!');
+        }}
+      />
 
       {/* Tutorial Video / Instructions Modal */}
       <Modal

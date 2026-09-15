@@ -175,15 +175,16 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             (response: FacebookLoginResponse) => {
               (async () => {
                 try {
-                  if (response.status === 'connected' && response.authResponse?.accessToken) {
+                  const auth = response.authResponse;
+                  if (response.status === 'connected' && (auth?.code || auth?.accessToken)) {
                     setStatus('processing');
 
-                    const accessToken = response.authResponse.accessToken;
-
                     const result = await whatsappService.handleCallback({
-                      accessToken,
+                      code: auth.code,
+                      accessToken: auth.accessToken,
                       wabaId: metaWabaId,
                       phoneNumberId: metaPhoneId,
+                      redirectUri: window.location.href,
                     });
 
                     setState({
@@ -218,9 +219,11 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
             },
             {
               config_id: configId,
+              response_type: 'code',
+              override_default_response_type: true,
               extras: {
+                feature: 'whatsapp_embedded_signup',
                 setup: {},
-                featureType: 'whatsapp_embedded_signup',
                 sessionInfoVersion: '3',
               },
             }
