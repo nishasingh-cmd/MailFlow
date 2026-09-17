@@ -22,6 +22,7 @@ import TemplatesPage from '../pages/templates/TemplatesPage';
 import CreateTemplatePage from '../pages/templates/CreateTemplatePage';
 import Settings from '../pages/settings/Settings';
 import BusinessOnboarding from '../pages/onboarding/BusinessOnboarding';
+import PrivacyPolicy from '../pages/legal/PrivacyPolicy';
 
 export function AppRoutes() {
   return (
@@ -33,6 +34,8 @@ export function AppRoutes() {
         <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
         <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
       </Route>
+
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path={ROUTES.ONBOARDING} element={<BusinessOnboarding />} />

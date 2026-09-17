@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { useToast } from '../../hooks/useToast';
-import { Button, Badge, Skeleton, Modal } from '../../components/ui';
+import { Button, Badge, Skeleton, Modal, ConfirmModal } from '../../components/ui';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/routes';
 
@@ -81,6 +81,23 @@ export default function TemplatesPage() {
   // Modals
   const [browseModalOpen, setBrowseModalOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WhatsappMetaTemplate | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<WhatsappMetaTemplate | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    setDeleting(true);
+    try {
+      await whatsappService.deleteTemplate(templateToDelete.name);
+      toast.success(`Template "${templateToDelete.name}" deleted successfully.`);
+      setTemplates((prev) => prev.filter((t) => t.name !== templateToDelete.name));
+      setTemplateToDelete(null);
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to delete template.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchTemplates = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -344,15 +361,37 @@ export default function TemplatesPage() {
                     <span>Preview Bubble</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(t.name);
-                      toast.success(`Copied "${t.name}" to clipboard`);
-                    }}
-                    className="text-[var(--content-tertiary)] hover:text-[var(--content-primary)] font-medium transition-colors cursor-pointer"
-                  >
-                    Copy Name
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(t.name);
+                        toast.success(`Copied "${t.name}" to clipboard`);
+                      }}
+                      className="text-[var(--content-tertiary)] hover:text-[var(--content-primary)] font-medium transition-colors cursor-pointer"
+                    >
+                      Copy Name
+                    </button>
+                    <button
+                      onClick={() => setTemplateToDelete(t)}
+                      title={`Delete template "${t.name}"`}
+                      className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors cursor-pointer p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-1"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      <span className="sr-only sm:not-sr-only text-2xs font-semibold">Delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -459,6 +498,31 @@ export default function TemplatesPage() {
           </div>
         </Modal>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!templateToDelete}
+        title="Delete Template?"
+        description={
+          <span>
+            Are you sure you want to delete template{' '}
+            <strong className="text-slate-900 dark:text-white">
+              &quot;{templateToDelete?.name}&quot;
+            </strong>
+            ?
+            <br />
+            <br />
+            This will permanently remove the template from your WhatsApp Business Account on Meta.
+            This action cannot be undone.
+          </span>
+        }
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteTemplate}
+        onCancel={() => !deleting && setTemplateToDelete(null)}
+      />
     </div>
   );
 }

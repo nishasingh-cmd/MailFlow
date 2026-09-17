@@ -190,6 +190,20 @@ export const whatsappService = {
     return envelope.data;
   },
 
+  async deleteTemplate(name: string): Promise<{ success: boolean; message: string }> {
+    const { data: envelope } = await api.delete<ApiEnvelope<{ success: boolean; message: string }>>(
+      `/whatsapp/templates/${encodeURIComponent(name)}`
+    );
+    if (!envelope.success) {
+      throw new Error(
+        (envelope as unknown as { error?: string }).error ||
+          envelope.message ||
+          'Failed to delete template'
+      );
+    }
+    return envelope.data;
+  },
+
   async getConnectionStatus(): Promise<{
     connected: boolean;
     config: WhatsappConfigData;

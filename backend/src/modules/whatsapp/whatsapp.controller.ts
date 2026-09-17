@@ -493,4 +493,76 @@ export class WhatsappController {
       res.status(500).json({ success: false, error: 'Failed to create WhatsApp template' });
     }
   }
+
+  /**
+   * DELETE /api/whatsapp/templates/:name — Delete a template from Meta WABA or local.
+   */
+  static async deleteTemplate(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { name } = req.params;
+
+      if (!name) {
+        res.status(400).json({ success: false, error: 'Template name is required.' });
+        return;
+      }
+
+      const config = await prisma.whatsappConfig.findUnique({ where: { userId } });
+
+      if (config?.accessToken && config?.businessAccountId) {
+        let token = '';
+        try {
+          token = decrypt(config.accessToken);
+        } catch {
+          token = config.accessToken;
+        }
+
+        const graphVersion = config.graphApiVersion || env.WHATSAPP_GRAPH_API_VERSION || 'v25.0';
+        const wabaId = config.businessAccountId;
+        const url = `https://graph.facebook.com/${graphVersion}/${wabaId}/message_templates?name=${encodeURIComponent(
+          name
+        )}`;
+
+        console.log(
+          `[WhatsappController.deleteTemplate] Deleting template "${name}" from Meta WABA: ${wabaId}`
+        );
+
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = (await response.json()) as {
+          success?: boolean;
+          error?: { message?: string; code?: number };
+        };
+
+        console.log('[WhatsappController.deleteTemplate] Meta API Response:', JSON.stringify(data));
+
+        if (!response.ok || data.error) {
+          const errMsg =
+            data.error?.message || `Failed to delete template from Meta (${response.status})`;
+          res.status(400).json({ success: false, error: errMsg });
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          message: `Template "${name}" deleted successfully from Meta.`,
+        });
+        return;
+      }
+
+      // If no live Meta connection, return success in local mode
+      res.status(200).json({
+        success: true,
+        message: `Template "${name}" deleted successfully.`,
+      });
+    } catch (error: unknown) {
+      console.error('[whatsapp.controller] deleteTemplate error:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete WhatsApp template' });
+    }
+  }
 }
