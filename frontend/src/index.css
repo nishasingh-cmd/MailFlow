@@ -5,36 +5,6 @@
 @tailwind utilities;
 
 :root {
-  --surface-bg: #09090b;
-  --surface-card: #111113;
-  --surface-elevated: #18181b;
-  --surface-hover: #1f1f23;
-  --surface-border: #27272a;
-
-  --content-primary: #fafafa;
-  --content-secondary: #a1a1aa;
-  --content-tertiary: #71717a;
-  --content-inverse: #09090b;
-  --content-brand: #818cf8;
-
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
-
-  --overlay-backdrop: rgba(0, 0, 0, 0.7);
-
-  --scrollbar-track: #18181b;
-  --scrollbar-thumb: #3f3f46;
-  --scrollbar-thumb-hover: #52525b;
-
-  --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25);
-  --shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
-  --shadow-dropdown: 0 12px 32px rgba(0, 0, 0, 0.65);
-}
-
-.light {
   --surface-bg: #f0f2f6;
   --surface-card: #ffffff;
   --surface-elevated: #f8fafc;
@@ -46,6 +16,11 @@
   --content-tertiary: #94a3b8;
   --content-inverse: #ffffff;
   --content-brand: #4f46e5;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
 
   --overlay-backdrop: rgba(15, 23, 42, 0.4);
 
@@ -139,14 +114,10 @@
   }
 
   .glass {
-    background: rgba(17, 17, 19, 0.7);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--surface-border);
-  }
-
-  .light .glass {
-    background: rgba(255, 255, 255, 0.7);
   }
 
   .scrollbar-none {

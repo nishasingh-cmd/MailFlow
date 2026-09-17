@@ -8,12 +8,6 @@ interface AppPreferencesTabProps {
   onUpdated: () => void;
 }
 
-const THEME_OPTIONS = [
-  { value: 'dark', label: 'Dark Mode (Sleek Modern)' },
-  { value: 'light', label: 'Light Mode (Clean)' },
-  { value: 'system', label: 'System Preference' },
-];
-
 const AI_TONE_OPTIONS = [
   { value: 'Professional', label: 'Professional & Direct (Recommended B2B)' },
   { value: 'Friendly', label: 'Friendly & Casual' },
@@ -28,7 +22,6 @@ const CAMPAIGN_TYPE_OPTIONS = [
 ];
 
 export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabProps) {
-  const [theme, setTheme] = useState(preferences.theme || 'dark');
   const [defaultAiTone, setDefaultAiTone] = useState(preferences.defaultAiTone || 'Professional');
   const [defaultCampaignType, setDefaultCampaignType] = useState(
     preferences.defaultCampaignType || 'EMAIL'
@@ -43,7 +36,7 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
     setAlert(null);
     try {
       await settingsService.updatePreferences({
-        theme,
+        theme: 'light',
         defaultAiTone,
         defaultCampaignType,
         emailSignature: emailSignature.trim() || null,
@@ -70,19 +63,12 @@ export function AppPreferencesTab({ preferences, onUpdated }: AppPreferencesTabP
           Application Preferences
         </h3>
         <p className="text-xs text-[var(--content-secondary)] mt-0.5">
-          Customize UI theme, default AI prompt tones, campaign parameters, and email signatures.
+          Customize default AI prompt tones, campaign parameters, and email signatures.
         </p>
       </div>
 
       <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6 space-y-5 shadow-elevation-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            id="pref-theme"
-            label="User Interface Theme"
-            value={theme}
-            onChange={(val) => setTheme(val as 'dark' | 'light' | 'system')}
-            options={THEME_OPTIONS}
-          />
           <Select
             id="pref-ai-tone"
             label="Default AI Generation Tone"
