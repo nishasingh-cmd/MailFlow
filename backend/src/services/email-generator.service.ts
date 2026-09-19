@@ -25,9 +25,6 @@ export class EmailGeneratorService {
    * Generate personalized email and subject line suggestions strictly grounded in research.
    */
   static async generateEmail(ctx: PromptContext): Promise<GeneratedEmailResult> {
-    console.log(
-      `[EmailGenerator] Generating grounded email for ${ctx.leadName} (${ctx.companyName}). Regenerate: ${!!ctx.regenerate}`
-    );
     const prompt = EmailPromptService.buildEmailGenerationPrompt(ctx);
     let rawText = '';
     let providerName = '';
@@ -62,7 +59,6 @@ export class EmailGeneratorService {
 
     // 3. Evidence-based grounded synthesis engine if external API unavailable
     if (!rawText) {
-      console.log(`[EmailGenerator] Using verified research synthesis engine.`);
       return EmailGeneratorService.buildFallbackEmail(ctx);
     }
 
