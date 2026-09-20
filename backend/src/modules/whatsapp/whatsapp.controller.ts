@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { WhatsappGeneratorService } from './whatsapp-generator.service';
 import { WhatsappService } from './whatsapp.service';
+import { resolveCampaignTemplateVariables } from './whatsapp-variable-resolver';
 import { PrismaClient } from '@prisma/client';
 import { decrypt } from '../../utils/crypto';
 import { env } from '../../config/env';
@@ -38,16 +39,66 @@ export class WhatsappController {
   }
 
   /**
-   * POST /api/whatsapp/preview-template — Generate AI personalized template variables and resolved preview text
+   * POST /api/whatsapp/preview-template — Generate template preview with mapped variables or AI fallbacks
    */
   static async previewTemplate(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { leadId, templateName, templateBodyText } = req.body as {
+      const { leadId, templateName, templateBodyText, variableMapping } = req.body as {
         leadId?: string;
         templateName?: string;
         templateBodyText?: string;
+        variableMapping?: Record<string, string>;
       };
       const userId = req.user!.userId;
+
+      // If user provided a campaign variable mapping, resolve variables deterministically
+      if (variableMapping && Object.keys(variableMapping).length > 0) {
+        let lead = null;
+        if (leadId) {
+          lead = await prisma.lead.findFirst({
+            where: { id: leadId, userId },
+          });
+        }
+
+        const userWithProfile = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { businessProfile: true },
+        });
+
+        const senderContext = {
+          user: userWithProfile,
+          businessProfile: userWithProfile?.businessProfile,
+        };
+
+        const resolved = resolveCampaignTemplateVariables(variableMapping, lead, senderContext);
+
+        let previewText =
+          templateBodyText ||
+          "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
+
+        Object.entries(resolved.variables).forEach(([num, val]) => {
+          previewText = previewText.replace(new RegExp(`\\{\\{\\s*${num}\\s*\\}\\}`, 'g'), val);
+        });
+
+        res.status(200).json({
+          success: true,
+          data: {
+            leadId: lead?.id || 'sample',
+            leadName: lead?.name || 'Prospect',
+            companyName: lead?.company || 'Company',
+            industry: lead?.industry || undefined,
+            phone: lead?.phone || '',
+            templateName: templateName || 'template',
+            templateLang: 'en',
+            variables: resolved.variables,
+            templateParams: resolved.params,
+            previewText,
+            missingVariables: resolved.missingVariables,
+            isValid: resolved.isValid,
+          },
+        });
+        return;
+      }
 
       const generated = await WhatsappGeneratorService.generateTemplateVariables(
         userId,

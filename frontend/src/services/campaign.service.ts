@@ -49,4 +49,21 @@ export const campaignService = {
     const { data: envelope } = await api.post<ApiEnvelope<Campaign>>(`/campaigns/${id}/duplicate`);
     return envelope.data;
   },
+
+  async getDatasetColumns(datasetId: string): Promise<{
+    datasetId: string;
+    datasetName: string;
+    columns: string[];
+    totalRows: number;
+  }> {
+    const { data: envelope } = await api.get<
+      ApiEnvelope<{
+        datasetId: string;
+        datasetName: string;
+        columns: string[];
+        totalRows: number;
+      }>
+    >('/campaigns/dataset-columns', { params: { datasetId } });
+    return envelope.data;
+  },
 };

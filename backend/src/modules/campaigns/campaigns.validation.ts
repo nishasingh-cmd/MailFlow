@@ -43,6 +43,9 @@ export const createCampaignSchema = z
     channel: z.enum(['EMAIL', 'WHATSAPP', 'EMAIL_AND_WHATSAPP']).optional().default('EMAIL'),
     status: z.enum(campaignStatusValues).optional().default('DRAFT'),
     createdBy: z.string().optional(),
+    datasetId: z.string().nullable().optional(),
+    whatsappTemplateName: z.string().nullable().optional(),
+    whatsappVariableMapping: z.record(z.string(), z.string()).nullable().optional(),
   })
   .refine((data) => data.name || data.campaignName, {
     message: 'Campaign name is required',
@@ -59,6 +62,9 @@ export const updateCampaignSchema = z.object({
   selectedTemplate: z.string().max(100).nullable().optional(),
   channel: z.enum(['EMAIL', 'WHATSAPP', 'EMAIL_AND_WHATSAPP']).optional(),
   status: z.enum(campaignStatusValues).optional(),
+  datasetId: z.string().nullable().optional(),
+  whatsappTemplateName: z.string().nullable().optional(),
+  whatsappVariableMapping: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 export const queryCampaignsSchema = z.object({

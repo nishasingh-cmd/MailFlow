@@ -240,6 +240,9 @@ model Campaign {
   status        CampaignStatus   @default(DRAFT)
   channel       CampaignChannel  @default(EMAIL)
   templateId    String?
+  datasetId               String?
+  whatsappTemplateName    String?
+  whatsappVariableMapping Json?
   sendingSpeed  String           @default("NORMAL") // FAST | NORMAL | SLOW
   startedAt     DateTime?
   completedAt   DateTime?

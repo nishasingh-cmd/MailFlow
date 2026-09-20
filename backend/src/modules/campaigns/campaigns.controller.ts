@@ -69,6 +69,30 @@ export class CampaignsController {
   }
 
   /**
+   * GET /campaigns/dataset-columns?datasetId=... — Get unique columns for a dataset
+   */
+  static async getDatasetColumns(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const datasetId = (req.query.datasetId as string) || (req.query.id as string);
+      if (!datasetId) {
+        res.status(400).json({ error: 'datasetId query parameter is required' });
+        return;
+      }
+      const userId = req.user!.userId;
+      const result = await CampaignsService.getDatasetColumns(userId, datasetId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === 'DATASET_NOT_FOUND') {
+        res.status(404).json({ error: 'Dataset not found or unauthorized' });
+        return;
+      }
+      console.error('[campaigns.controller] Get dataset columns error:', error);
+      res.status(500).json({ error: 'Failed to fetch dataset columns' });
+    }
+  }
+
+  /**
    * PATCH /campaigns/:id — Update campaign
    */
   static async update(req: AuthenticatedRequest, res: Response): Promise<void> {

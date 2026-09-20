@@ -24,6 +24,11 @@ export class CampaignsService {
     const channel = (validChannels.includes(rawChannel) ? rawChannel : 'EMAIL') as
       'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP';
 
+    const datasetId = (input.datasetId as string) || null;
+    const whatsappTemplateName = (input.whatsappTemplateName as string) || null;
+    const whatsappVariableMapping =
+      (input.whatsappVariableMapping as Prisma.InputJsonValue) || Prisma.JsonNull;
+
     const campaign = await prisma.campaign.create({
       data: {
         userId,
@@ -32,6 +37,9 @@ export class CampaignsService {
         status,
         channel,
         templateId,
+        datasetId,
+        whatsappTemplateName,
+        whatsappVariableMapping,
         campaignLeads:
           leadIds && leadIds.length > 0
             ? {
@@ -170,6 +178,16 @@ export class CampaignsService {
         ...(input.status !== undefined && { status: input.status as CampaignStatus }),
         ...(input.channel !== undefined && { channel: input.channel }),
         ...(input.templateId !== undefined && { templateId: input.templateId }),
+        ...(input.datasetId !== undefined && { datasetId: input.datasetId }),
+        ...(input.whatsappTemplateName !== undefined && {
+          whatsappTemplateName: input.whatsappTemplateName,
+        }),
+        ...(input.whatsappVariableMapping !== undefined && {
+          whatsappVariableMapping:
+            input.whatsappVariableMapping === null
+              ? Prisma.JsonNull
+              : (input.whatsappVariableMapping as Prisma.InputJsonValue),
+        }),
         ...(leadUpdate && { campaignLeads: leadUpdate }),
       },
       include: {
@@ -214,6 +232,10 @@ export class CampaignsService {
         status: 'DRAFT',
         channel: source.channel,
         templateId: source.templateId,
+        datasetId: source.datasetId,
+        whatsappTemplateName: source.whatsappTemplateName,
+        whatsappVariableMapping:
+          (source.whatsappVariableMapping as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         sendingSpeed: source.sendingSpeed,
         campaignLeads:
           source.campaignLeads.length > 0
@@ -253,5 +275,118 @@ export class CampaignsService {
     }
 
     return copy;
+  }
+
+  /**
+   * Get unique columns for a specific dataset/sheet belonging to the user.
+   * Strictly enforces tenant isolation: checks ownership of importHistory.
+   */
+  static async getDatasetColumns(userId: string, datasetId: string) {
+    if (!datasetId || typeof datasetId !== 'string') {
+      throw new Error('DATASET_ID_REQUIRED');
+    }
+
+    if (datasetId.toUpperCase() === 'MANUAL') {
+      const manualLeads = await prisma.lead.findMany({
+        where: { userId, importHistoryId: null },
+        take: 100,
+        select: { customFields: true },
+      });
+
+      const colSet = new Set<string>();
+      for (const lead of manualLeads) {
+        if (lead.customFields && typeof lead.customFields === 'object') {
+          for (const key of Object.keys(lead.customFields as Record<string, unknown>)) {
+            if (key !== '_uploadedColumns') {
+              colSet.add(key);
+            }
+          }
+        }
+      }
+
+      const standardFields = [
+        'Name',
+        'Phone',
+        'Email',
+        'Company',
+        'Industry',
+        'Website',
+        'LinkedIn',
+      ];
+      for (const sf of standardFields) {
+        if (!Array.from(colSet).some((c) => c.toLowerCase() === sf.toLowerCase())) {
+          colSet.add(sf);
+        }
+      }
+
+      return {
+        datasetId: 'MANUAL',
+        datasetName: 'Manual & Direct Leads',
+        columns: Array.from(colSet),
+        totalRows: manualLeads.length,
+      };
+    }
+
+    // Verify dataset ownership for strict tenant isolation
+    const history = await prisma.importHistory.findFirst({
+      where: { id: datasetId, userId },
+    });
+
+    if (!history) {
+      throw new Error('DATASET_NOT_FOUND');
+    }
+
+    // Find leads for this specific dataset to extract columns
+    const leads = await prisma.lead.findMany({
+      where: { importHistoryId: datasetId, userId },
+      take: 50,
+      select: { customFields: true },
+    });
+
+    let sheetColumns: string[] = [];
+
+    // Check if any lead has _uploadedColumns preserved from spreadsheet headers
+    for (const lead of leads) {
+      if (lead.customFields && typeof lead.customFields === 'object') {
+        const cf = lead.customFields as Record<string, unknown>;
+        if (Array.isArray(cf._uploadedColumns) && cf._uploadedColumns.length > 0) {
+          sheetColumns = (cf._uploadedColumns as string[]).filter(
+            (col) => typeof col === 'string' && col.trim().length > 0 && col !== '_uploadedColumns'
+          );
+          break;
+        }
+      }
+    }
+
+    // Fallback: If _uploadedColumns was not present, gather keys from customFields
+    if (sheetColumns.length === 0) {
+      const colSet = new Set<string>();
+      for (const lead of leads) {
+        if (lead.customFields && typeof lead.customFields === 'object') {
+          for (const key of Object.keys(lead.customFields as Record<string, unknown>)) {
+            if (key !== '_uploadedColumns') {
+              colSet.add(key);
+            }
+          }
+        }
+      }
+      sheetColumns = Array.from(colSet);
+    }
+
+    // Ensure standard fields (Name, Phone, Email, Company) are available
+    const finalColumns = [...sheetColumns];
+    const baseFields = ['Name', 'Phone', 'Email', 'Company'];
+    for (const bf of baseFields) {
+      if (!finalColumns.some((c) => c.toLowerCase() === bf.toLowerCase())) {
+        finalColumns.push(bf);
+      }
+    }
+
+    return {
+      datasetId: history.id,
+      datasetName: history.fileName,
+      columns: finalColumns,
+      totalRows: history.totalRows || history.importedCount,
+    };
   }
 }

@@ -1,11 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
-import { EmailTemplateType, Lead } from '@mailflow/shared';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { EmailTemplateType, Lead, ImportHistory } from '@mailflow/shared';
 import { Modal, Button, Input, Textarea, Select, Badge } from '../ui';
 import { LeadPickerTable } from './LeadPickerTable';
 import { campaignService } from '../../services/campaign.service';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
+import {
+  detectTemplateVariables,
+  resolveCampaignTemplateVariables,
+  SenderBusinessContext,
+  isBusinessProfileField,
+} from '../../utils/whatsapp-variable-resolver';
+import { businessProfileService, BusinessProfile } from '../../services/business-profile.service';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -183,11 +190,137 @@ export function CreateCampaignModal({
   const [channel, setChannel] = useState<'EMAIL' | 'WHATSAPP' | 'EMAIL_AND_WHATSAPP'>('EMAIL');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
 
+  // Dataset / Sheet selection states
+  const [datasets, setDatasets] = useState<ImportHistory[]>([]);
+  const [loadingDatasets, setLoadingDatasets] = useState(false);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
+  const [selectedDatasetName, setSelectedDatasetName] = useState<string>('');
+  const [datasetColumns, setDatasetColumns] = useState<string[]>([]);
+  const [loadingColumns, setLoadingColumns] = useState(false);
+
+  // WhatsApp Dynamic Variable Mapping state (variableIndex -> datasetColumn / businessField)
+  const [whatsappVariableMapping, setWhatsappVariableMapping] = useState<Record<string, string>>(
+    {}
+  );
+  const [mappingError, setMappingError] = useState<string>('');
+
+  // Business Profile state (from client initial onboarding)
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+
   useEffect(() => {
     if (open && initialSelectedLeadIds && initialSelectedLeadIds.length > 0) {
       setSelectedLeadIds(initialSelectedLeadIds);
     }
   }, [open, initialSelectedLeadIds]);
+
+  // Fetch client initial business profile
+  useEffect(() => {
+    if (!open) return;
+    businessProfileService
+      .getProfile()
+      .then((profile) => {
+        if (profile) setBusinessProfile(profile);
+      })
+      .catch((err) => {
+        console.warn('[CreateCampaignModal] Error fetching business profile:', err);
+      });
+  }, [open]);
+
+  // Authoritative sender & business context
+  const senderContext = useMemo<SenderBusinessContext>(
+    () => ({
+      user: user ? { name: user.name, email: user.email } : null,
+      businessProfile,
+    }),
+    [user, businessProfile]
+  );
+
+  // Business Profile mapping options from initial client onboarding
+  const businessOptions = useMemo(() => {
+    return [
+      {
+        value: 'My Business Name',
+        label: `My Business Name (${businessProfile?.businessName || 'Sociokraft Global Outreach'})`,
+      },
+      {
+        value: 'My Name (Sender)',
+        label: `My Name / Sender (${user?.name || 'Nisha Singh'})`,
+      },
+      {
+        value: 'My Website',
+        label: `My Website (${businessProfile?.website || 'https://www.sociokraft.in'})`,
+      },
+      {
+        value: 'My Products / Services',
+        label: `My Products / Services (${businessProfile?.productsOrServices ? businessProfile.productsOrServices.substring(0, 32) + '...' : 'Outreach Services'})`,
+      },
+      {
+        value: 'My Industry',
+        label: `My Industry (${businessProfile?.industry || 'Marketing & Advertising'})`,
+      },
+      {
+        value: 'My Value Proposition',
+        label: `My Value Proposition (${businessProfile?.valueProposition ? businessProfile.valueProposition.substring(0, 32) + '...' : 'Client Acquisition'})`,
+      },
+    ];
+  }, [businessProfile, user]);
+
+  // Fetch user's uploaded datasets / import history
+  useEffect(() => {
+    if (!open) return;
+    setLoadingDatasets(true);
+    leadService
+      .getImportHistory()
+      .then((history) => {
+        setDatasets(history || []);
+        if (history && history.length > 0 && !selectedDatasetId) {
+          setSelectedDatasetId(history[0].id);
+          setSelectedDatasetName(history[0].fileName);
+        }
+      })
+      .catch((err) => {
+        console.error('[CreateCampaignModal] Error fetching import history:', err);
+      })
+      .finally(() => setLoadingDatasets(false));
+  }, [open, selectedDatasetId]);
+
+  // Fetch dataset columns whenever selectedDatasetId changes
+  useEffect(() => {
+    if (!selectedDatasetId) {
+      setDatasetColumns([]);
+      setSelectedDatasetName('');
+      return;
+    }
+
+    setLoadingColumns(true);
+    campaignService
+      .getDatasetColumns(selectedDatasetId)
+      .then((res) => {
+        if (res?.columns) {
+          setDatasetColumns(res.columns);
+          setSelectedDatasetName(res.datasetName);
+
+          // Revalidate existing variable mappings against new dataset columns or business fields
+          setWhatsappVariableMapping((prev) => {
+            const next: Record<string, string> = {};
+            let changed = false;
+            Object.entries(prev).forEach(([varIdx, col]) => {
+              if (res.columns.includes(col) || isBusinessProfileField(col)) {
+                next[varIdx] = col;
+              } else {
+                changed = true;
+              }
+            });
+            return changed ? next : prev;
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('[CreateCampaignModal] Error fetching dataset columns:', err);
+        setDatasetColumns([]);
+      })
+      .finally(() => setLoadingColumns(false));
+  }, [selectedDatasetId]);
 
   // Email template state
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType | ''>('Cold Outreach');
@@ -398,6 +531,11 @@ export function CreateCampaignModal({
     setEmailTemplate('Cold Outreach');
     setSelectedWaTemplateName('cold_outreach');
     setActiveSetupTab('EMAIL');
+    setSelectedDatasetId('');
+    setSelectedDatasetName('');
+    setDatasetColumns([]);
+    setWhatsappVariableMapping({});
+    setMappingError('');
     setPreviewLeadId('');
     setPreviewData(null);
     setNameError('');
@@ -416,6 +554,28 @@ export function CreateCampaignModal({
         return;
       }
       setNameError('');
+    }
+    if (step === 1) {
+      if (!selectedDatasetId) {
+        toast.error('Please select a target dataset / sheet.');
+        return;
+      }
+      if (selectedLeadIds.length === 0) {
+        toast.error('Please select at least one lead from the dataset.');
+        return;
+      }
+    }
+    if (step === 2) {
+      if (channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP') {
+        const unmapped = detectedVariables.filter((v) => !whatsappVariableMapping[v.index]);
+        if (unmapped.length > 0) {
+          setMappingError(
+            `Please map all template variables (${unmapped.map((u) => `{{${u.index}}}`).join(', ')}) to a column from "${selectedDatasetName || 'dataset'}" before proceeding.`
+          );
+          return;
+        }
+      }
+      setMappingError('');
     }
     setStep((s) => Math.min(STEPS.length - 1, s + 1));
   };
@@ -446,6 +606,9 @@ export function CreateCampaignModal({
         selectedLeadIds: selectedLeadIds,
         templateId: chosenTemplateId,
         selectedTemplate: chosenTemplateId,
+        datasetId: selectedDatasetId || undefined,
+        whatsappTemplateName: channel !== 'EMAIL' ? selectedWaTemplateName : undefined,
+        whatsappVariableMapping: channel !== 'EMAIL' ? whatsappVariableMapping : undefined,
         status: 'DRAFT',
         createdBy: user?.name || user?.email || 'User',
       });
@@ -477,11 +640,44 @@ export function CreateCampaignModal({
     activeWaTemplate?.bodyText ||
     "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
 
+  const detectedVariables = useMemo(() => {
+    return detectTemplateVariables(templateBody);
+  }, [templateBody]);
+
   const selectedLeadsList = selectedLeadIds
     .map((id) => leadsMap[id])
     .filter((l): l is Lead => Boolean(l));
 
   const previewLead = previewLeadId ? leadsMap[previewLeadId] : selectedLeadsList[0] || null;
+
+  const resolvedPreview = useMemo(() => {
+    return resolveCampaignTemplateVariables(whatsappVariableMapping, previewLead, senderContext);
+  }, [whatsappVariableMapping, previewLead, senderContext]);
+
+  const missingDataReport = useMemo(() => {
+    if (channel !== 'WHATSAPP' && channel !== 'EMAIL_AND_WHATSAPP') return null;
+    if (detectedVariables.length === 0) return null;
+
+    const unmappedVariables = detectedVariables.filter((v) => !whatsappVariableMapping[v.index]);
+
+    const leadsWithMissingData: Array<{ lead: Lead; missingCols: string[] }> = [];
+
+    for (const lead of selectedLeadsList) {
+      const res = resolveCampaignTemplateVariables(whatsappVariableMapping, lead, senderContext);
+      if (res.missingVariables.length > 0) {
+        leadsWithMissingData.push({
+          lead,
+          missingCols: res.missingVariables.map((m) => m.column),
+        });
+      }
+    }
+
+    return {
+      unmappedVariables,
+      leadsWithMissingData,
+      totalSelected: selectedLeadsList.length,
+    };
+  }, [channel, detectedVariables, whatsappVariableMapping, selectedLeadsList, senderContext]);
   const leadDisplayName = previewLead?.name || previewData?.leadName || 'Contact';
   const leadFirstName = leadDisplayName.split(' ')[0] || leadDisplayName;
   const leadDisplayCompany = previewLead?.company || previewData?.companyName || 'your company';
@@ -762,15 +958,78 @@ export function CreateCampaignModal({
       )}
 
       {step === 1 && (
-        <div className="space-y-3">
-          <p className="text-sm text-[var(--content-secondary)]">
-            Choose which leads to include in this campaign.
-          </p>
-          <LeadPickerTable
-            selectedIds={selectedLeadIds}
-            onChange={setSelectedLeadIds}
-            onLeadsLoaded={handleLeadsLoaded}
-          />
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Target Lead Dataset / Sheet *
+              </label>
+              {selectedDatasetName && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  Active: {selectedDatasetName}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Select the spreadsheet dataset for this campaign. WhatsApp template variables will map
+              strictly to columns from this dataset.
+            </p>
+            {loadingDatasets ? (
+              <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
+                <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                Loading datasets...
+              </div>
+            ) : (
+              <select
+                id="campaign-dataset-select"
+                value={selectedDatasetId}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedDatasetId(newId);
+                  const found = datasets.find((d) => d.id === newId);
+                  setSelectedDatasetName(
+                    found ? found.fileName : newId === 'MANUAL' ? 'Manual & Direct Leads' : ''
+                  );
+                  setSelectedLeadIds([]);
+                }}
+                className="w-full text-xs sm:text-sm font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Choose a dataset / sheet --</option>
+                {datasets.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    📄 {d.fileName} ({d.importedCount || d.totalRows} leads •{' '}
+                    {new Date(d.createdAt).toLocaleDateString()})
+                  </option>
+                ))}
+                <option value="MANUAL">👤 Manual & Direct Leads</option>
+              </select>
+            )}
+          </div>
+
+          {!selectedDatasetId ? (
+            <div className="p-8 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl space-y-2">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Please select a dataset above to view and pick leads
+              </p>
+              <p className="text-xs text-slate-500">
+                Each campaign is tied to a specific dataset so column variable mapping is
+                authoritative and isolated.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--content-secondary)]">
+                Choose which leads from <strong>{selectedDatasetName}</strong> to include in this
+                campaign.
+              </p>
+              <LeadPickerTable
+                selectedIds={selectedLeadIds}
+                onChange={setSelectedLeadIds}
+                onLeadsLoaded={handleLeadsLoaded}
+                importHistoryId={selectedDatasetId}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1009,6 +1268,157 @@ export function CreateCampaignModal({
                 </div>
               </div>
 
+              {/* Dynamic WhatsApp Variable Mapping Card */}
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-[var(--surface-card)] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-black dark:text-white">
+                        Template Variable Mapping
+                      </h4>
+                    </div>
+                    <p className="text-xs text-black dark:text-white mt-1">
+                      Map each template placeholder to a column from{' '}
+                      <strong className="font-semibold text-black dark:text-white">
+                        {selectedDatasetName || 'selected dataset'}
+                      </strong>
+                      .
+                    </p>
+                  </div>
+
+                  {loadingColumns && (
+                    <span className="text-xs text-black dark:text-white flex items-center gap-1.5 shrink-0 font-normal">
+                      <span className="w-3 h-3 border-2 border-slate-700 border-t-transparent rounded-full animate-spin" />
+                      Loading columns...
+                    </span>
+                  )}
+                </div>
+
+                {detectedVariables.length === 0 ? (
+                  <div className="py-3 px-4 text-center text-xs text-black dark:text-white bg-slate-50 dark:bg-slate-900/50 rounded-xl font-normal">
+                    This template contains no variable placeholders (static message).
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {detectedVariables.map((v) => {
+                      const mappedCol = whatsappVariableMapping[v.index] || '';
+                      const sampleVal = previewLead
+                        ? resolveCampaignTemplateVariables(
+                            { [v.index]: mappedCol },
+                            previewLead,
+                            senderContext
+                          ).variables[v.index]
+                        : '';
+
+                      const isBusinessSource = isBusinessProfileField(mappedCol);
+
+                      return (
+                        <div
+                          key={v.index}
+                          className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="px-2 py-0.5 rounded text-xs font-normal text-black dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0">
+                                {`{{${v.index}}}`}
+                              </span>
+                              <span
+                                className="text-xs text-black dark:text-white truncate font-normal"
+                                title={v.contextSnippet}
+                              >
+                                "{v.contextSnippet}"
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                              <span className="text-xs text-black dark:text-white font-normal hidden sm:inline">
+                                →
+                              </span>
+                              <select
+                                id={`variable-mapping-${v.index}`}
+                                value={mappedCol}
+                                onChange={(e) => {
+                                  const newCol = e.target.value;
+                                  setWhatsappVariableMapping((prev) => ({
+                                    ...prev,
+                                    [v.index]: newCol,
+                                  }));
+                                  if (mappingError) setMappingError('');
+                                }}
+                                className="w-full sm:w-72 text-xs font-normal rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white dark:bg-slate-900 text-black dark:text-white"
+                              >
+                                <option value="">-- Select Source Column / Field --</option>
+                                <optgroup
+                                  label={`Spreadsheet Columns (${selectedDatasetName || 'Dataset'})`}
+                                >
+                                  {datasetColumns.map((col) => (
+                                    <option key={col} value={col}>
+                                      {col}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="Business & Sender Profile (Onboarding)">
+                                  {businessOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs text-black dark:text-white px-1">
+                            <span className="font-normal text-black dark:text-white">
+                              Preview value:
+                            </span>
+                            <span className="font-normal text-black dark:text-white truncate max-w-[280px]">
+                              {mappedCol ? (
+                                sampleVal ? (
+                                  <span className="text-black dark:text-white font-normal">
+                                    "{sampleVal}"{' '}
+                                    <span className="text-[11px] text-slate-500 font-normal">
+                                      {isBusinessSource
+                                        ? '(From Business Profile)'
+                                        : `(From Lead: ${previewLead?.name || 'Contact'})`}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-black dark:text-white font-normal">
+                                    (empty for this lead)
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-black dark:text-white font-normal">
+                                  Not mapped yet
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {mappingError && (
+                  <div className="p-2.5 rounded-lg border-2 border-black bg-red-50 text-red-700 text-xs font-semibold flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4 text-red-600 shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{mappingError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Lead Data Analysis & WhatsApp Preview */}
               <div className="space-y-2.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
@@ -1043,9 +1453,9 @@ export function CreateCampaignModal({
                     </div>
                   ) : (
                     <span className="text-xs text-slate-500">
-                      {previewData?.leadName
-                        ? `Analyzed for: ${previewData.leadName} ${previewData.companyName ? `(${previewData.companyName})` : ''}`
-                        : 'Prospect Data Analyzed'}
+                      {previewLead
+                        ? `Previewing for: ${previewLead.name} (${previewLead.company || selectedDatasetName || 'Dataset'})`
+                        : 'Prospect Data Preview'}
                     </span>
                   )}
                 </div>
@@ -1068,7 +1478,7 @@ export function CreateCampaignModal({
 
                     {/* Formatted body message */}
                     <div className="text-[13.5px] text-[#111b21] dark:text-[#d1d7db] leading-[21px] whitespace-pre-wrap break-words font-sans">
-                      {renderAnalyzedMessage(templateBody, previewData?.variables || {})}
+                      {renderAnalyzedMessage(templateBody, resolvedPreview.variables)}
                     </div>
 
                     {/* Footer text */}
@@ -1176,6 +1586,7 @@ export function CreateCampaignModal({
               }
             />
             <Row label="Description" value={description || '—'} />
+            <Row label="Target Dataset" value={selectedDatasetName || '—'} />
             <Row
               label="Selected Leads"
               value={`${selectedLeadIds.length} lead${selectedLeadIds.length !== 1 ? 's' : ''}`}
@@ -1196,15 +1607,105 @@ export function CreateCampaignModal({
                   label="Approved WhatsApp Template"
                   value={`${selectedWaTemplateName} (Meta Approved)`}
                 />
-                <Row
-                  label="WhatsApp AI Scope"
-                  value="Personalizes variables only ({{1}}, {{2}}). Message structure defined by Meta template."
-                />
+                <div className="px-4 py-3 bg-[var(--surface-card)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Variable Mapping Summary
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      Source Dataset: {selectedDatasetName || 'Dataset'}
+                    </span>
+                  </div>
+                  {detectedVariables.length > 0 ? (
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                      {detectedVariables.map((v) => {
+                        const mappedCol = whatsappVariableMapping[v.index];
+                        const sampleVal = previewLead
+                          ? resolveCampaignTemplateVariables(
+                              { [v.index]: mappedCol },
+                              previewLead,
+                              senderContext
+                            ).variables[v.index]
+                          : '';
+
+                        const isBusinessSource = isBusinessProfileField(mappedCol);
+
+                        return (
+                          <div
+                            key={v.index}
+                            className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                                {`{{${v.index}}}`}
+                              </span>
+                              <span className="text-slate-400">→</span>
+                              <span className="font-semibold text-slate-900 dark:text-white">
+                                {mappedCol ? (
+                                  <span>
+                                    {mappedCol}
+                                    {isBusinessSource && (
+                                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal ml-1.5">
+                                        (Business Profile)
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-red-500 italic">Not mapped</span>
+                                )}
+                              </span>
+                            </div>
+
+                            <span className="text-slate-500 font-mono text-[11px] truncate max-w-[180px]">
+                              {mappedCol && sampleVal ? `"${sampleVal}"` : '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">No variables in this template.</p>
+                  )}
+                </div>
               </>
             )}
 
             <Row label="Status" value="Draft" />
           </div>
+
+          {/* Missing data validation warning box */}
+          {missingDataReport && missingDataReport.leadsWithMissingData.length > 0 && (
+            <div className="p-3.5 rounded-xl border-2 border-black bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs space-y-1.5 font-sans">
+              <div className="flex items-center gap-2 font-bold text-sm text-red-800 dark:text-red-200">
+                <svg
+                  className="w-5 h-5 text-red-600 shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Missing Data Warning Before Send</span>
+              </div>
+              <p>
+                <strong>{missingDataReport.leadsWithMissingData.length}</strong> of{' '}
+                <strong>{missingDataReport.totalSelected}</strong> selected leads have empty or
+                missing values in mapped columns (
+                {Array.from(
+                  new Set(missingDataReport.leadsWithMissingData.flatMap((l) => l.missingCols))
+                ).join(', ')}
+                ).
+              </p>
+              <p className="text-[11px] text-red-600 dark:text-red-400">
+                When dispatched via Meta Cloud API, missing variables will resolve to fallback text
+                or empty strings. You can still save the campaign as a Draft and update lead data in
+                Lead Management.
+              </p>
+            </div>
+          )}
 
           {channel === 'WHATSAPP' && (
             <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-sm text-slate-900 dark:text-white flex items-center gap-2.5 font-sans">
@@ -1224,7 +1725,8 @@ export function CreateCampaignModal({
                 <strong className="font-sans font-bold text-slate-900 dark:text-white">
                   {selectedWaTemplateName}
                 </strong>{' '}
-                template with AI-populated variables for each lead.
+                template with variables resolved dynamically from{' '}
+                {selectedDatasetName || 'the chosen dataset'}.
               </span>
             </div>
           )}

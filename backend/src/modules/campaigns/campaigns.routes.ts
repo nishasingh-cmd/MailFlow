@@ -8,6 +8,7 @@ router.use(authenticateUser);
 
 router.post('/', CampaignsController.create);
 router.get('/', CampaignsController.list);
+router.get('/dataset-columns', CampaignsController.getDatasetColumns);
 router.get('/:id', CampaignsController.getById);
 router.patch('/:id', CampaignsController.update);
 router.delete('/:id', CampaignsController.remove);

@@ -1,6 +1,7 @@
 import { PrismaClient, QueueJobStatus, Prisma } from '@prisma/client';
 import { WhatsappGeneratorService } from './whatsapp-generator.service';
 import { WhatsappTemplateService } from './whatsapp-template.service';
+import { resolveCampaignTemplateVariables } from './whatsapp-variable-resolver';
 import { env } from '../../config/env';
 
 const prisma = new PrismaClient();
@@ -124,6 +125,27 @@ export class WhatsappService {
         })) || null;
     }
 
+    const campaign = input.campaignId
+      ? await prisma.campaign.findFirst({
+          where: { id: input.campaignId, userId },
+          select: {
+            id: true,
+            whatsappTemplateName: true,
+            whatsappVariableMapping: true,
+            templateId: true,
+          },
+        })
+      : null;
+
+    const userWithProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { businessProfile: true },
+    });
+    const senderContext = {
+      user: userWithProfile,
+      businessProfile: userWithProfile?.businessProfile,
+    };
+
     const queueItems: Prisma.WhatsappQueueUncheckedCreateInput[] = [];
 
     for (const lead of targetLeads) {
@@ -168,7 +190,26 @@ export class WhatsappService {
 
       let messageText: string = input.message || '';
 
-      if (!isWithin24h) {
+      if (
+        campaign?.whatsappVariableMapping &&
+        typeof campaign.whatsappVariableMapping === 'object' &&
+        Object.keys(campaign.whatsappVariableMapping).length > 0
+      ) {
+        sendType = 'TEMPLATE';
+        useTemplate = true;
+        templateName =
+          campaign.whatsappTemplateName ||
+          input.templateName ||
+          env.WHATSAPP_DEFAULT_TEMPLATE_NAME ||
+          'cold_outreach';
+
+        const resolved = resolveCampaignTemplateVariables(
+          campaign.whatsappVariableMapping as Record<string, string>,
+          lead,
+          senderContext
+        );
+        templateParams = resolved.params;
+      } else if (!isWithin24h) {
         sendType = 'TEMPLATE';
         useTemplate = true;
         templateName = input.templateName || env.WHATSAPP_DEFAULT_TEMPLATE_NAME || 'cold_outreach';

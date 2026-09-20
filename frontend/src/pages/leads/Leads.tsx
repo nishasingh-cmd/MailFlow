@@ -120,6 +120,7 @@ export default function Leads() {
   };
 
   const [waPreviewOpen, setWaPreviewOpen] = useState(false);
+  const [waPreviewLead, setWaPreviewLead] = useState<Lead | null>(null);
   const [waLeadId, setWaLeadId] = useState<string | null>(null);
   const [waLeadName, setWaLeadName] = useState<string>('');
   const [waCompanyName, setWaCompanyName] = useState<string>('');
@@ -128,6 +129,7 @@ export default function Leads() {
   const [waBatchModalOpen, setWaBatchModalOpen] = useState(false);
 
   const openWhatsappModal = (lead: Lead) => {
+    setWaPreviewLead(lead);
     setWaLeadId(lead.id);
     setWaLeadName(lead.name);
     setWaCompanyName(lead.company || '');
@@ -1094,18 +1096,6 @@ export default function Leads() {
               </div>
             </div>
 
-            {selectedDatasetId === 'MANUAL' && (
-              <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-brand-400">Dataset:</span>
-                  <span className="font-medium text-[var(--content-primary)]">
-                    Manual & Direct Leads
-                  </span>
-                  <span className="text-[var(--content-tertiary)]">({manualLeadsCount} leads)</span>
-                </div>
-              </div>
-            )}
-
             {selectedDatasetId !== 'MANUAL' && selectedHistory && (
               <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
                 <div className="flex items-center gap-2">
@@ -1310,6 +1300,9 @@ export default function Leads() {
       <WhatsappPreviewModal
         open={waPreviewOpen}
         leadId={waLeadId}
+        lead={waPreviewLead}
+        datasetColumns={uploadedColumns || undefined}
+        datasetName={selectedHistory?.fileName || 'Manual & Direct Leads'}
         leadName={waLeadName}
         companyName={waCompanyName}
         phone={waPhone}

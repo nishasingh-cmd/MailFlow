@@ -8,9 +8,15 @@ interface LeadPickerTableProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   onLeadsLoaded?: (leads: Lead[]) => void;
+  importHistoryId?: string;
 }
 
-export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPickerTableProps) {
+export function LeadPickerTable({
+  selectedIds,
+  onChange,
+  onLeadsLoaded,
+  importHistoryId,
+}: LeadPickerTableProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -28,6 +34,7 @@ export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPi
     try {
       const result: PaginatedLeadsResponse = await leadService.getLeads({
         search: search || undefined,
+        importHistoryId: importHistoryId || undefined,
         page,
         limit: 8,
       });
@@ -40,7 +47,7 @@ export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPi
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, page, importHistoryId]);
 
   useEffect(() => {
     const t = setTimeout(() => fetchLeads(), 300);
@@ -49,7 +56,7 @@ export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPi
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, importHistoryId]);
 
   const toggleLead = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -99,9 +106,41 @@ export function LeadPickerTable({ selectedIds, onChange, onLeadsLoaded }: LeadPi
             </svg>
           }
         />
-        <span className="text-sm font-medium text-brand-400 whitespace-nowrap">
-          {selectedIds.length} selected
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 whitespace-nowrap bg-brand-500/10 px-2 py-1 rounded">
+            {selectedIds.length} selected
+          </span>
+          {total > leads.length && selectedIds.length < total && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const res = await leadService.getLeads({
+                    importHistoryId: importHistoryId || undefined,
+                    limit: Math.min(total, 500),
+                  });
+                  if (res?.leads) {
+                    onChange(Array.from(new Set([...selectedIds, ...res.leads.map((l) => l.id)])));
+                  }
+                } catch (err) {
+                  console.error('Failed to select all leads:', err);
+                }
+              }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline cursor-pointer"
+            >
+              Select all {total}
+            </button>
+          )}
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg border border-[var(--surface-border)] overflow-hidden">

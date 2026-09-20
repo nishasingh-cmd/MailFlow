@@ -369,6 +369,9 @@ export interface Campaign {
   status: CampaignStatus;
   channel?: CampaignChannel;
   templateId?: string | null;
+  datasetId?: string | null;
+  whatsappTemplateName?: string | null;
+  whatsappVariableMapping?: Record<string, string> | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -391,6 +394,9 @@ export interface CreateCampaignRequest {
   selectedTemplate?: string;
   status?: CampaignStatus;
   createdBy?: string;
+  datasetId?: string | null;
+  whatsappTemplateName?: string | null;
+  whatsappVariableMapping?: Record<string, string> | null;
 }
 
 export interface UpdateCampaignRequest {
@@ -400,6 +406,9 @@ export interface UpdateCampaignRequest {
   leadIds?: string[];
   templateId?: string;
   status?: CampaignStatus;
+  datasetId?: string | null;
+  whatsappTemplateName?: string | null;
+  whatsappVariableMapping?: Record<string, string> | null;
 }
 
 export interface CampaignQueryFilters {
