@@ -33,8 +33,8 @@ export interface ImportHistory {
 }
 
 export interface ColumnMapping {
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   company?: string;
   phone?: string;
   website?: string;
@@ -71,14 +71,16 @@ export interface LeadValidationResult {
   validCount: number;
   duplicateCount: number;
   invalidCount: number;
+  uploadedColumns?: string[];
   validLeads: Array<{
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
     company?: string;
     phone?: string;
     website?: string;
     linkedin?: string;
     industry?: string;
+    customFields?: Record<string, unknown> | null;
   }>;
   duplicates: DuplicateLeadRow[];
   invalidRows: InvalidLeadRow[];
@@ -88,14 +90,16 @@ export interface ImportLeadsRequest {
   fileName: string;
   fileSize: number;
   totalRows: number;
+  uploadedColumns?: string[];
   validLeads: Array<{
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
     company?: string;
     phone?: string;
     website?: string;
     linkedin?: string;
     industry?: string;
+    customFields?: Record<string, unknown> | null;
   }>;
   duplicateCount: number;
   failedCount: number;
@@ -108,6 +112,7 @@ export interface ImportLeadsResponse {
   failedCount: number;
   duplicateCount: number;
   message: string;
+  uploadedColumns?: string[];
 }
 
 export interface CreateLeadRequest {
@@ -119,6 +124,7 @@ export interface CreateLeadRequest {
   linkedin?: string;
   industry?: string;
   status?: LeadStatus;
+  customFields?: Record<string, unknown> | null;
 }
 
 export interface UpdateLeadRequest {
@@ -130,6 +136,7 @@ export interface UpdateLeadRequest {
   linkedin?: string;
   industry?: string;
   status?: LeadStatus;
+  customFields?: Record<string, unknown> | null;
 }
 
 export interface LeadQueryFilters {

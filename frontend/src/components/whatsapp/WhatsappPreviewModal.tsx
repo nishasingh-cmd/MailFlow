@@ -74,7 +74,7 @@ export function WhatsappPreviewModal({
   const [templates, setTemplates] = useState<WhatsappMetaTemplate[]>(cachedTemplates);
   const [selectedTemplateName, setSelectedTemplateName] = useState<string>(() => {
     const approved = cachedTemplates.find((t) => t.status === 'APPROVED');
-    return approved ? approved.name : cachedTemplates[0]?.name || 'cold_outreach';
+    return approved ? approved.name : cachedTemplates[0]?.name || '';
   });
   const [templateLang, setTemplateLang] = useState('en_US');
   const [templateParams, setTemplateParams] = useState<string[]>([]);
@@ -130,25 +130,27 @@ export function WhatsappPreviewModal({
             });
         }
       } else {
-        const fallback: WhatsappMetaTemplate = {
-          name: 'cold_outreach',
-          language: 'en_US',
-          status: 'APPROVED',
-          bodyText:
-            "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!",
-        };
-        setTemplates([fallback]);
-        setSelectedTemplateName('cold_outreach');
-        const resolved = resolveTemplateVariables(fallback.bodyText || '', leadName, companyName);
-        setPreviewText(resolved.text);
-        setTemplateParams(resolved.params);
+        cachedTemplates = [];
+        setTemplates([]);
+        setSelectedTemplateName('');
+        setPreviewText('');
+        setTemplateParams([]);
       }
-    } catch {
-      // Fallback already handled
+    } catch (err: unknown) {
+      cachedTemplates = [];
+      setTemplates([]);
+      setSelectedTemplateName('');
+      setPreviewText('');
+      setTemplateParams([]);
+      const errMsg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message ||
+        'Failed to load WhatsApp templates from Meta. Please check Settings -> WhatsApp.';
+      toast.error(errMsg);
     } finally {
       setLoadingTemplates(false);
     }
-  }, [leadId, leadName, companyName]);
+  }, [leadId, leadName, companyName, toast]);
 
   // Bootstrap immediately when modal opens
   useEffect(() => {
@@ -271,13 +273,29 @@ export function WhatsappPreviewModal({
             </span>
           </div>
 
-          <Select
-            id="wa-template-selector"
-            value={selectedTemplateName}
-            onChange={handleTemplateChange}
-            options={templateOptions}
-            disabled={loadingTemplates}
-          />
+          {templates.length > 0 ? (
+            <Select
+              id="wa-template-selector"
+              value={selectedTemplateName}
+              onChange={handleTemplateChange}
+              options={templateOptions}
+              disabled={loadingTemplates}
+              placeholder="Select an approved template..."
+            />
+          ) : (
+            <div className="p-3 border border-black rounded-lg text-xs text-red-600 font-medium bg-red-50/20">
+              {loadingTemplates ? (
+                <span className="text-[var(--content-secondary)]">
+                  Loading approved Meta templates...
+                </span>
+              ) : (
+                <span>
+                  No WhatsApp templates found in your Meta account. Verify your WhatsApp connection
+                  in Settings or sync templates.
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Final Resolved WhatsApp Message Preview */}
@@ -291,7 +309,14 @@ export function WhatsappPreviewModal({
           {/* Instant clean preview — absolutely zero loader overlay or buffer screen */}
           <div className="relative">
             <WhatsappChatPreview
-              body={displayPreviewText || 'Loading resolved WhatsApp template preview...'}
+              body={
+                displayPreviewText ||
+                (loadingTemplates
+                  ? 'Loading resolved WhatsApp template preview...'
+                  : templates.length === 0
+                    ? 'No approved Meta template available.'
+                    : 'Select a template above to preview.')
+              }
             />
           </div>
           <p className="text-2xs text-[var(--content-tertiary)]">

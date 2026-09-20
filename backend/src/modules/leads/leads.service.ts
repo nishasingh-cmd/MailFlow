@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/db';
 import { parseFileBuffer, parseAllRows } from '../../utils/fileParser';
 import {
@@ -36,6 +37,16 @@ export class LeadsService {
     const rawRows = parseAllRows(fileBuffer);
     const totalRows = rawRows.length;
 
+    // Extract unique headers in original order from the file
+    const headerSet = new Set<string>();
+    rawRows.forEach((r) => {
+      Object.keys(r).forEach((k) => {
+        const trimmed = k.trim();
+        if (trimmed) headerSet.add(trimmed);
+      });
+    });
+    const uploadedColumns = Array.from(headerSet);
+
     // Retrieve existing lead emails for this user to check DB duplicates
     const existingLeads = await prisma.lead.findMany({
       where: { userId },
@@ -44,13 +55,14 @@ export class LeadsService {
     const existingEmailSet = new Set(existingLeads.map((l) => l.email.toLowerCase()));
 
     const validLeads: Array<{
-      name: string;
-      email: string;
+      name?: string;
+      email?: string;
       company?: string;
       phone?: string;
       website?: string;
       linkedin?: string;
       industry?: string;
+      customFields?: Record<string, unknown>;
     }> = [];
 
     const duplicates: DuplicateLeadRow[] = [];
@@ -61,7 +73,7 @@ export class LeadsService {
       const rowNumber = index + 1;
       const reasons: string[] = [];
 
-      // Extract values based on mapping
+      // Extract values based on mapping if provided
       const rawName = mapping.name ? (row[mapping.name] ?? '').trim() : '';
       const rawEmail = mapping.email ? (row[mapping.email] ?? '').trim().toLowerCase() : '';
       const company = mapping.company ? (row[mapping.company] ?? '').trim() : '';
@@ -76,18 +88,12 @@ export class LeadsService {
         return; // Skip empty row
       }
 
-      // Check required fields
-      if (!rawEmail) {
-        reasons.push('Missing email address');
-      } else if (!EMAIL_REGEX.test(rawEmail)) {
+      // Check email format only if a rawEmail was present
+      if (rawEmail && !EMAIL_REGEX.test(rawEmail)) {
         reasons.push(`Invalid email format: "${rawEmail}"`);
       }
 
-      if (!rawName) {
-        reasons.push('Missing contact name');
-      }
-
-      // If invalid format or missing required fields, record as invalid
+      // If invalid format, record as invalid
       if (reasons.length > 0) {
         invalidRows.push({
           rowNumber,
@@ -97,40 +103,68 @@ export class LeadsService {
         return;
       }
 
-      // Check for duplicates (File Duplicate or Database Duplicate)
-      if (seenEmailsInFile.has(rawEmail)) {
-        duplicates.push({
-          rowNumber,
-          email: rawEmail,
-          name: rawName,
-          company,
-          type: 'FILE_DUPLICATE',
-        });
-        return;
-      }
+      // If rawEmail is provided, check for duplicates
+      if (rawEmail) {
+        if (seenEmailsInFile.has(rawEmail)) {
+          duplicates.push({
+            rowNumber,
+            email: rawEmail,
+            name: rawName || company || `Lead #${rowNumber}`,
+            company,
+            type: 'FILE_DUPLICATE',
+          });
+          return;
+        }
 
-      if (existingEmailSet.has(rawEmail)) {
-        duplicates.push({
-          rowNumber,
-          email: rawEmail,
-          name: rawName,
-          company,
-          type: 'DATABASE_DUPLICATE',
-        });
+        if (existingEmailSet.has(rawEmail)) {
+          duplicates.push({
+            rowNumber,
+            email: rawEmail,
+            name: rawName || company || `Lead #${rowNumber}`,
+            company,
+            type: 'DATABASE_DUPLICATE',
+          });
+          seenEmailsInFile.add(rawEmail);
+          return;
+        }
+
         seenEmailsInFile.add(rawEmail);
-        return;
       }
 
-      // Mark as seen and valid
-      seenEmailsInFile.add(rawEmail);
+      // Generate surrogate internal email if no email was present, to satisfy database constraints
+      const effectiveEmail =
+        rawEmail ||
+        `noemail-${Date.now()}-${rowNumber}-${Math.random().toString(36).substring(2, 7)}@internal.mailflow`;
+      const effectiveName =
+        rawName ||
+        company ||
+        Object.values(row).find((v) => v && v.trim().length > 0) ||
+        `Lead #${rowNumber}`;
+
+      // Store ALL uploaded columns and their exact values in customFields, plus _uploadedColumns metadata
+      const customFields: Record<string, unknown> = {
+        _uploadedColumns: uploadedColumns,
+      };
+
+      uploadedColumns.forEach((colHeader) => {
+        const val =
+          row[colHeader] !== undefined
+            ? row[colHeader]
+            : Object.entries(row).find(([k]) => k.trim() === colHeader)?.[1];
+        if (val !== undefined && val !== null) {
+          customFields[colHeader] = typeof val === 'string' ? val.trim() : val;
+        }
+      });
+
       validLeads.push({
-        name: rawName,
-        email: rawEmail,
+        name: effectiveName,
+        email: effectiveEmail,
         company: company || undefined,
         phone: phone || undefined,
         website: website || undefined,
         linkedin: linkedin || undefined,
         industry: industry || undefined,
+        customFields,
       });
     });
 
@@ -139,6 +173,7 @@ export class LeadsService {
       validCount: validLeads.length,
       duplicateCount: duplicates.length,
       invalidCount: invalidRows.length,
+      uploadedColumns,
       validLeads,
       duplicates,
       invalidRows,
@@ -152,7 +187,15 @@ export class LeadsService {
     userId: string,
     payload: ImportLeadsRequest
   ): Promise<ImportLeadsResponse> {
-    const { fileName, fileSize, totalRows, validLeads, duplicateCount, failedCount } = payload;
+    const {
+      fileName,
+      fileSize,
+      totalRows,
+      validLeads,
+      duplicateCount,
+      failedCount,
+      uploadedColumns,
+    } = payload;
 
     return await prisma.$transaction(async (tx) => {
       // 1. Create ImportHistory record
@@ -171,16 +214,19 @@ export class LeadsService {
       // 2. Batch insert valid leads into database
       if (validLeads.length > 0) {
         await tx.lead.createMany({
-          data: validLeads.map((lead) => ({
+          data: validLeads.map((lead, idx) => ({
             userId,
             importHistoryId: historyRecord.id,
-            name: lead.name,
-            email: lead.email.toLowerCase(),
+            name: lead.name || `Lead #${idx + 1}`,
+            email: lead.email
+              ? lead.email.toLowerCase()
+              : `noemail-${historyRecord.id}-${idx + 1}@internal.mailflow`,
             company: lead.company,
             phone: lead.phone,
             website: lead.website,
             linkedin: lead.linkedin,
             industry: lead.industry,
+            customFields: (lead.customFields as Prisma.InputJsonValue) ?? Prisma.JsonNull,
             status: 'NEW',
           })),
           skipDuplicates: true,
@@ -193,6 +239,7 @@ export class LeadsService {
         failedCount,
         duplicateCount,
         message: `Successfully imported ${validLeads.length} leads.`,
+        uploadedColumns,
       };
     });
   }
@@ -311,6 +358,7 @@ export class LeadsService {
         website: data.website,
         linkedin: data.linkedin,
         industry: data.industry,
+        customFields: (data.customFields as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         status: (data.status as LeadStatus) ?? 'NEW',
       },
     });
@@ -350,6 +398,10 @@ export class LeadsService {
         website: data.website,
         linkedin: data.linkedin,
         industry: data.industry,
+        customFields:
+          data.customFields !== undefined
+            ? ((data.customFields as Prisma.InputJsonValue) ?? Prisma.JsonNull)
+            : undefined,
         status: data.status ? (data.status as LeadStatus) : undefined,
       },
     });

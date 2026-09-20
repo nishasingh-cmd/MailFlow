@@ -11,6 +11,7 @@ export const createLeadSchema = z.object({
   linkedin: z.string().optional(),
   industry: z.string().optional(),
   status: leadStatusEnum.optional(),
+  customFields: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export const updateLeadSchema = createLeadSchema.partial();
@@ -21,8 +22,8 @@ export const bulkDeleteSchema = z.object({
 
 export const validateMappingSchema = z.object({
   mapping: z.object({
-    name: z.string(),
-    email: z.string(),
+    name: z.string().optional(),
+    email: z.string().optional(),
     company: z.string().optional(),
     phone: z.string().optional(),
     website: z.string().optional(),
@@ -35,15 +36,17 @@ export const importLeadsSchema = z.object({
   fileName: z.string(),
   fileSize: z.number(),
   totalRows: z.number(),
+  uploadedColumns: z.array(z.string()).optional(),
   validLeads: z.array(
     z.object({
-      name: z.string(),
-      email: z.string().email(),
+      name: z.string().optional().default(''),
+      email: z.string().optional().default(''),
       company: z.string().optional(),
       phone: z.string().optional(),
       website: z.string().optional(),
       linkedin: z.string().optional(),
       industry: z.string().optional(),
+      customFields: z.record(z.string(), z.unknown()).optional().nullable(),
     })
   ),
   duplicateCount: z.number(),

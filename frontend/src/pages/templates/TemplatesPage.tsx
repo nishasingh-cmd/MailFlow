@@ -99,33 +99,25 @@ export default function TemplatesPage() {
     }
   };
 
-  const fetchTemplates = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    try {
-      const res = await whatsappService.getTemplates();
-      setTemplates(res.templates || []);
-    } catch {
-      // Fallback with demo templates if backend offline or unconfigured
-      setTemplates([
-        {
-          name: 'quick_lead_outreach',
-          language: 'en_US',
-          status: 'APPROVED',
-          bodyText:
-            'Hi {{1}}, noticed {{2}} is exploring multichannel outreach. Would you be open to a 5-min demo?',
-        },
-        {
-          name: 'lead_followup_reminder',
-          language: 'en_US',
-          status: 'APPROVED',
-          bodyText:
-            'Hello {{1}}, following up on our email regarding {{2}}. Let me know if you have any questions!',
-        },
-      ]);
-    } finally {
-      if (!isSilent) setLoading(false);
-    }
-  }, []);
+  const fetchTemplates = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
+      try {
+        const res = await whatsappService.getTemplates();
+        setTemplates(res.templates || []);
+      } catch (err: unknown) {
+        setTemplates([]);
+        const errMsg =
+          (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          (err as Error)?.message ||
+          'Failed to load WhatsApp templates. Verify Meta connection in Settings.';
+        if (!isSilent) toast.error(errMsg);
+      } finally {
+        if (!isSilent) setLoading(false);
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     fetchTemplates();

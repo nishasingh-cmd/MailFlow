@@ -269,30 +269,13 @@ export function CreateCampaignModal({
               setSelectedWaTemplateName(res.templates[0].name);
             }
           } else {
-            // Fallback default template if no WABA templates fetched yet
-            setWaTemplates([
-              {
-                name: 'cold_outreach',
-                language: 'en',
-                status: 'APPROVED',
-                bodyText:
-                  "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!",
-              },
-            ]);
-            setSelectedWaTemplateName('cold_outreach');
+            setWaTemplates([]);
+            setSelectedWaTemplateName('');
           }
         })
         .catch(() => {
-          setWaTemplates([
-            {
-              name: 'cold_outreach',
-              language: 'en',
-              status: 'APPROVED',
-              bodyText:
-                "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!",
-            },
-          ]);
-          setSelectedWaTemplateName('cold_outreach');
+          setWaTemplates([]);
+          setSelectedWaTemplateName('');
         })
         .finally(() => setLoadingWaTemplates(false));
     }

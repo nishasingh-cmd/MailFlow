@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
 import { Lead, LeadStatus, ImportHistory, ResearchProgressResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
@@ -48,10 +48,15 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('ALL');
   const [sortOption, setSortOption] = useState<string>('createdAt-desc');
 
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Dynamic Column Visibility & Discovery
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({});
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -126,6 +131,7 @@ export default function Leads() {
       const response = await leadService.getLeads({
         search: searchQuery,
         status: statusFilter,
+        importHistoryId: selectedDatasetId !== 'ALL' ? selectedDatasetId : undefined,
         sortBy,
         sortOrder,
         page,
@@ -136,7 +142,7 @@ export default function Leads() {
       setTotalLeads(response.total);
       setTotalPages(response.totalPages);
 
-      if (page === 1 && !searchQuery && statusFilter === 'ALL') {
+      if (page === 1 && !searchQuery && statusFilter === 'ALL' && selectedDatasetId === 'ALL') {
         setStats({
           total: response.total,
           notContactedCount: response.leads.filter((l) => l.status === 'NEW').length,
@@ -151,7 +157,7 @@ export default function Leads() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, statusFilter, sortOption, page, limit, toast]);
+  }, [searchQuery, statusFilter, selectedDatasetId, sortOption, page, limit, toast]);
 
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true);
@@ -194,6 +200,10 @@ export default function Leads() {
   }, [toast]);
 
   useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  useEffect(() => {
     if (activeTab === 'LEADS') {
       fetchLeads();
     } else if (activeTab === 'HISTORY') {
@@ -203,13 +213,16 @@ export default function Leads() {
     }
   }, [activeTab, fetchLeads, fetchHistory, fetchResearchLeads]);
 
-  const handleSelectAll = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedLeadIds(leads.map((l) => l.id));
-    } else {
-      setSelectedLeadIds([]);
-    }
-  };
+  const handleSelectAll = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      if (e.target.checked) {
+        setSelectedLeadIds(leads.map((l) => l.id));
+      } else {
+        setSelectedLeadIds([]);
+      }
+    },
+    [leads]
+  );
 
   const handleResearchSelectAll = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -219,11 +232,11 @@ export default function Leads() {
     }
   };
 
-  const handleToggleSelectLead = (id: string) => {
+  const handleToggleSelectLead = useCallback((id: string) => {
     setSelectedLeadIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
-  };
+  }, []);
 
   const handleBulkDelete = async () => {
     if (selectedLeadIds.length === 0) return;
@@ -242,19 +255,22 @@ export default function Leads() {
     }
   };
 
-  const handleDeleteSingle = async (lead: Lead) => {
-    if (!window.confirm(`Delete lead "${lead.name}" (${lead.email})?`)) return;
-    try {
-      await leadService.deleteLead(lead.id);
-      toast.success('Lead deleted.');
-      fetchLeads();
-    } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { error?: string } } };
-      toast.error(errorObj.response?.data?.error ?? 'Failed to delete lead.');
-    }
-  };
+  const handleDeleteSingle = useCallback(
+    async (lead: Lead) => {
+      if (!window.confirm(`Delete lead "${lead.name}" (${lead.email})?`)) return;
+      try {
+        await leadService.deleteLead(lead.id);
+        toast.success('Lead deleted.');
+        fetchLeads();
+      } catch (err: unknown) {
+        const errorObj = err as { response?: { data?: { error?: string } } };
+        toast.error(errorObj.response?.data?.error ?? 'Failed to delete lead.');
+      }
+    },
+    [fetchLeads, toast]
+  );
 
-  const handleOpenDetail = async (lead: Lead) => {
+  const handleOpenDetail = useCallback(async (lead: Lead) => {
     try {
       const fullLead = await leadService.getLead(lead.id);
       setSelectedLeadDetail(fullLead);
@@ -263,7 +279,7 @@ export default function Leads() {
       setSelectedLeadDetail(lead);
       setIsDetailDrawerOpen(true);
     }
-  };
+  }, []);
 
   const handleOpenResearch = (lead: Lead) => {
     setResearchDrawerLeadId(lead.id);
@@ -314,94 +330,270 @@ export default function Leads() {
     return <Badge variant="neutral">Not Contacted</Badge>;
   };
 
-  const leadColumns: Column<Lead>[] = [
-    {
-      key: 'select',
-      header: (
-        <input
-          type="checkbox"
-          checked={leads.length > 0 && selectedLeadIds.length === leads.length}
-          onChange={handleSelectAll}
-          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
-        />
-      ),
-      render: (lead) => (
-        <input
-          type="checkbox"
-          checked={selectedLeadIds.includes(lead.id)}
-          onChange={() => handleToggleSelectLead(lead.id)}
-          className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
-        />
-      ),
-      width: '40px',
-    },
-    {
-      key: 'name',
-      header: 'Name',
-      render: (lead) => (
-        <button
-          onClick={() => handleOpenDetail(lead)}
-          className="font-semibold text-[var(--content-primary)] hover:text-brand-400 text-left whitespace-nowrap"
-        >
-          {lead.name}
-        </button>
-      ),
-    },
-    {
-      key: 'email',
-      header: 'Email',
-      render: (lead) => (
-        <span className="text-xs font-mono text-[var(--content-secondary)] whitespace-nowrap">
-          {lead.email}
-        </span>
-      ),
-    },
-    {
-      key: 'company',
-      header: 'Company',
-      width: '160px',
-      render: (lead) => (
-        <span className="text-xs whitespace-nowrap">
-          {lead.company || <span className="text-[var(--content-tertiary)] italic">—</span>}
-        </span>
-      ),
-    },
-    {
-      key: 'phone',
-      header: 'Phone',
-      render: (lead) => (
-        <span className="text-xs font-mono whitespace-nowrap">
-          {lead.phone || <span className="text-[var(--content-tertiary)] italic">—</span>}
-        </span>
-      ),
-    },
-    {
-      key: 'website',
-      header: 'Website',
-      render: (lead) => (
-        <span className="text-xs whitespace-nowrap">
-          {lead.website ? (
-            <a
-              href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-brand-400 hover:underline truncate max-w-[120px] inline-block"
+  // Check if current dataset or leads have mirrored spreadsheet columns
+  const uploadedColumns = useMemo<string[] | null>(() => {
+    for (const lead of leads) {
+      if (
+        lead.customFields &&
+        typeof lead.customFields === 'object' &&
+        Array.isArray((lead.customFields as Record<string, unknown>)._uploadedColumns) &&
+        ((lead.customFields as Record<string, unknown>)._uploadedColumns as string[]).length > 0
+      ) {
+        return (lead.customFields as Record<string, unknown>)._uploadedColumns as string[];
+      }
+    }
+    return null;
+  }, [leads]);
+
+  const selectedHistory = useMemo(() => {
+    if (selectedDatasetId === 'ALL') return null;
+    return importHistory.find((h) => h.id === selectedDatasetId) || null;
+  }, [importHistory, selectedDatasetId]);
+
+  // Discover all unique dynamic field keys across leads on the current page
+  const dynamicFieldKeys = useMemo(() => {
+    const keys = new Set<string>();
+    leads.forEach((l) => {
+      if (l.customFields && typeof l.customFields === 'object') {
+        Object.keys(l.customFields).forEach((k) => {
+          if (k === '_uploadedColumns') return;
+          const val = l.customFields?.[k];
+          if (val !== undefined && val !== null && String(val).trim() !== '') {
+            keys.add(k);
+          }
+        });
+      }
+    });
+    return Array.from(keys);
+  }, [leads]);
+
+  const toggleColumnVisibility = (colKey: string) => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [colKey]: prev[colKey] !== undefined ? !prev[colKey] : false,
+    }));
+  };
+
+  const isColVisible = useCallback(
+    (colKey: string) => columnVisibility[colKey] !== false,
+    [columnVisibility]
+  );
+
+  // Generate dynamic columns for custom fields
+  const dynamicColumns = useMemo<Column<Lead>[]>(() => {
+    return dynamicFieldKeys
+      .filter((key) => isColVisible(`custom_${key}`))
+      .map((key) => ({
+        key: `custom_${key}`,
+        header: (
+          <span title={key} className="truncate max-w-[140px] inline-block font-medium">
+            {key}
+          </span>
+        ),
+        width: '160px',
+        render: (lead: Lead) => {
+          const val = lead.customFields?.[key];
+          if (val === undefined || val === null || String(val).trim() === '') {
+            return <span className="text-[var(--content-tertiary)] italic">—</span>;
+          }
+          const strVal = String(val);
+          return (
+            <span
+              className="text-xs text-[var(--content-secondary)] truncate max-w-[160px] inline-block align-middle"
+              title={strVal}
             >
-              {lead.website}
-            </a>
-          ) : (
-            <span className="text-[var(--content-tertiary)] italic">—</span>
-          )}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: '140px',
-      render: (lead) => getStatusBadge(lead.status),
-    },
-    {
+              {strVal}
+            </span>
+          );
+        },
+      }));
+  }, [dynamicFieldKeys, isColVisible]);
+
+  const leadColumns = useMemo<Column<Lead>[]>(() => {
+    const baseCols: Column<Lead>[] = [
+      {
+        key: 'select',
+        header: (
+          <input
+            type="checkbox"
+            checked={leads.length > 0 && selectedLeadIds.length === leads.length}
+            onChange={handleSelectAll}
+            className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
+          />
+        ),
+        render: (lead) => (
+          <input
+            type="checkbox"
+            checked={selectedLeadIds.includes(lead.id)}
+            onChange={() => handleToggleSelectLead(lead.id)}
+            className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 bg-[var(--surface-card)] cursor-pointer"
+          />
+        ),
+        width: '40px',
+      },
+    ];
+
+    if (uploadedColumns && uploadedColumns.length > 0) {
+      // 1:1 Mirroring of uploaded spreadsheet columns
+      uploadedColumns.forEach((colName, idx) => {
+        if (columnVisibility[colName] === false) return;
+
+        baseCols.push({
+          key: `col_${colName}`,
+          header: (
+            <span
+              title={colName}
+              className="truncate max-w-[180px] inline-block font-semibold text-xs tracking-wide"
+            >
+              {colName}
+            </span>
+          ),
+          render: (lead: Lead) => {
+            const val = (lead.customFields as Record<string, unknown> | undefined)?.[colName];
+            const hasVal = val !== undefined && val !== null && String(val).trim() !== '';
+            const displayVal = hasVal ? String(val) : '—';
+
+            if (idx === 0) {
+              return (
+                <button
+                  type="button"
+                  onClick={() => handleOpenDetail(lead)}
+                  className="font-semibold text-[var(--content-primary)] hover:text-brand-400 text-left whitespace-nowrap truncate max-w-[220px] block"
+                  title={displayVal}
+                >
+                  {displayVal}
+                </button>
+              );
+            }
+
+            if (
+              typeof val === 'string' &&
+              (val.startsWith('http://') || val.startsWith('https://'))
+            ) {
+              return (
+                <a
+                  href={val}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand-400 hover:underline truncate max-w-[160px] inline-block text-xs"
+                  title={val}
+                >
+                  {val}
+                </a>
+              );
+            }
+
+            return (
+              <span
+                className={`text-xs truncate max-w-[180px] inline-block align-middle ${
+                  !hasVal
+                    ? 'text-[var(--content-tertiary)] italic'
+                    : 'text-[var(--content-secondary)]'
+                }`}
+                title={displayVal}
+              >
+                {displayVal}
+              </span>
+            );
+          },
+        });
+      });
+    } else {
+      // Standard CRM Columns (Fallback for manual / unmapped legacy leads)
+      if (isColVisible('name')) {
+        baseCols.push({
+          key: 'name',
+          header: 'Name',
+          render: (lead) => (
+            <button
+              onClick={() => handleOpenDetail(lead)}
+              className="font-semibold text-[var(--content-primary)] hover:text-brand-400 text-left whitespace-nowrap"
+            >
+              {lead.name}
+            </button>
+          ),
+        });
+      }
+
+      if (isColVisible('email')) {
+        baseCols.push({
+          key: 'email',
+          header: 'Email',
+          render: (lead) => {
+            if (lead.email.includes('@internal.mailflow')) {
+              return <span className="text-xs text-[var(--content-tertiary)] italic">—</span>;
+            }
+            return (
+              <span className="text-xs font-mono text-[var(--content-secondary)] whitespace-nowrap">
+                {lead.email}
+              </span>
+            );
+          },
+        });
+      }
+
+      if (isColVisible('company')) {
+        baseCols.push({
+          key: 'company',
+          header: 'Company',
+          width: '160px',
+          render: (lead) => (
+            <span className="text-xs whitespace-nowrap">
+              {lead.company || <span className="text-[var(--content-tertiary)] italic">—</span>}
+            </span>
+          ),
+        });
+      }
+
+      if (isColVisible('phone')) {
+        baseCols.push({
+          key: 'phone',
+          header: 'Phone',
+          render: (lead) => (
+            <span className="text-xs font-mono whitespace-nowrap">
+              {lead.phone || <span className="text-[var(--content-tertiary)] italic">—</span>}
+            </span>
+          ),
+        });
+      }
+
+      if (isColVisible('website')) {
+        baseCols.push({
+          key: 'website',
+          header: 'Website',
+          render: (lead) => (
+            <span className="text-xs whitespace-nowrap">
+              {lead.website ? (
+                <a
+                  href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand-400 hover:underline truncate max-w-[120px] inline-block"
+                >
+                  {lead.website}
+                </a>
+              ) : (
+                <span className="text-[var(--content-tertiary)] italic">—</span>
+              )}
+            </span>
+          ),
+        });
+      }
+
+      // Dynamic industry columns injected here
+      baseCols.push(...dynamicColumns);
+
+      if (isColVisible('status')) {
+        baseCols.push({
+          key: 'status',
+          header: 'Status',
+          width: '140px',
+          render: (lead) => getStatusBadge(lead.status),
+        });
+      }
+    }
+
+    baseCols.push({
       key: 'actions',
       header: 'Actions',
       align: 'right',
@@ -468,8 +660,21 @@ export default function Leads() {
           </Button>
         </div>
       ),
-    },
-  ];
+    });
+
+    return baseCols;
+  }, [
+    leads,
+    selectedLeadIds,
+    columnVisibility,
+    dynamicColumns,
+    uploadedColumns,
+    handleSelectAll,
+    handleToggleSelectLead,
+    handleOpenDetail,
+    handleDeleteSingle,
+    isColVisible,
+  ]);
 
   const researchColumns: Column<Lead>[] = [
     {
@@ -676,6 +881,23 @@ export default function Leads() {
               </div>
 
               <div className="flex items-center gap-3">
+                {importHistory.length > 0 && (
+                  <Select
+                    options={[
+                      { value: 'ALL', label: 'All Datasets' },
+                      ...importHistory.map((h) => ({
+                        value: h.id,
+                        label: `${h.fileName} (${h.importedCount})`,
+                      })),
+                    ]}
+                    value={selectedDatasetId}
+                    onChange={(val) => {
+                      setSelectedDatasetId(val);
+                      setPage(1);
+                    }}
+                    className="w-56"
+                  />
+                )}
                 <Select
                   options={STATUS_FILTER_OPTIONS}
                   value={statusFilter}
@@ -694,8 +916,163 @@ export default function Leads() {
                   }}
                   className="w-56"
                 />
+
+                {/* Columns Visibility Dropdown */}
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsColumnDropdownOpen((prev) => !prev)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <svg
+                      className="w-4 h-4 text-[var(--content-secondary)]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 4.5v15m6-15v15m-10.5-15h15a2.25 2.25 0 012.25 2.25v13.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 014.5 4.5z"
+                      />
+                    </svg>
+                    <span>Columns</span>
+                    {uploadedColumns && uploadedColumns.length > 0 ? (
+                      <span className="px-1.5 py-0.5 bg-brand-500/10 text-brand-500 text-[10px] font-semibold rounded-full">
+                        {uploadedColumns.length}
+                      </span>
+                    ) : dynamicFieldKeys.length > 0 ? (
+                      <span className="px-1.5 py-0.5 bg-brand-500/10 text-brand-500 text-[10px] font-semibold rounded-full">
+                        +{dynamicFieldKeys.length}
+                      </span>
+                    ) : null}
+                  </Button>
+
+                  {isColumnDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setIsColumnDropdownOpen(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-64 bg-[var(--surface-elevated)] border border-[var(--surface-border)] rounded-xl shadow-2xl z-30 p-2.5 max-h-80 overflow-y-auto space-y-1 text-xs">
+                        {uploadedColumns && uploadedColumns.length > 0 ? (
+                          <>
+                            <div className="px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider">
+                              Spreadsheet Columns ({uploadedColumns.length})
+                            </div>
+                            {uploadedColumns.map((col) => (
+                              <label
+                                key={col}
+                                className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={columnVisibility[col] !== false}
+                                  onChange={() => toggleColumnVisibility(col)}
+                                  className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                                />
+                                <span
+                                  className="text-[var(--content-primary)] truncate max-w-[180px]"
+                                  title={col}
+                                >
+                                  {col}
+                                </span>
+                              </label>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <div className="px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider">
+                              Standard Columns
+                            </div>
+                            {[
+                              { id: 'name', label: 'Name' },
+                              { id: 'email', label: 'Email' },
+                              { id: 'company', label: 'Company' },
+                              { id: 'phone', label: 'Phone' },
+                              { id: 'website', label: 'Website' },
+                              { id: 'status', label: 'Status' },
+                            ].map((col) => (
+                              <label
+                                key={col.id}
+                                className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isColVisible(col.id)}
+                                  onChange={() => toggleColumnVisibility(col.id)}
+                                  className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                                />
+                                <span className="text-[var(--content-primary)] font-medium">
+                                  {col.label}
+                                </span>
+                              </label>
+                            ))}
+
+                            {dynamicFieldKeys.length > 0 && (
+                              <>
+                                <div className="px-2 pt-2.5 pb-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider border-t border-[var(--surface-border)] mt-2">
+                                  Dynamic Columns ({dynamicFieldKeys.length})
+                                </div>
+                                {dynamicFieldKeys.map((key) => (
+                                  <label
+                                    key={key}
+                                    className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isColVisible(`custom_${key}`)}
+                                      onChange={() => toggleColumnVisibility(`custom_${key}`)}
+                                      className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                                    />
+                                    <span
+                                      className="text-[var(--content-primary)] truncate"
+                                      title={key}
+                                    >
+                                      {key}
+                                    </span>
+                                  </label>
+                                ))}
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
+
+            {selectedDatasetId !== 'ALL' && selectedHistory && (
+              <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-brand-400">Viewing Dataset:</span>
+                  <span className="font-mono text-[var(--content-primary)]">
+                    {selectedHistory.fileName}
+                  </span>
+                  <span className="text-[var(--content-tertiary)]">
+                    ({selectedHistory.importedCount} leads)
+                  </span>
+                  {uploadedColumns && (
+                    <span className="px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded-full font-medium">
+                      Mirroring {uploadedColumns.length} columns from file
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDatasetId('ALL');
+                    setPage(1);
+                  }}
+                  className="text-xs text-brand-400 hover:text-brand-300 underline font-medium cursor-pointer"
+                >
+                  Show All Datasets
+                </button>
+              </div>
+            )}
 
             {selectedLeadIds.length > 0 && (
               <div className="p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center justify-between text-sm animate-fade-in">
@@ -810,9 +1187,12 @@ export default function Leads() {
       <ImportLeadsModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onSuccess={() => {
+        onSuccess={(newImportHistoryId) => {
+          fetchHistory();
+          if (newImportHistoryId) {
+            setSelectedDatasetId(newImportHistoryId);
+          }
           fetchLeads();
-          if (activeTab === 'HISTORY') fetchHistory();
         }}
       />
 

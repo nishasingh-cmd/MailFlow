@@ -329,9 +329,10 @@ export class WhatsappWebhookController {
               });
             }
             if (!config) {
-              config = await prisma.whatsappConfig.findFirst({
-                where: { status: { in: ['CONNECTED', 'MOCK_ACTIVE'] } },
-              });
+              console.warn(
+                `[WhatsappWebhook] Inbound message dropped: No account found matching phoneNumberId="${phoneNumberId}" or wabaId="${wabaId}". Strict tenant isolation enforced.`
+              );
+              continue;
             }
 
             const owningUserId = config?.userId;

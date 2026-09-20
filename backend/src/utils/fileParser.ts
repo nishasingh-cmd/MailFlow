@@ -134,7 +134,7 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
     }
   }
 
-  // Pass 2: Substring / keyword inclusion matches for unmapped fields
+  // Pass 2: Word-boundary / safe inclusion matches for unmapped fields
   for (const [targetField, keywords] of Object.entries(FIELD_KEYWORDS)) {
     if (mapping[targetField]) continue; // Already mapped
 
@@ -143,7 +143,12 @@ export function autoDetectColumnMapping(headers: string[]): ColumnMapping {
         !usedHeaderIndices.has(idx) &&
         keywords.some((kw) => {
           const cleanKw = kw.replace(/[_-]/g, ' ');
-          return h.includes(cleanKw) || cleanKw.includes(h);
+          // For short keywords (<= 4 chars like 'tel', 'cell', 'org', 'site', 'mail'), require word boundary
+          if (cleanKw.length <= 4) {
+            const regex = new RegExp(`\\b${cleanKw}\\b`, 'i');
+            return regex.test(h);
+          }
+          return h.includes(cleanKw);
         })
     );
 
@@ -168,13 +173,27 @@ export function parseFileBuffer(
   }
 
   const worksheet = workbook.Sheets[firstSheetName];
-  const rawJson = xlsx.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+  const rawJson = xlsx.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: '',
+    raw: false,
+  });
 
   if (!rawJson || rawJson.length === 0) {
     throw new Error('FILE_EMPTY: The uploaded file has no data rows.');
   }
 
-  const headers = Object.keys(rawJson[0]);
+  // Scan all rows to discover all unique column headers in order of appearance
+  const headerSet = new Set<string>();
+  rawJson.forEach((row) => {
+    Object.keys(row).forEach((k) => {
+      const trimmed = k.trim();
+      if (trimmed) {
+        headerSet.add(trimmed);
+      }
+    });
+  });
+  const headers = Array.from(headerSet);
+
   if (headers.length === 0) {
     throw new Error('INVALID_FORMAT: Could not detect valid headers in the file.');
   }
@@ -182,7 +201,9 @@ export function parseFileBuffer(
   const sampleRows = rawJson.slice(0, 10).map((row) => {
     const cleanedRow: Record<string, string> = {};
     headers.forEach((h) => {
-      cleanedRow[h] = row[h] != null ? String(row[h]).trim() : '';
+      const rawVal =
+        row[h] !== undefined ? row[h] : Object.entries(row).find(([k]) => k.trim() === h)?.[1];
+      cleanedRow[h] = rawVal != null ? String(rawVal).trim() : '';
     });
     return cleanedRow;
   });
@@ -208,15 +229,31 @@ export function parseAllRows(fileBuffer: Buffer): Record<string, string>[] {
   if (!firstSheetName) return [];
 
   const worksheet = workbook.Sheets[firstSheetName];
-  const rawJson = xlsx.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+  const rawJson = xlsx.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: '',
+    raw: false,
+  });
 
   if (!rawJson || rawJson.length === 0) return [];
-  const headers = Object.keys(rawJson[0]);
+
+  // Scan all rows to discover all unique column headers in order of appearance
+  const headerSet = new Set<string>();
+  rawJson.forEach((row) => {
+    Object.keys(row).forEach((k) => {
+      const trimmed = k.trim();
+      if (trimmed) {
+        headerSet.add(trimmed);
+      }
+    });
+  });
+  const headers = Array.from(headerSet);
 
   return rawJson.map((row) => {
     const cleanedRow: Record<string, string> = {};
     headers.forEach((h) => {
-      cleanedRow[h] = row[h] != null ? String(row[h]).trim() : '';
+      const rawVal =
+        row[h] !== undefined ? row[h] : Object.entries(row).find(([k]) => k.trim() === h)?.[1];
+      cleanedRow[h] = rawVal != null ? String(rawVal).trim() : '';
     });
     return cleanedRow;
   });

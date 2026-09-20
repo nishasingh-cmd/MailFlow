@@ -111,33 +111,17 @@ export default function CreateCampaignPage() {
       .then((res) => {
         if (res?.templates && res.templates.length > 0) {
           setWaTemplates(res.templates);
-          // If edtech_sales exists or approved template
-          const found = res.templates.find((t) => t.name === 'edtech_sales') || res.templates[0];
+          const approved = res.templates.find((t) => t.status === 'APPROVED');
+          const found = approved || res.templates[0];
           setSelectedTemplateName(found.name);
         } else {
-          // Preload default approved template matching user screenshot
-          const defaultTmpl: WhatsappMetaTemplate = {
-            name: 'edtech_sales',
-            language: 'en',
-            status: 'APPROVED',
-            bodyText:
-              'Hi {{1}},\n\nPreparing for {{2}} this year?\n\nWe have helped *students improve their mock test scores* using structured revision planning and performance tracking.\n\nIf you would like to see how this works for you, choose an option below.',
-          };
-          setWaTemplates([defaultTmpl]);
-          setSelectedTemplateName('edtech_sales');
+          setWaTemplates([]);
+          setSelectedTemplateName('');
         }
       })
       .catch(() => {
-        setWaTemplates([
-          {
-            name: 'edtech_sales',
-            language: 'en',
-            status: 'APPROVED',
-            bodyText:
-              'Hi {{1}},\n\nPreparing for {{2}} this year?\n\nWe have helped *students improve their mock test scores* using structured revision planning and performance tracking.\n\nIf you would like to see how this works for you, choose an option below.',
-          },
-        ]);
-        setSelectedTemplateName('edtech_sales');
+        setWaTemplates([]);
+        setSelectedTemplateName('');
       })
       .finally(() => setLoadingTemplates(false));
   }, []);
