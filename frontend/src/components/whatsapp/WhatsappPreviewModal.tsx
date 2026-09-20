@@ -33,8 +33,8 @@ function resolveTemplateVariables(
 ): { text: string; params: string[] } {
   if (!body) return { text: '', params: [] };
 
-  const firstName = (leadName || '').trim().split(' ')[0] || leadName || 'there';
-  const comp = (companyName || '').trim() || 'your company';
+  const fullName = (leadName || '').trim() || 'there';
+  const comp = (companyName || '').trim() || fullName || 'your company';
 
   // Find max {{N}} parameter count
   const paramMatches = body.match(/\{\{(\d+)\}\}/g);
@@ -44,13 +44,13 @@ function resolveTemplateVariables(
 
   const params: string[] = [];
   for (let i = 1; i <= Math.max(maxParam, 1); i++) {
-    if (i === 1) params.push(firstName);
+    if (i === 1) params.push(fullName);
     else if (i === 2) params.push(comp);
     else params.push('Services');
   }
 
   let text = body;
-  text = text.replace(/\{\{\s*1\s*\}\}/g, firstName);
+  text = text.replace(/\{\{\s*1\s*\}\}/g, fullName);
   text = text.replace(/\{\{\s*2\s*\}\}/g, comp);
   text = text.replace(/\{\{\s*3\s*\}\}/g, 'Services');
   text = text.replace(/\{\{\s*\d+\s*\}\}/g, '');

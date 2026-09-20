@@ -155,6 +155,11 @@ export interface PaginatedLeadsResponse {
   page: number;
   limit: number;
   totalPages: number;
+  stats?: {
+    total: number;
+    notContactedCount: number;
+    contactedCount: number;
+  };
 }
 
 export type ResearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';

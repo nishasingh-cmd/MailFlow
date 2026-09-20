@@ -2,7 +2,16 @@ import { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
 import { Lead, LeadStatus, ImportHistory, ResearchProgressResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
-import { Button, Card, Input, Select, Badge, Table, Column } from '../../components/ui';
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  Badge,
+  Table,
+  Column,
+  ConfirmModal,
+} from '../../components/ui';
 import { ImportLeadsModal } from '../../components/leads/ImportLeadsModal';
 import { LeadDetailsDrawer } from '../../components/leads/LeadDetailsDrawer';
 import { LeadFormModal } from '../../components/leads/LeadFormModal';
@@ -48,7 +57,7 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('ALL');
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('createdAt-desc');
 
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
@@ -63,12 +72,19 @@ export default function Leads() {
   const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
+  // Deletion Modal States (replacing native window.confirm)
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   const [selectedLeadDetail, setSelectedLeadDetail] = useState<
     (Lead & { importHistory?: ImportHistory | null }) | null
   >(null);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
 
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
+  const [manualLeadsCount, setManualLeadsCount] = useState<number>(0);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const [stats, setStats] = useState({
@@ -121,6 +137,7 @@ export default function Leads() {
   };
 
   const fetchLeads = useCallback(async () => {
+    if (!selectedDatasetId) return;
     setIsLoading(true);
     try {
       const [sortBy, sortOrder] = sortOption.split('-') as [
@@ -131,7 +148,7 @@ export default function Leads() {
       const response = await leadService.getLeads({
         search: searchQuery,
         status: statusFilter,
-        importHistoryId: selectedDatasetId !== 'ALL' ? selectedDatasetId : undefined,
+        importHistoryId: selectedDatasetId,
         sortBy,
         sortOrder,
         page,
@@ -142,14 +159,8 @@ export default function Leads() {
       setTotalLeads(response.total);
       setTotalPages(response.totalPages);
 
-      if (page === 1 && !searchQuery && statusFilter === 'ALL' && selectedDatasetId === 'ALL') {
-        setStats({
-          total: response.total,
-          notContactedCount: response.leads.filter((l) => l.status === 'NEW').length,
-          contactedCount: response.leads.filter(
-            (l) => l.status === 'CONTACTED' || (l.status as string) === 'QUALIFIED'
-          ).length,
-        });
+      if (response.stats) {
+        setStats(response.stats);
       }
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
@@ -162,8 +173,22 @@ export default function Leads() {
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true);
     try {
-      const history = await leadService.getImportHistory();
-      setImportHistory(history);
+      const [history, manualRes] = await Promise.all([
+        leadService.getImportHistory(),
+        leadService.getLeads({ importHistoryId: 'MANUAL', limit: 1 }),
+      ]);
+      const validHistory = history.filter((h) => h.importedCount > 0);
+      setImportHistory(validHistory);
+      setManualLeadsCount(manualRes.total);
+
+      setSelectedDatasetId((prev) => {
+        if (prev) {
+          if (prev === 'MANUAL' && manualRes.total > 0) return prev;
+          if (validHistory.some((h) => h.id === prev)) return prev;
+        }
+        if (validHistory.length > 0) return validHistory[0].id;
+        return 'MANUAL';
+      });
     } catch {
       toast.error('Failed to load import history.');
     } finally {
@@ -238,37 +263,48 @@ export default function Leads() {
     );
   }, []);
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedLeadIds.length === 0) return;
-    if (
-      !window.confirm(`Are you sure you want to delete ${selectedLeadIds.length} selected leads?`)
-    )
-      return;
+    setBulkDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleting(true);
     try {
       const res = await leadService.bulkDeleteLeads(selectedLeadIds);
       toast.success(res.message);
       setSelectedLeadIds([]);
+      setBulkDeleteModalOpen(false);
       fetchLeads();
+      fetchHistory();
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
       toast.error(errorObj.response?.data?.error ?? 'Failed to delete selected leads.');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
-  const handleDeleteSingle = useCallback(
-    async (lead: Lead) => {
-      if (!window.confirm(`Delete lead "${lead.name}" (${lead.email})?`)) return;
-      try {
-        await leadService.deleteLead(lead.id);
-        toast.success('Lead deleted.');
-        fetchLeads();
-      } catch (err: unknown) {
-        const errorObj = err as { response?: { data?: { error?: string } } };
-        toast.error(errorObj.response?.data?.error ?? 'Failed to delete lead.');
-      }
-    },
-    [fetchLeads, toast]
-  );
+  const handleDeleteSingle = useCallback((lead: Lead) => {
+    setLeadToDelete(lead);
+  }, []);
+
+  const confirmDeleteSingle = async () => {
+    if (!leadToDelete) return;
+    setIsDeletingLead(true);
+    try {
+      await leadService.deleteLead(leadToDelete.id);
+      toast.success('Lead deleted.');
+      setLeadToDelete(null);
+      fetchLeads();
+      fetchHistory();
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      toast.error(errorObj.response?.data?.error ?? 'Failed to delete lead.');
+    } finally {
+      setIsDeletingLead(false);
+    }
+  };
 
   const handleOpenDetail = useCallback(async (lead: Lead) => {
     try {
@@ -330,8 +366,12 @@ export default function Leads() {
     return <Badge variant="neutral">Not Contacted</Badge>;
   };
 
-  // Check if current dataset or leads have mirrored spreadsheet columns
+  // Check if current dataset has mirrored spreadsheet columns
   const uploadedColumns = useMemo<string[] | null>(() => {
+    // If viewing manual leads, always show standard CRM columns
+    if (selectedDatasetId === 'MANUAL') return null;
+
+    // For any uploaded sheet, mirror its uploaded columns
     for (const lead of leads) {
       if (
         lead.customFields &&
@@ -343,10 +383,10 @@ export default function Leads() {
       }
     }
     return null;
-  }, [leads]);
+  }, [leads, selectedDatasetId]);
 
   const selectedHistory = useMemo(() => {
-    if (selectedDatasetId === 'ALL') return null;
+    if (!selectedDatasetId || selectedDatasetId === 'MANUAL') return null;
     return importHistory.find((h) => h.id === selectedDatasetId) || null;
   }, [importHistory, selectedDatasetId]);
 
@@ -843,7 +883,7 @@ export default function Leads() {
         <div className="flex items-center border-b border-[var(--surface-border)] space-x-6">
           {(
             [
-              { id: 'LEADS', label: `All Leads (${totalLeads})` },
+              { id: 'LEADS', label: `Leads (${totalLeads})` },
               { id: 'HISTORY', label: 'Import History' },
               { id: 'RESEARCH', label: 'AI Research' },
             ] as const
@@ -881,21 +921,30 @@ export default function Leads() {
               </div>
 
               <div className="flex items-center gap-3">
-                {importHistory.length > 0 && (
+                {(importHistory.length > 0 || manualLeadsCount > 0) && (
                   <Select
                     options={[
-                      { value: 'ALL', label: 'All Datasets' },
-                      ...importHistory.map((h) => ({
-                        value: h.id,
-                        label: `${h.fileName} (${h.importedCount})`,
-                      })),
+                      ...(manualLeadsCount > 0
+                        ? [
+                            {
+                              value: 'MANUAL',
+                              label: `Manual & Direct Leads (${manualLeadsCount})`,
+                            },
+                          ]
+                        : []),
+                      ...importHistory
+                        .filter((h) => h.importedCount > 0)
+                        .map((h) => ({
+                          value: h.id,
+                          label: `${h.fileName} (${h.importedCount})`,
+                        })),
                     ]}
                     value={selectedDatasetId}
                     onChange={(val) => {
                       setSelectedDatasetId(val);
                       setPage(1);
                     }}
-                    className="w-56"
+                    className="w-64"
                   />
                 )}
                 <Select
@@ -1045,10 +1094,22 @@ export default function Leads() {
               </div>
             </div>
 
-            {selectedDatasetId !== 'ALL' && selectedHistory && (
+            {selectedDatasetId === 'MANUAL' && (
               <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-brand-400">Viewing Dataset:</span>
+                  <span className="font-semibold text-brand-400">Dataset:</span>
+                  <span className="font-medium text-[var(--content-primary)]">
+                    Manual & Direct Leads
+                  </span>
+                  <span className="text-[var(--content-tertiary)]">({manualLeadsCount} leads)</span>
+                </div>
+              </div>
+            )}
+
+            {selectedDatasetId !== 'MANUAL' && selectedHistory && (
+              <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-brand-400">Dataset:</span>
                   <span className="font-mono text-[var(--content-primary)]">
                     {selectedHistory.fileName}
                   </span>
@@ -1061,16 +1122,6 @@ export default function Leads() {
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedDatasetId('ALL');
-                    setPage(1);
-                  }}
-                  className="text-xs text-brand-400 hover:text-brand-300 underline font-medium cursor-pointer"
-                >
-                  Show All Datasets
-                </button>
               </div>
             )}
 
@@ -1200,7 +1251,10 @@ export default function Leads() {
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         lead={editingLead}
-        onSuccess={fetchLeads}
+        onSuccess={() => {
+          fetchLeads();
+          fetchHistory();
+        }}
       />
 
       <LeadDetailsDrawer
@@ -1270,6 +1324,53 @@ export default function Leads() {
         totalLeadsCount={totalLeads}
         onClose={() => setWaBatchModalOpen(false)}
         onSuccess={() => fetchLeads()}
+      />
+
+      {/* Individual Lead Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!leadToDelete}
+        title="Delete Lead"
+        description={
+          <span>
+            Are you sure you want to delete{' '}
+            <strong className="text-[var(--content-primary)] font-semibold">
+              "{leadToDelete?.name || 'this lead'}"
+            </strong>
+            {leadToDelete?.email && !leadToDelete.email.includes('@internal.mailflow') ? (
+              <span className="text-[var(--content-secondary)]"> ({leadToDelete.email})</span>
+            ) : null}
+            ? This action cannot be undone.
+          </span>
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={isDeletingLead}
+        onConfirm={confirmDeleteSingle}
+        onCancel={() => {
+          if (!isDeletingLead) setLeadToDelete(null);
+        }}
+      />
+
+      {/* Bulk Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteModalOpen}
+        title="Delete Selected Leads"
+        description={
+          <span>
+            Are you sure you want to delete{' '}
+            <strong className="text-[var(--content-primary)] font-semibold">
+              {selectedLeadIds.length} selected lead{selectedLeadIds.length > 1 ? 's' : ''}
+            </strong>
+            ? This action cannot be undone.
+          </span>
+        }
+        confirmLabel={`Delete (${selectedLeadIds.length})`}
+        variant="danger"
+        loading={isBulkDeleting}
+        onConfirm={confirmBulkDelete}
+        onCancel={() => {
+          if (!isBulkDeleting) setBulkDeleteModalOpen(false);
+        }}
       />
     </div>
   );

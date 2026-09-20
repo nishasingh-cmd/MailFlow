@@ -188,7 +188,7 @@ export class WhatsappService {
               messageText = aiGenerated.previewText;
             }
           } catch {
-            templateParams = [lead.name ? lead.name.split(' ')[0] : 'there'];
+            templateParams = [lead.name ? lead.name.trim() : 'there'];
           }
         }
       }
@@ -198,14 +198,14 @@ export class WhatsappService {
           if (templateName === 'hello_world') {
             messageText = 'Hello World';
           } else {
-            const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
-            const companyName = lead.company || 'your company';
+            const leadFullName = lead.name ? lead.name.trim() : 'there';
+            const companyName = lead.company || leadFullName || 'your company';
             const defaultBody =
               "Hi {{1}} 👋 Hope you're having a great week! I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!";
             const params =
               templateParams && templateParams.length > 0
                 ? templateParams
-                : [firstName, companyName];
+                : [leadFullName, companyName];
             let rendered = defaultBody;
             params.forEach((param, idx) => {
               rendered = rendered.replace(new RegExp(`\\{\\{${idx + 1}\\}\\}`, 'g'), param);

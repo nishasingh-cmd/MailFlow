@@ -353,11 +353,10 @@ export function CreateCampaignModal({
         console.warn('[CreateCampaignModal] Preview error:', err);
         if (isMounted) {
           const lead = previewLeadId ? leadsMap[previewLeadId] : null;
-          const leadName = lead?.name || 'Prospect';
-          const firstName = leadName.split(' ')[0] || leadName;
-          const companyName = lead?.company || 'Company';
+          const leadName = lead?.name?.trim() || 'Prospect';
+          const companyName = lead?.company || leadName || 'Company';
           const vars: Record<string, string> = {
-            '1': firstName,
+            '1': leadName,
             '2': companyName,
             '3': lead?.industry || 'Industry',
           };

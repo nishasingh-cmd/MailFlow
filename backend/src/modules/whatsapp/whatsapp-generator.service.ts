@@ -257,16 +257,15 @@ ${ctaText}`;
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    const leadName = lead?.name || 'Alex Rivera';
-    const firstName = leadName.split(' ')[0] || 'there';
-    const companyName = lead?.company || lead?.companyRef?.name || 'InnovaTech Solutions';
-    const specialtyOrIndustry = lead?.industry || lead?.companyRef?.industry || 'Healthcare Tech';
+    const leadName = lead?.name?.trim() || 'there';
+    const companyName = lead?.company || lead?.companyRef?.name || leadName || 'your company';
+    const specialtyOrIndustry = lead?.industry || lead?.companyRef?.industry || 'Services';
     const phone = lead?.phone || '—';
     const finalLeadId = lead?.id || 'sample';
 
-    // Default variable values — AI will improve these if Gemini is configured
+    // Default variable values — exact field values without truncation
     let variables: Record<string, string> = {
-      '1': firstName,
+      '1': leadName,
       '2': companyName,
       '3': specialtyOrIndustry,
     };
@@ -280,8 +279,7 @@ ${ctaText}`;
       const prompt = `You are a B2B sales personalization AI. Your task is to extract exact, concise values for WhatsApp template variables.
 
 PROSPECT DATA:
-- Full Name: ${leadName}
-- First Name: ${firstName}
+- Full Name / Recipient: ${leadName}
 - Company/Clinic Name: ${companyName}
 - Industry/Specialty: ${specialtyOrIndustry}
 - Research Highlights / Pain Points: ${painPointsStr || 'Workflow efficiency & patient outreach'}
@@ -291,16 +289,16 @@ TEMPLATE STRUCTURE:
 
 INSTRUCTIONS:
 1. Provide values for template placeholders {{1}}, {{2}}, {{3}}.
-2. {{1}} = First Name or Title + Name (e.g. "${firstName}")
-3. {{2}} = Company or Clinic Name (e.g. "${companyName}")
+2. {{1}} = Prospect or Contact Name (use full value "${leadName}")
+3. {{2}} = Company or Clinic Name (use "${companyName}")
 4. {{3}} = Relevant Specialty or Field (e.g. "${specialtyOrIndustry}")
 5. Keep values short, professional, and factual. Never invent statistics or fake claims.
 6. Return ONLY valid JSON in this exact structure:
 {
   "variables": {
-    "1": "value1",
-    "2": "value2",
-    "3": "value3"
+    "1": "${leadName}",
+    "2": "${companyName}",
+    "3": "${specialtyOrIndustry}"
   }
 }`;
 
@@ -314,7 +312,7 @@ INSTRUCTIONS:
           const parsed = JSON.parse(cleanedJson) as { variables?: Record<string, string> };
           if (parsed?.variables && typeof parsed.variables === 'object') {
             variables = {
-              '1': parsed.variables['1'] || firstName,
+              '1': parsed.variables['1'] || leadName,
               '2': parsed.variables['2'] || companyName,
               '3': parsed.variables['3'] || specialtyOrIndustry,
             };
@@ -329,7 +327,7 @@ INSTRUCTIONS:
     const templateParams: string[] = [];
     for (let i = 1; i <= Math.max(expectedParamCount, 1); i++) {
       templateParams.push(
-        variables[String(i)] || (i === 1 ? firstName : i === 2 ? companyName : specialtyOrIndustry)
+        variables[String(i)] || (i === 1 ? leadName : i === 2 ? companyName : specialtyOrIndustry)
       );
     }
 

@@ -272,14 +272,18 @@ export class LeadsService {
 
     // Import history filter
     if (query.importHistoryId) {
-      whereClause.importHistoryId = query.importHistoryId;
+      if (query.importHistoryId === 'MANUAL') {
+        whereClause.importHistoryId = null;
+      } else {
+        whereClause.importHistoryId = query.importHistoryId;
+      }
     }
 
     // Sorting
     const sortBy = query.sortBy ?? 'createdAt';
     const sortOrder = query.sortOrder ?? 'desc';
 
-    const [leads, total] = await Promise.all([
+    const [leads, total, userTotal, notContactedCount, contactedCount] = await Promise.all([
       prisma.lead.findMany({
         where: whereClause,
         orderBy: { [sortBy]: sortOrder },
@@ -287,6 +291,11 @@ export class LeadsService {
         take: limit,
       }),
       prisma.lead.count({ where: whereClause }),
+      prisma.lead.count({ where: { userId } }),
+      prisma.lead.count({ where: { userId, status: 'NEW' } }),
+      prisma.lead.count({
+        where: { userId, status: { in: ['CONTACTED', 'QUALIFIED'] } },
+      }),
     ]);
 
     const totalPages = Math.ceil(total / limit) || 1;
@@ -313,6 +322,11 @@ export class LeadsService {
       page,
       limit,
       totalPages,
+      stats: {
+        total: userTotal,
+        notContactedCount,
+        contactedCount,
+      },
     };
   }
 
@@ -450,10 +464,16 @@ export class LeadsService {
     const history = await prisma.importHistory.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { leads: true },
+        },
+      },
     });
 
     return history.map((h) => ({
       ...h,
+      importedCount: h._count?.leads ?? h.importedCount,
       createdAt: h.createdAt.toISOString(),
     }));
   }
