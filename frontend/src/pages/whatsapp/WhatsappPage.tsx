@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { whatsappService } from '../../services/whatsapp.service';
-import {
-  WhatsappLogItem,
-  WhatsappQueueItem,
-  WhatsappStats,
-  WhatsappConfigData,
-} from '@mailflow/shared';
+import { WhatsappLogItem, WhatsappQueueItem, WhatsappStats } from '@mailflow/shared';
 import { useToast } from '../../hooks/useToast';
 import { Button, Input, Select, Badge, Skeleton, Modal, ExpandableText } from '../../components/ui';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -115,20 +110,6 @@ export default function WhatsappPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 
-  const [connectionStatus, setConnectionStatus] = useState<{
-    connected: boolean;
-    config: WhatsappConfigData | null;
-  } | null>(null);
-
-  const fetchConnectionStatus = useCallback(async () => {
-    try {
-      const res = await whatsappService.getConnectionStatus();
-      setConnectionStatus({ connected: res.connected, config: res.config });
-    } catch (err: unknown) {
-      void err;
-    }
-  }, []);
-
   const fetchStats = useCallback(async () => {
     try {
       const s = await whatsappService.getStats();
@@ -180,8 +161,7 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     fetchStats();
-    fetchConnectionStatus();
-  }, [fetchStats, fetchConnectionStatus]);
+  }, [fetchStats]);
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -370,91 +350,29 @@ export default function WhatsappPage() {
           <div className="space-y-8">
             {/* Step 1 */}
             <div className="flex items-start gap-4">
-              <div
-                className={`w-8 h-8 rounded-full font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5 ${
-                  connectionStatus?.connected
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-                }`}
-              >
-                {connectionStatus?.connected ? '✓' : '1'}
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                1
               </div>
               <div className="space-y-3 flex-1">
                 <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {connectionStatus?.connected
-                        ? 'WhatsApp Business API Connected'
-                        : 'Get Your WhatsApp Business API'}
-                    </h3>
-                    {connectionStatus?.connected && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Connected & Active
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Get Your WhatsApp Business API
+                  </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    {connectionStatus?.connected
-                      ? `Your account is connected to Meta Cloud API via ${connectionStatus.config?.displayPhone || '+91 82911 63086'}${connectionStatus.config?.businessName ? ` (${connectionStatus.config.businessName})` : ''}.`
-                      : 'Get instant access to the WhatsApp Business API using your Facebook account.'}
+                    Get instant access to the WhatsApp Business API using your Facebook account.
                   </p>
                 </div>
-
-                {connectionStatus?.connected ? (
-                  <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 max-w-md space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400 font-medium">
-                        Display Phone:
-                      </span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {connectionStatus.config?.displayPhone || '+91 82911 63086'}
-                      </span>
-                    </div>
-                    {connectionStatus.config?.businessAccountId && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">
-                          WABA ID:
-                        </span>
-                        <span className="font-mono text-slate-700 dark:text-slate-300">
-                          {connectionStatus.config.businessAccountId}
-                        </span>
-                      </div>
-                    )}
-                    <div className="pt-2 flex items-center gap-4 text-xs">
-                      <Link
-                        to="/settings"
-                        className="font-semibold text-brand-600 dark:text-brand-400 hover:underline"
-                      >
-                        Manage in Settings →
-                      </Link>
-                      <button
-                        onClick={() => setConnectModalOpen(true)}
-                        className="font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
-                      >
-                        Reconnect Account
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <button
-                      onClick={() => setConnectModalOpen(true)}
-                      className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
-                      </svg>
-                      Connect WhatsApp
-                    </button>
-                    <Link
-                      to="/settings"
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] hover:bg-[var(--surface-elevated)] text-sm font-semibold text-[var(--content-primary)] shadow-xs transition-all hover:border-brand-500/40"
-                    >
-                      Manual API Connection
-                    </Link>
-                  </div>
-                )}
+                <div>
+                  <button
+                    onClick={() => setConnectModalOpen(true)}
+                    className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                    </svg>
+                    Connect WhatsApp
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -893,7 +811,6 @@ export default function WhatsappPage() {
         onClose={() => setConnectModalOpen(false)}
         onSuccess={() => {
           fetchStats();
-          fetchConnectionStatus();
           fetchHistory(true);
           toast.success('WhatsApp Business connected successfully!');
         }}
