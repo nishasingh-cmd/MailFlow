@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { execSync } from 'child_process';
 import { Server } from 'http';
+// Reloaded with new WHATSAPP_CONFIG_ID: 1807078397269645
 import { env } from './config/env';
 import { checkRedisConnection, closeRedisConnection } from './config/redis';
 import healthRouter from './routes/health';

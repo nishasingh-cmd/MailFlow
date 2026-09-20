@@ -51,6 +51,22 @@ const OPTIONS: { id: NumberType; icon: React.ReactNode; label: string }[] = [
   },
 ];
 
+function toEnglishError(msg: string | null): string {
+  if (!msg) return '';
+  if (
+    msg.includes('URL लोड') ||
+    msg.includes('डोमेन') ||
+    msg.toLowerCase().includes("can't load url") ||
+    msg.toLowerCase().includes("domain of this url isn't included")
+  ) {
+    return "Can't load URL: The domain of this URL is not included in your Meta App's domains. To allow this URL, add this domain to the 'App Domains' and 'Allowed Domains for the JavaScript SDK' in your Meta App Settings.";
+  }
+  if (/[\u0900-\u097F]/.test(msg)) {
+    return 'Meta OAuth Error: The current domain or redirect URL is not authorized in your Meta App Settings. Please check App Domains in Meta Developer Console.';
+  }
+  return msg;
+}
+
 export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsAppModalProps) {
   const [selected, setSelected] = useState<NumberType>('new');
   const [otpConfirmed, setOtpConfirmed] = useState(false);
@@ -217,15 +233,15 @@ export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsA
             </label>
           </div>
 
-          {/* Error Banner if any */}
+          {/* Error Banner in Black Border Box */}
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 flex items-start gap-2.5 animate-in fade-in">
+            <div className="rounded-xl border-2 border-black bg-white dark:bg-zinc-900 p-3.5 flex items-start gap-3 shadow-sm animate-in fade-in">
               <svg
-                className="w-4 h-4 text-red-500 shrink-0 mt-0.5"
+                className="w-4 h-4 text-black dark:text-white shrink-0 mt-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-                strokeWidth={2}
+                strokeWidth={2.5}
               >
                 <path
                   strokeLinecap="round"
@@ -233,9 +249,26 @@ export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsA
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <div className="text-xs text-red-700 leading-relaxed font-medium">{error}</div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
+                  Meta OAuth Error
+                </p>
+                <div className="text-xs text-black dark:text-zinc-200 leading-relaxed font-medium">
+                  {toEnglishError(error)}
+                </div>
+              </div>
             </div>
           )}
+
+          <div className="pt-1 text-center">
+            <a
+              href="/settings"
+              onClick={handleClose}
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline inline-flex items-center gap-1"
+            >
+              Have Meta Cloud API credentials? Connect manually via Settings →
+            </a>
+          </div>
         </div>
 
         {/* ── Footer ── */}

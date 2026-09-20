@@ -222,8 +222,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
               response_type: 'code',
               override_default_response_type: true,
               extras: {
-                feature: 'whatsapp_embedded_signup',
-                setup: {},
+                version: 'v4',
                 sessionInfoVersion: '3',
               },
             }

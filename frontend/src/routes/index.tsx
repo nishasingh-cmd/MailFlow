@@ -36,6 +36,7 @@ export function AppRoutes() {
       </Route>
 
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<PrivacyPolicy />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path={ROUTES.ONBOARDING} element={<BusinessOnboarding />} />
