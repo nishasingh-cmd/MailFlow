@@ -11,7 +11,7 @@ export class WhatsappGeneratorService {
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15_000);
+    const timeoutId = setTimeout(() => controller.abort(), 2_500);
 
     try {
       const res = await fetch(url, {
@@ -271,7 +271,7 @@ ${ctaText}`;
       '3': specialtyOrIndustry,
     };
 
-    if (env.GEMINI_API_KEY) {
+    if (env.GEMINI_API_KEY && expectedParamCount > 1) {
       let painPointsStr = '';
       if (Array.isArray(lead?.research?.painPoints)) {
         painPointsStr = (lead?.research?.painPoints as string[]).join(', ');

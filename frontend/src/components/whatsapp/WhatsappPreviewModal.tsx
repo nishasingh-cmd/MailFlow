@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import { Modal, Button, Badge, Select } from '../ui';
 import { whatsappService, WhatsappMetaTemplate } from '../../services/whatsapp.service';
@@ -17,6 +17,47 @@ interface WhatsappPreviewModalProps {
   onSent?: () => void;
 }
 
+// In-memory template cache so subsequent modal opens are instant with zero network fetch delay
+let cachedTemplates: WhatsappMetaTemplate[] = [];
+
+/**
+ * Synchronously and instantly resolves Meta template variable placeholders
+ * {{1}} -> Lead's First Name
+ * {{2}} -> Lead's Company Name
+ * {{3}} -> Service / Industry
+ */
+function resolveTemplateVariables(
+  body: string,
+  leadName?: string,
+  companyName?: string
+): { text: string; params: string[] } {
+  if (!body) return { text: '', params: [] };
+
+  const firstName = (leadName || '').trim().split(' ')[0] || leadName || 'there';
+  const comp = (companyName || '').trim() || 'your company';
+
+  // Find max {{N}} parameter count
+  const paramMatches = body.match(/\{\{(\d+)\}\}/g);
+  const maxParam = paramMatches
+    ? Math.max(...paramMatches.map((m) => parseInt(m.replace(/[^\d]/g, ''), 10)), 0)
+    : 0;
+
+  const params: string[] = [];
+  for (let i = 1; i <= Math.max(maxParam, 1); i++) {
+    if (i === 1) params.push(firstName);
+    else if (i === 2) params.push(comp);
+    else params.push('Services');
+  }
+
+  let text = body;
+  text = text.replace(/\{\{\s*1\s*\}\}/g, firstName);
+  text = text.replace(/\{\{\s*2\s*\}\}/g, comp);
+  text = text.replace(/\{\{\s*3\s*\}\}/g, 'Services');
+  text = text.replace(/\{\{\s*\d+\s*\}\}/g, '');
+
+  return { text, params };
+}
+
 export function WhatsappPreviewModal({
   open,
   leadId,
@@ -29,117 +70,136 @@ export function WhatsappPreviewModal({
 }: WhatsappPreviewModalProps) {
   const { toast } = useToast();
 
-  // Template state
-  const [templates, setTemplates] = useState<WhatsappMetaTemplate[]>([]);
-  const [selectedTemplateName, setSelectedTemplateName] = useState('cold_outreach');
-  const [templateLang, setTemplateLang] = useState('en');
+  // Template state — initialized from cache if available
+  const [templates, setTemplates] = useState<WhatsappMetaTemplate[]>(cachedTemplates);
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string>(() => {
+    const approved = cachedTemplates.find((t) => t.status === 'APPROVED');
+    return approved ? approved.name : cachedTemplates[0]?.name || 'cold_outreach';
+  });
+  const [templateLang, setTemplateLang] = useState('en_US');
   const [templateParams, setTemplateParams] = useState<string[]>([]);
-  const [, setVariables] = useState<Record<string, string>>({});
   const [previewText, setPreviewText] = useState('');
 
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Track the last lead+template pair we fetched preview for —
-  // prevents the loadTemplates→setSelectedTemplateName→fetchPreview cascade.
-  const lastFetchedRef = useRef<string>('');
-  // Tracks whether we already bootstrapped for the current open session.
   const sessionRef = useRef<string>('');
 
-  // Fetch template variables & resolved preview
-  const fetchPreview = useCallback(
-    async (tplName: string) => {
-      if (!leadId || !tplName) return;
-      const key = `${leadId}::${tplName}`;
-      if (lastFetchedRef.current === key) return; // already fetched this combo
-      lastFetchedRef.current = key;
-      setGenerating(true);
-      try {
-        const res = await whatsappService.previewTemplate(leadId, tplName);
-        // Do NOT call setSelectedTemplateName here — it would re-trigger this effect
-        setTemplateLang(res.templateLang);
-        setTemplateParams(res.templateParams || []);
-        setVariables(res.variables || {});
-        setPreviewText(res.previewText || '');
-      } catch (error: unknown) {
-        const err = error as { response?: { data?: { error?: string } }; message?: string };
-        toast.error(
-          err.response?.data?.error || err.message || 'Failed to load template variable preview.'
-        );
-      } finally {
-        setGenerating(false);
-      }
-    },
-    [leadId, toast]
-  );
+  // Find currently selected template object
+  const currentTemplate = useMemo(() => {
+    return templates.find((t) => t.name === selectedTemplateName) || templates[0];
+  }, [templates, selectedTemplateName]);
 
-  // Fetch approved Meta templates — runs once per (open+leadId) session
+  // Instantly resolve preview text and params for the current template & lead
+  const instantResolved = useMemo(() => {
+    return resolveTemplateVariables(currentTemplate?.bodyText || '', leadName, companyName);
+  }, [currentTemplate?.bodyText, leadName, companyName]);
+
+  // Load templates from Meta API (populates cache and state)
   const loadTemplates = useCallback(async () => {
-    setLoadingTemplates(true);
+    if (cachedTemplates.length === 0) {
+      setLoadingTemplates(true);
+    }
     try {
       const res = await whatsappService.getTemplates();
       if (res?.templates && res.templates.length > 0) {
+        cachedTemplates = res.templates;
         setTemplates(res.templates);
         const approved = res.templates.find((t) => t.status === 'APPROVED');
-        const name = approved ? approved.name : res.templates[0].name;
-        setSelectedTemplateName(name);
-        // Kick off preview immediately with the resolved name — avoids a second render cycle
-        fetchPreview(name);
+        const chosen = approved || res.templates[0];
+        setSelectedTemplateName(chosen.name);
+        if (chosen.language) setTemplateLang(chosen.language);
+
+        const resolved = resolveTemplateVariables(chosen.bodyText || '', leadName, companyName);
+        setPreviewText(resolved.text);
+        setTemplateParams(resolved.params);
+
+        // Optional silent background refinement (never blocks UI or shows loader)
+        if (leadId) {
+          whatsappService
+            .previewTemplate(leadId, chosen.name)
+            .then((apiRes) => {
+              if (apiRes?.previewText) setPreviewText(apiRes.previewText);
+              if (apiRes?.templateParams && apiRes.templateParams.length > 0) {
+                setTemplateParams(apiRes.templateParams);
+              }
+              if (apiRes?.templateLang) setTemplateLang(apiRes.templateLang);
+            })
+            .catch(() => {
+              // Instant local resolution is already active and complete
+            });
+        }
       } else {
         const fallback: WhatsappMetaTemplate = {
           name: 'cold_outreach',
-          language: 'en',
+          language: 'en_US',
           status: 'APPROVED',
           bodyText:
             "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!",
         };
         setTemplates([fallback]);
         setSelectedTemplateName('cold_outreach');
-        fetchPreview('cold_outreach');
+        const resolved = resolveTemplateVariables(fallback.bodyText || '', leadName, companyName);
+        setPreviewText(resolved.text);
+        setTemplateParams(resolved.params);
       }
     } catch {
-      const fallback: WhatsappMetaTemplate = {
-        name: 'cold_outreach',
-        language: 'en',
-        status: 'APPROVED',
-        bodyText:
-          "Hello {{1}}, I came across {{2}} and wanted to reach out regarding our services. Let me know if you'd be open to a quick 5-minute chat!",
-      };
-      setTemplates([fallback]);
-      setSelectedTemplateName('cold_outreach');
-      fetchPreview('cold_outreach');
+      // Fallback already handled
     } finally {
       setLoadingTemplates(false);
     }
-  }, [fetchPreview]);
+  }, [leadId, leadName, companyName]);
 
-  // Bootstrap once per open+leadId session
+  // Bootstrap immediately when modal opens
   useEffect(() => {
     const sessionKey = `${open}::${leadId}`;
     if (open && leadId && sessionRef.current !== sessionKey) {
       sessionRef.current = sessionKey;
-      lastFetchedRef.current = ''; // reset so new session re-fetches
+
+      // Immediately compute instant preview with whatever templates we have
+      if (currentTemplate?.bodyText) {
+        const resolved = resolveTemplateVariables(currentTemplate.bodyText, leadName, companyName);
+        setPreviewText(resolved.text);
+        setTemplateParams(resolved.params);
+      }
+
       loadTemplates();
     }
     if (!open) {
-      // Reset on close so next open starts fresh
       sessionRef.current = '';
-      lastFetchedRef.current = '';
-      setPreviewText('');
-      setTemplates([]);
     }
-  }, [open, leadId, loadTemplates]);
+  }, [open, leadId, leadName, companyName, currentTemplate?.bodyText, loadTemplates]);
 
-  // When user manually changes the template dropdown, fetch new preview
+  // When user manually changes the template dropdown
   const handleTemplateChange = useCallback(
     (val: string) => {
       setSelectedTemplateName(val);
-      lastFetchedRef.current = ''; // allow re-fetch for new name
-      fetchPreview(val);
+      const chosen = templates.find((t) => t.name === val);
+      if (chosen) {
+        if (chosen.language) setTemplateLang(chosen.language);
+        const resolved = resolveTemplateVariables(chosen.bodyText || '', leadName, companyName);
+        setPreviewText(resolved.text);
+        setTemplateParams(resolved.params);
+      }
+      if (leadId) {
+        whatsappService
+          .previewTemplate(leadId, val)
+          .then((apiRes) => {
+            if (apiRes?.previewText) setPreviewText(apiRes.previewText);
+            if (apiRes?.templateParams && apiRes.templateParams.length > 0) {
+              setTemplateParams(apiRes.templateParams);
+            }
+            if (apiRes?.templateLang) setTemplateLang(apiRes.templateLang);
+          })
+          .catch(() => {});
+      }
     },
-    [fetchPreview]
+    [templates, leadId, leadName, companyName]
   );
+
+  // Active preview and params to send
+  const displayPreviewText = previewText || instantResolved.text || currentTemplate?.bodyText || '';
+  const activeParams = templateParams.length > 0 ? templateParams : instantResolved.params;
 
   // Send approved template via Meta Cloud API
   const handleSend = async () => {
@@ -150,7 +210,7 @@ export function WhatsappPreviewModal({
         leadIds: [leadId],
         campaignId,
         templateName: selectedTemplateName,
-        templateParams,
+        templateParams: activeParams,
       });
 
       if (res && res.count > 0) {
@@ -169,8 +229,6 @@ export function WhatsappPreviewModal({
       setSending(false);
     }
   };
-
-  const currentTemplate = templates.find((t) => t.name === selectedTemplateName) || templates[0];
 
   const templateOptions = templates.map((t) => ({
     value: t.name,
@@ -218,7 +276,7 @@ export function WhatsappPreviewModal({
             value={selectedTemplateName}
             onChange={handleTemplateChange}
             options={templateOptions}
-            disabled={loadingTemplates || generating}
+            disabled={loadingTemplates}
           />
         </div>
 
@@ -230,23 +288,11 @@ export function WhatsappPreviewModal({
             </span>
           </div>
 
-          {/* Always keep WhatsappChatPreview mounted — use an overlay for loading
-              so the layout never blanks out, eliminating the flicker */}
+          {/* Instant clean preview — absolutely zero loader overlay or buffer screen */}
           <div className="relative">
             <WhatsappChatPreview
-              body={
-                previewText ||
-                currentTemplate?.bodyText ||
-                'Loading resolved WhatsApp template preview...'
-              }
+              body={displayPreviewText || 'Loading resolved WhatsApp template preview...'}
             />
-            {generating && (
-              <div className="absolute inset-0 rounded-xl bg-[#0b141a]/70 flex items-center justify-center pointer-events-none">
-                <span className="text-2xs text-emerald-400 animate-pulse">
-                  Resolving variables...
-                </span>
-              </div>
-            )}
           </div>
           <p className="text-2xs text-[var(--content-tertiary)]">
             Fixed Meta Template: Text structure cannot be rewritten; only variables are
@@ -263,7 +309,7 @@ export function WhatsappPreviewModal({
             variant="primary"
             onClick={handleSend}
             loading={sending}
-            disabled={generating || sending || !selectedTemplateName || !phone}
+            disabled={sending || !selectedTemplateName || !phone}
             leftIcon={
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
