@@ -6,32 +6,18 @@ import { Skeleton } from '../../components/ui';
 import { ProfileTab } from '../../components/settings/ProfileTab';
 import { SecurityTab } from '../../components/settings/SecurityTab';
 import { SmtpSettingsForm } from '../../components/smtp/SmtpSettingsForm';
-import { AiIntegrationTab } from '../../components/settings/AiIntegrationTab';
 import { WhatsappIntegrationTab } from '../../components/settings/WhatsappIntegrationTab';
-import { AppPreferencesTab } from '../../components/settings/AppPreferencesTab';
-import { IntegrationsOverviewTab } from '../../components/settings/IntegrationsOverviewTab';
 import { BusinessProfileTab } from '../../components/settings/BusinessProfileTab';
 import { cn } from '../../utils/cn';
 
-type TabKey =
-  | 'profile'
-  | 'business'
-  | 'security'
-  | 'email'
-  | 'ai'
-  | 'whatsapp'
-  | 'preferences'
-  | 'integrations';
+type TabKey = 'profile' | 'business' | 'security' | 'email' | 'whatsapp';
 
 const TABS: Array<{ id: TabKey; label: string }> = [
   { id: 'profile', label: 'Profile' },
   { id: 'business', label: 'Business Profile' },
   { id: 'security', label: 'Security' },
   { id: 'email', label: 'Email Providers' },
-  { id: 'ai', label: 'AI Integration' },
   { id: 'whatsapp', label: 'WhatsApp' },
-  { id: 'preferences', label: 'Preferences' },
-  { id: 'integrations', label: 'Integrations' },
 ];
 
 export default function Settings() {
@@ -73,11 +59,11 @@ export default function Settings() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-[var(--content-primary)] tracking-tight">
-          Settings & Integrations
+          Settings
         </h1>
         <p className="text-sm text-[var(--content-secondary)] mt-0.5">
-          Configure user profile, authentication security, SMTP delivery, AI model keys, WhatsApp
-          Cloud API, and application preferences.
+          Configure user profile, company details, authentication security, SMTP delivery, and
+          WhatsApp Cloud API.
         </p>
       </div>
 
@@ -111,21 +97,8 @@ export default function Settings() {
 
       {activeTab === 'email' && <SmtpSettingsForm />}
 
-      {activeTab === 'ai' && <AiIntegrationTab config={data.aiConfig} onUpdated={loadSettings} />}
-
       {activeTab === 'whatsapp' && (
         <WhatsappIntegrationTab config={data.whatsappConfig} onUpdated={loadSettings} />
-      )}
-
-      {activeTab === 'preferences' && (
-        <AppPreferencesTab preferences={data.preferences} onUpdated={loadSettings} />
-      )}
-
-      {activeTab === 'integrations' && (
-        <IntegrationsOverviewTab
-          integrations={data.integrations}
-          onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
-        />
       )}
     </div>
   );
