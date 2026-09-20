@@ -5,6 +5,7 @@ import { useToast } from '../../hooks/useToast';
 import { Button, Input, Select, Badge, Skeleton, Modal, ExpandableText } from '../../components/ui';
 import { Link } from 'react-router-dom';
 import { resolveDeliveryError } from '../../utils/errorDiagnostics';
+import { SmtpSettingsForm } from '../../components/smtp/SmtpSettingsForm';
 
 function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return '—';
@@ -331,103 +332,10 @@ export default function EmailOutreachPage() {
                     Amazon SES, or custom SMTP server.
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link to="/settings">
-                    <button className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                      Connect Mailbox in Settings
-                    </button>
-                  </Link>
 
-                  <button
-                    onClick={() => setGuideModal('gmail')}
-                    className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1"
-                  >
-                    How to create Gmail App Password ↗
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-400 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
-                2
-              </div>
-              <div className="space-y-3 flex-1">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      Authenticate Domain DNS (SPF, DKIM, DMARC)
-                    </h3>
-                    <button
-                      onClick={() => setGuideModal('dns')}
-                      className="text-2xs font-semibold text-brand-600 hover:underline"
-                    >
-                      View DNS Guide
-                    </button>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    Add standard TXT records to your DNS provider (Cloudflare, GoDaddy, Namecheap)
-                    to verify domain ownership and bypass spam filters.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[var(--content-primary)]">
-                      SPF Record (TXT):
-                    </span>
-                    <span className="font-mono text-2xs text-[var(--content-secondary)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--surface-border)]">
-                      v=spf1 include:_spf.google.com ~all
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[var(--content-primary)]">
-                      DMARC Policy (TXT):
-                    </span>
-                    <span className="font-mono text-2xs text-[var(--content-secondary)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--surface-border)]">
-                      v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-400 font-bold flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
-                3
-              </div>
-              <div className="space-y-3 flex-1">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      Sender Warm-Up &amp; Rate Safeguards
-                    </h3>
-                    <button
-                      onClick={() => setGuideModal('warmup')}
-                      className="text-2xs font-semibold text-brand-600 hover:underline"
-                    >
-                      View Ramp-Up Schedule
-                    </button>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    MailFlow automatically paces outbound dispatches with randomized delays between
-                    30-90s to mimic real human behavior and protect domain reputation.
-                  </p>
+                {/* Embedded SMTP Settings Form */}
+                <div className="pt-2">
+                  <SmtpSettingsForm />
                 </div>
               </div>
             </div>
