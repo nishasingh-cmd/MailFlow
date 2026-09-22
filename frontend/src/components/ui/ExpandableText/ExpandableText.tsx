@@ -20,35 +20,50 @@ export interface ExpandableTextProps {
  * existing column width. Only the visible row height changes on expand/collapse.
  */
 export function ExpandableText({
-  text,
+  text = '',
   limit = 60,
   className,
   textClassName,
 }: ExpandableTextProps) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = text.length > limit;
-  const displayText = isLong && !expanded ? `${text.slice(0, limit)}...` : text;
+  const safeText = text || '';
+  const isLong = safeText.length > limit;
+
+  if (!expanded) {
+    return (
+      <div className={cn('flex items-center gap-1.5 w-full min-w-0', className)}>
+        <span className={cn('text-xs truncate min-w-0 flex-1', textClassName)} title={safeText}>
+          {safeText}
+        </span>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="shrink-0 whitespace-nowrap text-xs font-semibold text-brand-500 dark:text-brand-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded cursor-pointer"
+            aria-expanded={false}
+            aria-label="Expand text"
+          >
+            Read more
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
-    /* w-full + min-w-0 + overflow-hidden: guarantees this div never drives
-       its parent column wider — the cardinal rule for stable table layout. */
     <div className={cn('w-full min-w-0 overflow-hidden', className)}>
-      {/* break-words + whitespace-normal: long words / URLs wrap rather than overflow */}
       <span className={cn('text-xs leading-relaxed break-words whitespace-normal', textClassName)}>
-        {displayText}
+        {safeText}
       </span>
-      {isLong && (
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          /* inline so it flows with text; no nowrap so it wraps if needed */
-          className="ml-1 text-xs font-semibold text-brand-500 dark:text-brand-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded cursor-pointer"
-          aria-expanded={expanded}
-          aria-label={expanded ? 'Collapse text' : 'Expand text'}
-        >
-          {expanded ? 'Read less' : 'Read more'}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setExpanded(false)}
+        className="ml-1.5 inline text-xs font-semibold text-brand-500 dark:text-brand-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded cursor-pointer whitespace-nowrap"
+        aria-expanded={true}
+        aria-label="Collapse text"
+      >
+        Read less
+      </button>
     </div>
   );
 }

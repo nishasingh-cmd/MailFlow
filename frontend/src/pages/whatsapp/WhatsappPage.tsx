@@ -541,26 +541,23 @@ export default function WhatsappPage() {
                 {/* table-layout:fixed keeps column widths stable when ExpandableText expands */}
                 <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
                   <colgroup>
-                    <col style={{ width: '18%' }} />
                     {/* Recipient */}
-                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '18%' }} />
                     {/* Phone */}
-                    <col style={{ width: '10%' }} />
-                    {/* Message ID */}
-                    <col style={{ width: '25%' }} />
+                    <col style={{ width: '14%' }} />
                     {/* Message Snippet */}
-                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '30%' }} />
                     {/* Status */}
-                    <col style={{ width: '13%' }} />
-                    {/* Sent Time */}
                     <col style={{ width: '12%' }} />
+                    {/* Sent Time */}
+                    <col style={{ width: '14%' }} />
                     {/* Provider */}
+                    <col style={{ width: '12%' }} />
                   </colgroup>
                   <thead className="bg-[var(--surface-elevated)] text-2xs uppercase text-[var(--content-tertiary)] font-semibold">
                     <tr>
                       <th className="px-4 py-3 text-left">Recipient</th>
                       <th className="px-4 py-3 text-left">Phone</th>
-                      <th className="px-4 py-3 text-left">Message ID</th>
                       <th className="px-4 py-3 text-left">Message Snippet</th>
                       <th className="px-4 py-3 text-left">Status</th>
                       <th className="px-4 py-3 text-left">Sent Time</th>
@@ -589,12 +586,6 @@ export default function WhatsappPage() {
                           </td>
                           <td className="px-4 py-3 font-mono text-xs text-brand-400">
                             {log.phone}
-                          </td>
-                          <td
-                            className="px-4 py-3 font-mono text-2xs text-[var(--content-tertiary)] max-w-[120px] truncate"
-                            title={log.messageId || ''}
-                          >
-                            {log.messageId || '—'}
                           </td>
                           <td className="px-4 py-3 overflow-hidden">
                             <MessageSnippetCell message={log.message} />

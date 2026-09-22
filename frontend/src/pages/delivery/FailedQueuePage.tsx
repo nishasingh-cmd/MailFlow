@@ -24,6 +24,11 @@ function formatDateTime(dateStr?: string | null) {
   });
 }
 
+function stripRePrefix(subject?: string | null): string {
+  if (!subject) return '—';
+  return subject.replace(/^re:\s*/i, '');
+}
+
 function ErrorDiagnosticsCell({ errorMessage }: { errorMessage?: string | null }) {
   const diagnostic = resolveDeliveryError(errorMessage);
   return (
@@ -356,7 +361,7 @@ export default function FailedQueuePage() {
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-[var(--content-primary)] truncate max-w-xs">
-                          {job.subject}
+                          {stripRePrefix(job.subject)}
                         </p>
                         <p className="text-xs text-brand-400 mt-0.5">
                           {job.campaign?.name || 'Campaign'}

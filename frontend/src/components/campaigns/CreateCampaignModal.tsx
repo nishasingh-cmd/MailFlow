@@ -104,7 +104,7 @@ const EMAIL_FRAMEWORK_DETAILS: Record<string, EmailFrameworkDetails> = {
     goal: 'Zero-Pressure Re-engagement with Fresh Context',
     tone: 'Warm, Casual & High-Relevance',
     bestFor: 'Unresponsive prospects after initial touchpoint',
-    subject: ({ company }) => `Re: Thoughts for ${company}`,
+    subject: ({ company }) => `Thoughts for ${company}`,
     intro: ({ company }) =>
       `Circling back on my previous note regarding ${company}'s outreach workflow.`,
     painPoint: ({ industry }) =>

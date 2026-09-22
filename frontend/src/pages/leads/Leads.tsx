@@ -1096,25 +1096,6 @@ export default function Leads() {
               </div>
             </div>
 
-            {selectedDatasetId !== 'MANUAL' && selectedHistory && (
-              <div className="flex items-center justify-between px-3.5 py-2 bg-brand-500/5 border border-brand-500/20 rounded-lg text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-brand-400">Dataset:</span>
-                  <span className="font-mono text-[var(--content-primary)]">
-                    {selectedHistory.fileName}
-                  </span>
-                  <span className="text-[var(--content-tertiary)]">
-                    ({selectedHistory.importedCount} leads)
-                  </span>
-                  {uploadedColumns && (
-                    <span className="px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded-full font-medium">
-                      Mirroring {uploadedColumns.length} columns from file
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
             {selectedLeadIds.length > 0 && (
               <div className="p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center justify-between text-sm animate-fade-in">
                 <span className="text-[var(--content-primary)] font-medium">

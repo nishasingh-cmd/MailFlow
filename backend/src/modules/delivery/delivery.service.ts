@@ -55,7 +55,7 @@ function resolveCampaignEmailContent(
   switch (normCampaign) {
     case 'follow_up':
       return {
-        subject: `Re: Thoughts for ${company}`,
+        subject: `Thoughts for ${company}`,
         body: `Hi {{firstName}},\n\nCircling back on my previous note regarding ${company}'s outreach workflow in ${industry}.\n\nMailFlow helps teams streamline prospect research and keep communication personalized without manual bottlenecks.\n\nWould you be open to a brief 10-minute check-in sometime this week?\n\nBest regards,\nMailFlow Team`,
       };
     case 'partnership':

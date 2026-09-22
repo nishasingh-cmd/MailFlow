@@ -17,6 +17,11 @@ function formatDateTime(dateStr?: string | null) {
   });
 }
 
+function stripRePrefix(subject?: string | null): string {
+  if (!subject) return '—';
+  return subject.replace(/^re:\s*/i, '');
+}
+
 function ErrorDiagnosticsCell({ errorMessage }: { errorMessage?: string | null }) {
   const diagnostic = resolveDeliveryError(errorMessage);
   return (
@@ -486,10 +491,10 @@ export default function EmailOutreachPage() {
                           </td>
                           <td
                             className="px-4 py-3 text-xs text-[var(--content-secondary)] max-w-sm"
-                            title={log.subject}
+                            title={stripRePrefix(log.subject)}
                           >
                             <p className="font-medium text-[var(--content-primary)] truncate">
-                              {log.subject}
+                              {stripRePrefix(log.subject)}
                             </p>
                             {log.errorReason && (
                               <p
@@ -689,7 +694,7 @@ export default function EmailOutreachPage() {
                           <p className="text-2xs font-mono text-brand-400">{job.recipientEmail}</p>
                         </td>
                         <td className="px-4 py-3 text-xs text-[var(--content-primary)] max-w-xs truncate">
-                          {job.subject}
+                          {stripRePrefix(job.subject)}
                         </td>
                         <td className="px-4 py-3 overflow-hidden">
                           <ErrorDiagnosticsCell errorMessage={job.errorMessage} />
