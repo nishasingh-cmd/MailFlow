@@ -252,12 +252,12 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
                     waTemplates.length > 0
                       ? waTemplates.map((t) => ({
                           value: t.name,
-                          label: `${t.name} (Meta Status: ✓ ${t.status}, Lang: ${t.language})`,
+                          label: t.name,
                         }))
                       : [
                           {
                             value: templateId || 'cold_outreach',
-                            label: `${templateId || 'cold_outreach'} (Meta Approved ✓)`,
+                            label: templateId || 'cold_outreach',
                           },
                         ]
                   }
@@ -284,12 +284,12 @@ export function EditCampaignModal({ open, campaign, onClose, onUpdated }: EditCa
                   waTemplates.length > 0
                     ? waTemplates.map((t) => ({
                         value: t.name,
-                        label: `${t.name} (Meta Status: ✓ ${t.status}, Lang: ${t.language})`,
+                        label: t.name,
                       }))
                     : [
                         {
                           value: templateId || 'cold_outreach',
-                          label: `${templateId || 'cold_outreach'} (Meta Approved ✓)`,
+                          label: templateId || 'cold_outreach',
                         },
                       ]
                 }

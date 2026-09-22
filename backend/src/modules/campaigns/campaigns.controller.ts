@@ -156,4 +156,74 @@ export class CampaignsController {
       res.status(500).json({ error: 'Failed to duplicate campaign' });
     }
   }
+
+  /**
+   * POST /campaigns/:id/leads — Add leads to an existing campaign
+   */
+  static async addLeads(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const leadIds = req.body.leadIds;
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        res.status(400).json({ error: 'leadIds array is required' });
+        return;
+      }
+      const campaign = await CampaignsService.addLeadsToCampaign(userId, id, leadIds);
+      res.status(200).json({ success: true, data: campaign });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === 'CAMPAIGN_NOT_FOUND') {
+        res.status(404).json({ error: 'Campaign not found' });
+        return;
+      }
+      console.error('[campaigns.controller] Add leads error:', error);
+      res.status(500).json({ error: 'Failed to add leads to campaign' });
+    }
+  }
+
+  /**
+   * DELETE /campaigns/:id/leads/:leadId — Remove a lead from an existing campaign
+   */
+  static async removeLead(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id, leadId } = req.params;
+      const userId = req.user!.userId;
+      const campaign = await CampaignsService.removeLeadFromCampaign(userId, id, leadId);
+      res.status(200).json({ success: true, data: campaign });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === 'CAMPAIGN_NOT_FOUND') {
+        res.status(404).json({ error: 'Campaign not found' });
+        return;
+      }
+      console.error('[campaigns.controller] Remove lead error:', error);
+      res.status(500).json({ error: 'Failed to remove lead from campaign' });
+    }
+  }
+
+  /**
+   * POST /campaigns/:id/leads/remove — Batch remove leads from an existing campaign
+   */
+  static async removeLeads(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const leadIds = req.body.leadIds;
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        res.status(400).json({ error: 'leadIds array is required' });
+        return;
+      }
+      const campaign = await CampaignsService.removeLeadsFromCampaign(userId, id, leadIds);
+      res.status(200).json({ success: true, data: campaign });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === 'CAMPAIGN_NOT_FOUND') {
+        res.status(404).json({ error: 'Campaign not found' });
+        return;
+      }
+      console.error('[campaigns.controller] Batch remove leads error:', error);
+      res.status(500).json({ error: 'Failed to remove leads from campaign' });
+    }
+  }
 }

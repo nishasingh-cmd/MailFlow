@@ -15,6 +15,7 @@ import { EditCampaignModal } from '../../components/campaigns/EditCampaignModal'
 import { DeleteCampaignModal } from '../../components/campaigns/DeleteCampaignModal';
 import { CampaignSendModal } from '../../components/campaigns/CampaignSendModal';
 import { CompletionSummaryModal } from '../../components/campaigns/CompletionSummaryModal';
+import { ManageCampaignLeadsModal } from '../../components/campaigns/ManageCampaignLeadsModal';
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -60,8 +61,24 @@ export default function CampaignDetail() {
   const [progress, setProgress] = useState<CampaignProgress | null>(null);
   const [summaryData, setSummaryData] = useState<CompletionSummaryData | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [manageLeadsOpen, setManageLeadsOpen] = useState(false);
+  const [removingLeadId, setRemovingLeadId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
+
+  const handleRemoveLeadDirect = async (leadId: string, leadName?: string) => {
+    if (!campaign) return;
+    setRemovingLeadId(leadId);
+    try {
+      await campaignService.removeLeadFromCampaign(campaign.id, leadId);
+      toast.success(leadName ? `Removed ${leadName} from campaign` : 'Lead removed from campaign');
+      loadCampaign();
+    } catch {
+      toast.error('Failed to remove lead from campaign');
+    } finally {
+      setRemovingLeadId(null);
+    }
+  };
 
   const loadCampaign = useCallback(async () => {
     if (!id) return;
@@ -609,14 +626,14 @@ export default function CampaignDetail() {
             <h2 className="text-base font-semibold text-[var(--content-primary)]">
               Campaign Leads ({campaign.campaignLeads.length})
             </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+            <Button variant="ghost" size="sm" onClick={() => setManageLeadsOpen(true)}>
               Manage Leads
             </Button>
           </div>
 
           {campaign.campaignLeads.length === 0 ? (
             <p className="text-sm text-[var(--content-tertiary)] py-6 text-center">
-              No leads added to this campaign yet. Edit the campaign to add leads.
+              No leads added to this campaign yet. Click "Manage Leads" above to add leads.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -631,6 +648,9 @@ export default function CampaignDetail() {
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--content-tertiary)] uppercase">
                       {campaign.channel === 'WHATSAPP' ? 'WA Delivery Ready' : 'AI Email Draft'}
+                    </th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-[var(--content-tertiary)] uppercase">
+                      Action
                     </th>
                   </tr>
                 </thead>
@@ -666,6 +686,17 @@ export default function CampaignDetail() {
                               {hasDraft ? 'Ready' : 'Not generated'}
                             </Badge>
                           )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={removingLeadId === cl.leadId}
+                            onClick={() => handleRemoveLeadDirect(cl.leadId, lead?.name)}
+                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 h-auto"
+                          >
+                            {removingLeadId === cl.leadId ? 'Removing...' : 'Remove'}
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -713,6 +744,15 @@ export default function CampaignDetail() {
         onViewLogs={() => {
           setSummaryOpen(false);
           navigate(`/delivery-logs?campaignId=${campaign.id}`);
+        }}
+      />
+
+      <ManageCampaignLeadsModal
+        open={manageLeadsOpen}
+        campaign={campaign}
+        onClose={() => setManageLeadsOpen(false)}
+        onUpdated={() => {
+          loadCampaign();
         }}
       />
     </div>

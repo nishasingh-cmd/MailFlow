@@ -2,10 +2,21 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { ROUTE_LABELS } from '../../routes/routes';
 
+function isId(segment: string): boolean {
+  // CUID (e.g. cmucvt7r9000114mbi...), UUID, Mongo ObjectId, or long alphanumeric ID
+  return (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) ||
+    /^[0-9a-f]{24}$/i.test(segment) ||
+    /^c[a-z0-9]{20,}$/i.test(segment) ||
+    (segment.length > 12 && /\d/.test(segment) && /[a-z]/i.test(segment))
+  );
+}
+
 export function Breadcrumb({ className }: { className?: string }) {
   const { pathname } = useLocation();
 
-  const segments = pathname.split('/').filter(Boolean);
+  const rawSegments = pathname.split('/').filter(Boolean);
+  const segments = rawSegments.filter((seg) => !isId(seg));
 
   if (segments.length === 0) return null;
 

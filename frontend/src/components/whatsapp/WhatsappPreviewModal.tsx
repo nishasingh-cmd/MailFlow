@@ -7,7 +7,6 @@ import {
   detectTemplateVariables,
   resolveCampaignTemplateVariables,
   SenderBusinessContext,
-  isBusinessProfileField,
 } from '../../utils/whatsapp-variable-resolver';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../hooks/useAuth';
@@ -358,27 +357,23 @@ export function WhatsappPreviewModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="WhatsApp Outreach — Approved Meta Template"
+      title="WhatsApp Outreach: Approved Meta Template"
       size="xl"
     >
       <div className="space-y-4 font-sans">
         {/* Recipient lead context */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs text-black dark:text-white">
           <div>
-            <span className="text-slate-500">Recipient: </span>
+            <span className="text-black dark:text-white">Recipient: </span>
             <span className="font-semibold text-black dark:text-white">
               {currentRecipientName}
             </span>{' '}
-            (
-            <span className="font-mono text-emerald-600 dark:text-emerald-400">
-              {currentRecipientPhone}
-            </span>
-            )
+            (<span className="font-mono text-black dark:text-white">{currentRecipientPhone}</span>)
           </div>
           {currentRecipientCompany && (
             <div className="flex items-center gap-2">
-              <span className="text-slate-500">Company: </span>
-              <Badge variant="brand" size="sm">
+              <span className="text-black dark:text-white">Company: </span>
+              <Badge variant="neutral" size="sm" className="text-black dark:text-white">
                 {currentRecipientCompany}
               </Badge>
             </div>
@@ -410,7 +405,7 @@ export function WhatsappPreviewModal({
             >
               {templates.map((t) => (
                 <option key={t.name} value={t.name}>
-                  {t.name} (Meta Status: ✓ {t.status || 'APPROVED'}, Lang: {t.language})
+                  {t.name}
                 </option>
               ))}
             </select>
@@ -446,31 +441,20 @@ export function WhatsappPreviewModal({
             <div className="space-y-2.5">
               {detectedVariables.map((v) => {
                 const mappedCol = variableMapping[v.index] || '';
-                const sampleVal = resolved.variables[v.index] || '';
-                const isBusinessSource = isBusinessProfileField(mappedCol);
 
                 return (
                   <div
                     key={v.index}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2"
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="px-2 py-0.5 rounded text-xs font-normal text-black dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0">
                           {`{{${v.index}}}`}
                         </span>
-                        <span
-                          className="text-xs text-black dark:text-white truncate font-normal"
-                          title={v.contextSnippet}
-                        >
-                          "{v.contextSnippet}"
-                        </span>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                        <span className="text-xs text-black dark:text-white font-normal hidden sm:inline">
-                          →
-                        </span>
                         <select
                           id={`lead-wa-variable-mapping-${v.index}`}
                           value={mappedCol}
@@ -503,32 +487,6 @@ export function WhatsappPreviewModal({
                           </optgroup>
                         </select>
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-black dark:text-white px-1">
-                      <span className="font-normal text-black dark:text-white">Preview value:</span>
-                      <span className="font-normal text-black dark:text-white truncate max-w-[280px]">
-                        {mappedCol ? (
-                          sampleVal ? (
-                            <span className="text-black dark:text-white font-normal">
-                              "{sampleVal}"{' '}
-                              <span className="text-[11px] text-slate-500 font-normal">
-                                {isBusinessSource
-                                  ? '(From Business Profile)'
-                                  : `(From Lead: ${currentRecipientName})`}
-                              </span>
-                            </span>
-                          ) : (
-                            <span className="text-black dark:text-white font-normal">
-                              (empty for this lead)
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-black dark:text-white font-normal">
-                            Not mapped yet
-                          </span>
-                        )}
-                      </span>
                     </div>
                   </div>
                 );

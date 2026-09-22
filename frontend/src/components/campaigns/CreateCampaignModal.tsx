@@ -145,34 +145,11 @@ const EMAIL_FRAMEWORK_DETAILS: Record<string, EmailFrameworkDetails> = {
   },
 };
 
-function renderEmailHighlightedText(text: string, tokens: { company?: string; industry?: string }) {
-  if (!tokens.company && !tokens.industry) return text;
-  const comp = tokens.company?.trim();
-  const ind = tokens.industry?.trim();
-
-  const validTokens = [comp, ind].filter((t): t is string => Boolean(t && t.length > 1));
-  if (validTokens.length === 0) return text;
-
-  const regex = new RegExp(
-    `(${validTokens.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
-    'g'
-  );
-
-  const splits = text.split(regex);
-  return splits.map((part, i) => {
-    if ((comp && part === comp) || (ind && part === ind)) {
-      return (
-        <span
-          key={i}
-          className="inline-flex items-center px-1.5 py-0.5 rounded font-semibold text-xs bg-[#800000]/10 dark:bg-[#800000]/25 text-[#800000] dark:text-[#ffb3ba] border border-[#800000]/30 dark:border-[#800000]/50 mx-0.5 align-baseline"
-          title={part === comp ? 'Lead Company' : 'Lead Industry'}
-        >
-          {part}
-        </span>
-      );
-    }
-    return part;
-  });
+function renderEmailHighlightedText(
+  text: string,
+  _tokens?: { company?: string; industry?: string }
+) {
+  return text;
 }
 
 export function CreateCampaignModal({
@@ -960,20 +937,9 @@ export function CreateCampaignModal({
       {step === 1 && (
         <div className="space-y-4">
           <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Target Lead Dataset / Sheet *
-              </label>
-              {selectedDatasetName && (
-                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                  Active: {selectedDatasetName}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Select the spreadsheet dataset for this campaign. WhatsApp template variables will map
-              strictly to columns from this dataset.
-            </p>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Target Lead Dataset / Sheet *
+            </label>
             {loadingDatasets ? (
               <div className="flex items-center gap-2 text-xs text-slate-500 py-1">
                 <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -1018,10 +984,6 @@ export function CreateCampaignModal({
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs text-[var(--content-secondary)]">
-                Choose which leads from <strong>{selectedDatasetName}</strong> to include in this
-                campaign.
-              </p>
               <LeadPickerTable
                 selectedIds={selectedLeadIds}
                 onChange={setSelectedLeadIds}
@@ -1173,13 +1135,7 @@ export function CreateCampaignModal({
 
                   {/* Email Body */}
                   <div className="p-4 sm:p-5 space-y-3 text-[13px] sm:text-[13.5px] leading-relaxed text-slate-800 dark:text-slate-200 font-sans">
-                    <p className="font-medium">
-                      Hi{' '}
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded font-semibold text-xs bg-[#800000]/10 dark:bg-[#800000]/25 text-[#800000] dark:text-[#ffb3ba] border border-[#800000]/30 dark:border-[#800000]/50 mx-0.5 align-baseline">
-                        {leadFirstName}
-                      </span>
-                      ,
-                    </p>
+                    <p className="font-medium">Hi {leadFirstName},</p>
 
                     <p>
                       {renderEmailHighlightedText(
@@ -1260,7 +1216,7 @@ export function CreateCampaignModal({
                     >
                       {waTemplates.map((t) => (
                         <option key={t.name} value={t.name}>
-                          {t.name} ({t.status || 'APPROVED'}) • {t.language.toUpperCase()}
+                          {t.name}
                         </option>
                       ))}
                     </select>
@@ -1302,38 +1258,20 @@ export function CreateCampaignModal({
                   <div className="space-y-2.5">
                     {detectedVariables.map((v) => {
                       const mappedCol = whatsappVariableMapping[v.index] || '';
-                      const sampleVal = previewLead
-                        ? resolveCampaignTemplateVariables(
-                            { [v.index]: mappedCol },
-                            previewLead,
-                            senderContext
-                          ).variables[v.index]
-                        : '';
-
-                      const isBusinessSource = isBusinessProfileField(mappedCol);
 
                       return (
                         <div
                           key={v.index}
-                          className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2"
+                          className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="px-2 py-0.5 rounded text-xs font-normal text-black dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0">
                                 {`{{${v.index}}}`}
                               </span>
-                              <span
-                                className="text-xs text-black dark:text-white truncate font-normal"
-                                title={v.contextSnippet}
-                              >
-                                "{v.contextSnippet}"
-                              </span>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-                              <span className="text-xs text-black dark:text-white font-normal hidden sm:inline">
-                                →
-                              </span>
                               <select
                                 id={`variable-mapping-${v.index}`}
                                 value={mappedCol}
@@ -1366,34 +1304,6 @@ export function CreateCampaignModal({
                                 </optgroup>
                               </select>
                             </div>
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs text-black dark:text-white px-1">
-                            <span className="font-normal text-black dark:text-white">
-                              Preview value:
-                            </span>
-                            <span className="font-normal text-black dark:text-white truncate max-w-[280px]">
-                              {mappedCol ? (
-                                sampleVal ? (
-                                  <span className="text-black dark:text-white font-normal">
-                                    "{sampleVal}"{' '}
-                                    <span className="text-[11px] text-slate-500 font-normal">
-                                      {isBusinessSource
-                                        ? '(From Business Profile)'
-                                        : `(From Lead: ${previewLead?.name || 'Contact'})`}
-                                    </span>
-                                  </span>
-                                ) : (
-                                  <span className="text-black dark:text-white font-normal">
-                                    (empty for this lead)
-                                  </span>
-                                )
-                              ) : (
-                                <span className="text-black dark:text-white font-normal">
-                                  Not mapped yet
-                                </span>
-                              )}
-                            </span>
                           </div>
                         </div>
                       );

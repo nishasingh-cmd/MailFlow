@@ -50,6 +50,31 @@ export const campaignService = {
     return envelope.data;
   },
 
+  async addLeadsToCampaign(id: string, leadIds: string[]): Promise<CampaignDetail> {
+    const { data: envelope } = await api.post<ApiEnvelope<CampaignDetail>>(
+      `/campaigns/${id}/leads`,
+      {
+        leadIds,
+      }
+    );
+    return envelope.data;
+  },
+
+  async removeLeadFromCampaign(id: string, leadId: string): Promise<CampaignDetail> {
+    const { data: envelope } = await api.delete<ApiEnvelope<CampaignDetail>>(
+      `/campaigns/${id}/leads/${leadId}`
+    );
+    return envelope.data;
+  },
+
+  async removeLeadsFromCampaign(id: string, leadIds: string[]): Promise<CampaignDetail> {
+    const { data: envelope } = await api.post<ApiEnvelope<CampaignDetail>>(
+      `/campaigns/${id}/leads/remove`,
+      { leadIds }
+    );
+    return envelope.data;
+  },
+
   async getDatasetColumns(datasetId: string): Promise<{
     datasetId: string;
     datasetName: string;

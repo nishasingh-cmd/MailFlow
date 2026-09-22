@@ -13,6 +13,10 @@ router.get('/:id', CampaignsController.getById);
 router.patch('/:id', CampaignsController.update);
 router.delete('/:id', CampaignsController.remove);
 
+router.post('/:id/leads', CampaignsController.addLeads);
+router.delete('/:id/leads/:leadId', CampaignsController.removeLead);
+router.post('/:id/leads/remove', CampaignsController.removeLeads);
+
 router.post('/:id/duplicate', CampaignsController.duplicate);
 
 export default router;

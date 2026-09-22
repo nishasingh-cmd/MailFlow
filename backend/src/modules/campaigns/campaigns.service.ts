@@ -199,6 +199,62 @@ export class CampaignsService {
   }
 
   /**
+   * Add leads to an existing campaign without affecting existing ones
+   */
+  static async addLeadsToCampaign(userId: string, id: string, leadIds: string[]) {
+    const existing = await prisma.campaign.findFirst({ where: { id, userId } });
+    if (!existing) throw new Error('CAMPAIGN_NOT_FOUND');
+
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return this.getCampaignById(userId, id);
+    }
+
+    const validLeads = await prisma.lead.findMany({
+      where: { id: { in: leadIds }, userId },
+      select: { id: true },
+    });
+
+    if (validLeads.length > 0) {
+      await prisma.campaignLead.createMany({
+        data: validLeads.map((l) => ({ campaignId: id, leadId: l.id })),
+        skipDuplicates: true,
+      });
+    }
+
+    return this.getCampaignById(userId, id);
+  }
+
+  /**
+   * Remove a single lead from an existing campaign
+   */
+  static async removeLeadFromCampaign(userId: string, id: string, leadId: string) {
+    const existing = await prisma.campaign.findFirst({ where: { id, userId } });
+    if (!existing) throw new Error('CAMPAIGN_NOT_FOUND');
+
+    await prisma.campaignLead.deleteMany({
+      where: { campaignId: id, leadId },
+    });
+
+    return this.getCampaignById(userId, id);
+  }
+
+  /**
+   * Batch remove multiple leads from an existing campaign
+   */
+  static async removeLeadsFromCampaign(userId: string, id: string, leadIds: string[]) {
+    const existing = await prisma.campaign.findFirst({ where: { id, userId } });
+    if (!existing) throw new Error('CAMPAIGN_NOT_FOUND');
+
+    if (Array.isArray(leadIds) && leadIds.length > 0) {
+      await prisma.campaignLead.deleteMany({
+        where: { campaignId: id, leadId: { in: leadIds } },
+      });
+    }
+
+    return this.getCampaignById(userId, id);
+  }
+
+  /**
    * Delete a campaign — never deletes the leads themselves
    */
   static async deleteCampaign(userId: string, id: string) {
