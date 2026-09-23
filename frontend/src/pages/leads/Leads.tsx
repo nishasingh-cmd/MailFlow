@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, ChangeEvent } from 'react';
 import { Lead, LeadStatus, ImportHistory, ResearchProgressResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
@@ -25,6 +25,7 @@ import { ResearchProgressCard } from '../../components/research/ResearchProgress
 import { WhatsappPreviewModal } from '../../components/whatsapp/WhatsappPreviewModal';
 import { WhatsappSendOptionsModal } from '../../components/whatsapp/WhatsappSendOptionsModal';
 import { useToast } from '../../hooks/useToast';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -39,6 +40,42 @@ const SORT_OPTIONS = [
   { value: 'name-desc', label: 'Name (Z-A)' },
   { value: 'company-asc', label: 'Company (A-Z)' },
 ];
+
+const STANDARD_COLUMN_KEYS = ['name', 'email', 'company', 'phone', 'website', 'status'];
+
+const getColumnStorageKey = (datasetId: string) => `mailflow:lead-column-selection:${datasetId}`;
+const getAvailableColumnsStorageKey = (datasetId: string) =>
+  `mailflow:lead-available-columns:${datasetId}`;
+
+const getSavedColumns = (datasetId: string): string[] | null => {
+  if (!datasetId) return null;
+  try {
+    const raw = localStorage.getItem(getColumnStorageKey(datasetId));
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string');
+    }
+  } catch (e) {
+    console.error('Failed to parse saved column selection:', e);
+  }
+  return null;
+};
+
+const getCachedAvailableColumns = (datasetId: string): string[] | null => {
+  if (!datasetId) return null;
+  try {
+    const raw = localStorage.getItem(getAvailableColumnsStorageKey(datasetId));
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string');
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+  return null;
+};
 
 interface LeadWithStatus extends Lead {
   researchStatus?: string | null;
@@ -57,15 +94,36 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'ALL'>('ALL');
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('mailflow:selected-dataset-id') || '';
+    } catch {
+      return '';
+    }
+  });
   const [sortOption, setSortOption] = useState<string>('createdAt-desc');
 
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Dynamic Column Visibility & Discovery
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({});
+  // User-selected visible columns for current dataset (persisted independently from available columns)
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
+    try {
+      const initialDatasetId = localStorage.getItem('mailflow:selected-dataset-id') || '';
+      if (initialDatasetId) {
+        const saved = getSavedColumns(initialDatasetId);
+        if (saved !== null) {
+          return saved;
+        }
+      }
+    } catch {
+      // Ignore storage errors on initial state
+    }
+    return [];
+  });
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+  const columnDropdownRef = useRef<HTMLDivElement>(null);
+  useClickOutside(columnDropdownRef, () => setIsColumnDropdownOpen(false), isColumnDropdownOpen);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -108,16 +166,15 @@ export default function Leads() {
   const [emailDrawerLeadName, setEmailDrawerLeadName] = useState<string | null>(null);
   const [emailDrawerCompanyName, setEmailDrawerCompanyName] = useState<string | null>(null);
 
-  const openEmailGenerator = (
-    leadId: string,
-    leadName?: string | null,
-    companyName?: string | null
-  ) => {
-    setEmailDrawerLeadId(leadId);
-    setEmailDrawerLeadName(leadName || null);
-    setEmailDrawerCompanyName(companyName || null);
-    setEmailDrawerOpen(true);
-  };
+  const openEmailGenerator = useCallback(
+    (leadId: string, leadName?: string | null, companyName?: string | null) => {
+      setEmailDrawerLeadId(leadId);
+      setEmailDrawerLeadName(leadName || null);
+      setEmailDrawerCompanyName(companyName || null);
+      setEmailDrawerOpen(true);
+    },
+    []
+  );
 
   const [waPreviewOpen, setWaPreviewOpen] = useState(false);
   const [waPreviewLead, setWaPreviewLead] = useState<Lead | null>(null);
@@ -128,7 +185,7 @@ export default function Leads() {
   const [waLastInboundMessageAt, setWaLastInboundMessageAt] = useState<string | null>(null);
   const [waBatchModalOpen, setWaBatchModalOpen] = useState(false);
 
-  const openWhatsappModal = (lead: Lead) => {
+  const openWhatsappModal = useCallback((lead: Lead) => {
     setWaPreviewLead(lead);
     setWaLeadId(lead.id);
     setWaLeadName(lead.name);
@@ -136,7 +193,7 @@ export default function Leads() {
     setWaPhone(lead.phone || '');
     setWaLastInboundMessageAt(lead.lastInboundMessageAt ?? null);
     setWaPreviewOpen(true);
-  };
+  }, []);
 
   const fetchLeads = useCallback(async () => {
     if (!selectedDatasetId) return;
@@ -188,8 +245,18 @@ export default function Leads() {
           if (prev === 'MANUAL' && manualRes.total > 0) return prev;
           if (validHistory.some((h) => h.id === prev)) return prev;
         }
-        if (validHistory.length > 0) return validHistory[0].id;
-        return 'MANUAL';
+        const savedId = localStorage.getItem('mailflow:selected-dataset-id');
+        if (savedId) {
+          if (savedId === 'MANUAL' && manualRes.total > 0) return savedId;
+          if (validHistory.some((h) => h.id === savedId)) return savedId;
+        }
+        const fallback = validHistory.length > 0 ? validHistory[0].id : 'MANUAL';
+        try {
+          localStorage.setItem('mailflow:selected-dataset-id', fallback);
+        } catch {
+          // Ignore storage write error
+        }
+        return fallback;
       });
     } catch {
       toast.error('Failed to load import history.');
@@ -381,9 +448,26 @@ export default function Leads() {
         Array.isArray((lead.customFields as Record<string, unknown>)._uploadedColumns) &&
         ((lead.customFields as Record<string, unknown>)._uploadedColumns as string[]).length > 0
       ) {
-        return (lead.customFields as Record<string, unknown>)._uploadedColumns as string[];
+        const cols = (lead.customFields as Record<string, unknown>)._uploadedColumns as string[];
+        if (selectedDatasetId) {
+          try {
+            localStorage.setItem(
+              getAvailableColumnsStorageKey(selectedDatasetId),
+              JSON.stringify(cols)
+            );
+          } catch {
+            // Ignore storage write error
+          }
+        }
+        return cols;
       }
     }
+
+    if (selectedDatasetId) {
+      const cached = getCachedAvailableColumns(selectedDatasetId);
+      if (cached && cached.length > 0) return cached;
+    }
+
     return null;
   }, [leads, selectedDatasetId]);
 
@@ -409,22 +493,116 @@ export default function Leads() {
     return Array.from(keys);
   }, [leads]);
 
-  const toggleColumnVisibility = (colKey: string) => {
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [colKey]: prev[colKey] !== undefined ? !prev[colKey] : false,
-    }));
+  // Synchronize persisted column selection with available columns
+  useEffect(() => {
+    if (!selectedDatasetId) return;
+
+    const saved = getSavedColumns(selectedDatasetId);
+
+    if (uploadedColumns && uploadedColumns.length > 0) {
+      if (saved !== null) {
+        // Case 2: Persisted selection exists.
+        // Prune removed columns. New columns remain unselected by default.
+        const sanitized = saved.filter((col) => uploadedColumns.includes(col));
+        setSelectedColumns(sanitized);
+
+        if (sanitized.length !== saved.length) {
+          try {
+            localStorage.setItem(getColumnStorageKey(selectedDatasetId), JSON.stringify(sanitized));
+          } catch {
+            // Ignore storage write error
+          }
+        }
+      } else {
+        // Case 1: No previous selection exists (new upload).
+        // Default to all available uploaded columns.
+        setSelectedColumns(uploadedColumns);
+      }
+    } else if (selectedDatasetId === 'MANUAL' || (!uploadedColumns && leads.length > 0)) {
+      const availableStandard = [
+        ...STANDARD_COLUMN_KEYS,
+        ...dynamicFieldKeys.map((k) => `custom_${k}`),
+      ];
+
+      if (saved !== null) {
+        const sanitized = saved.filter((col) => availableStandard.includes(col));
+        setSelectedColumns(sanitized);
+        if (sanitized.length !== saved.length) {
+          try {
+            localStorage.setItem(getColumnStorageKey(selectedDatasetId), JSON.stringify(sanitized));
+          } catch {
+            // Ignore storage write error
+          }
+        }
+      } else {
+        setSelectedColumns(availableStandard);
+      }
+    }
+  }, [selectedDatasetId, uploadedColumns, dynamicFieldKeys, leads.length]);
+
+  const toggleColumn = (colName: string) => {
+    if (!selectedDatasetId) return;
+    setSelectedColumns((prev) => {
+      const next = prev.includes(colName) ? prev.filter((c) => c !== colName) : [...prev, colName];
+      try {
+        localStorage.setItem(getColumnStorageKey(selectedDatasetId), JSON.stringify(next));
+      } catch (err) {
+        console.error('Failed to save column selection:', err);
+      }
+      return next;
+    });
   };
 
-  const isColVisible = useCallback(
-    (colKey: string) => columnVisibility[colKey] !== false,
-    [columnVisibility]
-  );
+  const handleSelectAllColumns = () => {
+    if (!selectedDatasetId) return;
+    const allCols =
+      uploadedColumns && uploadedColumns.length > 0
+        ? [...uploadedColumns]
+        : [...STANDARD_COLUMN_KEYS, ...dynamicFieldKeys.map((k) => `custom_${k}`)];
+
+    setSelectedColumns(allCols);
+    try {
+      localStorage.setItem(getColumnStorageKey(selectedDatasetId), JSON.stringify(allCols));
+    } catch (err) {
+      console.error('Failed to save column selection:', err);
+    }
+  };
+
+  const handleClearAllColumns = () => {
+    if (!selectedDatasetId) return;
+    setSelectedColumns([]);
+    try {
+      localStorage.setItem(getColumnStorageKey(selectedDatasetId), JSON.stringify([]));
+    } catch (err) {
+      console.error('Failed to save column selection:', err);
+    }
+  };
+
+  const handleDatasetChange = (newDatasetId: string) => {
+    setSelectedDatasetId(newDatasetId);
+    try {
+      localStorage.setItem('mailflow:selected-dataset-id', newDatasetId);
+      const saved = getSavedColumns(newDatasetId);
+      if (saved !== null) {
+        setSelectedColumns(saved);
+      } else {
+        const cachedAvailable = getCachedAvailableColumns(newDatasetId);
+        if (cachedAvailable && cachedAvailable.length > 0) {
+          setSelectedColumns(cachedAvailable);
+        } else {
+          setSelectedColumns([]);
+        }
+      }
+    } catch {
+      // Ignore storage errors on dataset change
+    }
+    setPage(1);
+  };
 
   // Generate dynamic columns for custom fields
   const dynamicColumns = useMemo<Column<Lead>[]>(() => {
     return dynamicFieldKeys
-      .filter((key) => isColVisible(`custom_${key}`))
+      .filter((key) => selectedColumns.includes(`custom_${key}`))
       .map((key) => ({
         key: `custom_${key}`,
         header: (
@@ -449,7 +627,7 @@ export default function Leads() {
           );
         },
       }));
-  }, [dynamicFieldKeys, isColVisible]);
+  }, [dynamicFieldKeys, selectedColumns]);
 
   const leadColumns = useMemo<Column<Lead>[]>(() => {
     const baseCols: Column<Lead>[] = [
@@ -478,7 +656,7 @@ export default function Leads() {
     if (uploadedColumns && uploadedColumns.length > 0) {
       // 1:1 Mirroring of uploaded spreadsheet columns
       uploadedColumns.forEach((colName, idx) => {
-        if (columnVisibility[colName] === false) return;
+        if (!selectedColumns.includes(colName)) return;
 
         baseCols.push({
           key: `col_${colName}`,
@@ -542,7 +720,7 @@ export default function Leads() {
       });
     } else {
       // Standard CRM Columns (Fallback for manual / unmapped legacy leads)
-      if (isColVisible('name')) {
+      if (selectedColumns.includes('name')) {
         baseCols.push({
           key: 'name',
           header: 'Name',
@@ -557,7 +735,7 @@ export default function Leads() {
         });
       }
 
-      if (isColVisible('email')) {
+      if (selectedColumns.includes('email')) {
         baseCols.push({
           key: 'email',
           header: 'Email',
@@ -574,7 +752,7 @@ export default function Leads() {
         });
       }
 
-      if (isColVisible('company')) {
+      if (selectedColumns.includes('company')) {
         baseCols.push({
           key: 'company',
           header: 'Company',
@@ -587,7 +765,7 @@ export default function Leads() {
         });
       }
 
-      if (isColVisible('phone')) {
+      if (selectedColumns.includes('phone')) {
         baseCols.push({
           key: 'phone',
           header: 'Phone',
@@ -599,7 +777,7 @@ export default function Leads() {
         });
       }
 
-      if (isColVisible('website')) {
+      if (selectedColumns.includes('website')) {
         baseCols.push({
           key: 'website',
           header: 'Website',
@@ -625,7 +803,7 @@ export default function Leads() {
       // Dynamic industry columns injected here
       baseCols.push(...dynamicColumns);
 
-      if (isColVisible('status')) {
+      if (selectedColumns.includes('status')) {
         baseCols.push({
           key: 'status',
           header: 'Status',
@@ -708,14 +886,15 @@ export default function Leads() {
   }, [
     leads,
     selectedLeadIds,
-    columnVisibility,
+    selectedColumns,
     dynamicColumns,
     uploadedColumns,
     handleSelectAll,
     handleToggleSelectLead,
     handleOpenDetail,
     handleDeleteSingle,
-    isColVisible,
+    openWhatsappModal,
+    openEmailGenerator,
   ]);
 
   const researchColumns: Column<Lead>[] = [
@@ -943,8 +1122,7 @@ export default function Leads() {
                     ]}
                     value={selectedDatasetId}
                     onChange={(val) => {
-                      setSelectedDatasetId(val);
-                      setPage(1);
+                      handleDatasetChange(val);
                     }}
                     className="w-64"
                   />
@@ -969,7 +1147,7 @@ export default function Leads() {
                 />
 
                 {/* Columns Visibility Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={columnDropdownRef}>
                   <Button
                     variant="outline"
                     onClick={() => setIsColumnDropdownOpen((prev) => !prev)}
@@ -989,108 +1167,133 @@ export default function Leads() {
                       />
                     </svg>
                     <span>Columns</span>
-                    {uploadedColumns && uploadedColumns.length > 0 ? (
-                      <span className="px-1.5 py-0.5 bg-brand-500/10 text-brand-500 text-[10px] font-semibold rounded-full">
-                        {uploadedColumns.length}
-                      </span>
-                    ) : dynamicFieldKeys.length > 0 ? (
-                      <span className="px-1.5 py-0.5 bg-brand-500/10 text-brand-500 text-[10px] font-semibold rounded-full">
-                        +{dynamicFieldKeys.length}
-                      </span>
-                    ) : null}
+                    <span className="px-1.5 py-0.5 bg-brand-500/10 text-brand-500 text-[10px] font-semibold rounded-full">
+                      {selectedColumns.length}
+                    </span>
                   </Button>
 
                   {isColumnDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-20"
-                        onClick={() => setIsColumnDropdownOpen(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-64 bg-[var(--surface-elevated)] border border-[var(--surface-border)] rounded-xl shadow-2xl z-30 p-2.5 max-h-80 overflow-y-auto space-y-1 text-xs">
-                        {uploadedColumns && uploadedColumns.length > 0 ? (
-                          <>
-                            <div className="px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider">
-                              Spreadsheet Columns ({uploadedColumns.length})
-                            </div>
-                            {uploadedColumns.map((col) => (
-                              <label
-                                key={col}
-                                className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                    <div className="absolute right-0 mt-2 w-64 bg-[var(--surface-elevated)] border border-[var(--surface-border)] rounded-xl shadow-2xl z-30 p-2.5 max-h-80 overflow-y-auto overscroll-contain space-y-1 text-xs">
+                      {uploadedColumns && uploadedColumns.length > 0 ? (
+                        <>
+                          <div className="flex items-center justify-between px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider border-b border-[var(--surface-border)] pb-1.5 mb-1">
+                            <span>
+                              Spreadsheet Columns ({selectedColumns.length}/{uploadedColumns.length}
+                              )
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={handleSelectAllColumns}
+                                className="text-brand-500 hover:text-brand-400 font-medium cursor-pointer text-[10px]"
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={columnVisibility[col] !== false}
-                                  onChange={() => toggleColumnVisibility(col)}
-                                  className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
-                                />
-                                <span
-                                  className="text-[var(--content-primary)] truncate max-w-[180px]"
-                                  title={col}
-                                >
-                                  {col}
-                                </span>
-                              </label>
-                            ))}
-                          </>
-                        ) : (
-                          <>
-                            <div className="px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider">
-                              Standard Columns
-                            </div>
-                            {[
-                              { id: 'name', label: 'Name' },
-                              { id: 'email', label: 'Email' },
-                              { id: 'company', label: 'Company' },
-                              { id: 'phone', label: 'Phone' },
-                              { id: 'website', label: 'Website' },
-                              { id: 'status', label: 'Status' },
-                            ].map((col) => (
-                              <label
-                                key={col.id}
-                                className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                                Select All
+                              </button>
+                              <span className="text-[var(--content-tertiary)]">·</span>
+                              <button
+                                type="button"
+                                onClick={handleClearAllColumns}
+                                className="text-[var(--content-tertiary)] hover:text-red-400 font-medium cursor-pointer text-[10px]"
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={isColVisible(col.id)}
-                                  onChange={() => toggleColumnVisibility(col.id)}
-                                  className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
-                                />
-                                <span className="text-[var(--content-primary)] font-medium">
-                                  {col.label}
-                                </span>
-                              </label>
-                            ))}
+                                Clear All
+                              </button>
+                            </div>
+                          </div>
+                          {uploadedColumns.map((col) => (
+                            <label
+                              key={col}
+                              className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedColumns.includes(col)}
+                                onChange={() => toggleColumn(col)}
+                                className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                              />
+                              <span
+                                className="text-[var(--content-primary)] truncate max-w-[180px]"
+                                title={col}
+                              >
+                                {col}
+                              </span>
+                            </label>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between px-2 py-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider border-b border-[var(--surface-border)] pb-1.5 mb-1">
+                            <span>Standard Columns ({selectedColumns.length})</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={handleSelectAllColumns}
+                                className="text-brand-500 hover:text-brand-400 font-medium cursor-pointer text-[10px]"
+                              >
+                                Select All
+                              </button>
+                              <span className="text-[var(--content-tertiary)]">·</span>
+                              <button
+                                type="button"
+                                onClick={handleClearAllColumns}
+                                className="text-[var(--content-tertiary)] hover:text-red-400 font-medium cursor-pointer text-[10px]"
+                              >
+                                Clear All
+                              </button>
+                            </div>
+                          </div>
+                          {[
+                            { id: 'name', label: 'Name' },
+                            { id: 'email', label: 'Email' },
+                            { id: 'company', label: 'Company' },
+                            { id: 'phone', label: 'Phone' },
+                            { id: 'website', label: 'Website' },
+                            { id: 'status', label: 'Status' },
+                          ].map((col) => (
+                            <label
+                              key={col.id}
+                              className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedColumns.includes(col.id)}
+                                onChange={() => toggleColumn(col.id)}
+                                className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                              />
+                              <span className="text-[var(--content-primary)] font-medium">
+                                {col.label}
+                              </span>
+                            </label>
+                          ))}
 
-                            {dynamicFieldKeys.length > 0 && (
-                              <>
-                                <div className="px-2 pt-2.5 pb-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider border-t border-[var(--surface-border)] mt-2">
-                                  Dynamic Columns ({dynamicFieldKeys.length})
-                                </div>
-                                {dynamicFieldKeys.map((key) => (
-                                  <label
-                                    key={key}
-                                    className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                          {dynamicFieldKeys.length > 0 && (
+                            <>
+                              <div className="px-2 pt-2.5 pb-1 font-semibold text-[var(--content-tertiary)] uppercase text-[10px] tracking-wider border-t border-[var(--surface-border)] mt-2">
+                                Dynamic Columns ({dynamicFieldKeys.length})
+                              </div>
+                              {dynamicFieldKeys.map((key) => (
+                                <label
+                                  key={key}
+                                  className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-[var(--surface-card)] rounded-lg cursor-pointer transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedColumns.includes(`custom_${key}`)}
+                                    onChange={() => toggleColumn(`custom_${key}`)}
+                                    className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+                                  />
+                                  <span
+                                    className="text-[var(--content-primary)] truncate"
+                                    title={key}
                                   >
-                                    <input
-                                      type="checkbox"
-                                      checked={isColVisible(`custom_${key}`)}
-                                      onChange={() => toggleColumnVisibility(`custom_${key}`)}
-                                      className="rounded border-[var(--surface-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
-                                    />
-                                    <span
-                                      className="text-[var(--content-primary)] truncate"
-                                      title={key}
-                                    >
-                                      {key}
-                                    </span>
-                                  </label>
-                                ))}
-                              </>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </>
+                                    {key}
+                                  </span>
+                                </label>
+                              ))}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1212,7 +1415,7 @@ export default function Leads() {
         onSuccess={(newImportHistoryId) => {
           fetchHistory();
           if (newImportHistoryId) {
-            setSelectedDatasetId(newImportHistoryId);
+            handleDatasetChange(newImportHistoryId);
           }
           fetchLeads();
         }}
