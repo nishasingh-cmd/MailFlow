@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Lead, LeadStatus, ImportHistory, ResearchProgressResponse } from '@mailflow/shared';
 import { leadService } from '../../services/lead.service';
 import { researchService } from '../../services/research.service';
@@ -84,7 +85,37 @@ interface LeadWithStatus extends Lead {
 export default function Leads() {
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'LEADS' | 'HISTORY' | 'RESEARCH'>('LEADS');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const rawTab = searchParams.get('tab')?.toUpperCase();
+  const activeTab: 'LEADS' | 'HISTORY' | 'RESEARCH' =
+    rawTab === 'HISTORY' || rawTab === 'RESEARCH' ? rawTab : 'LEADS';
+
+  const setActiveTab = useCallback(
+    (tab: 'LEADS' | 'HISTORY' | 'RESEARCH') => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (tab === 'LEADS') {
+            next.delete('tab');
+          } else {
+            next.set('tab', tab.toLowerCase());
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem('mailflow:leads-active-tab');
+    } catch {
+      // Ignore
+    }
+  }, []);
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState<number>(0);
@@ -266,20 +297,19 @@ export default function Leads() {
   }, [toast]);
 
   const fetchResearchLeads = useCallback(async () => {
+    if (!selectedDatasetId) return;
     setResearchLeadsLoading(true);
     try {
       const response = await leadService.getLeads({
-        sortBy: 'company',
-        sortOrder: 'asc',
+        importHistoryId: selectedDatasetId,
         limit: 100,
         page: 1,
       });
 
-      const withCompany = response.leads.filter((l) => l.company);
-      setResearchLeads(withCompany);
+      setResearchLeads(response.leads);
 
-      if (withCompany.length > 0) {
-        const statusList = await researchService.getBulkStatus(withCompany.map((l) => l.id));
+      if (response.leads.length > 0) {
+        const statusList = await researchService.getBulkStatus(response.leads.map((l) => l.id));
         const statusMap: Record<string, string | null> = {};
         statusList.forEach((s) => {
           statusMap[s.leadId] = s.researchStatus;
@@ -291,7 +321,7 @@ export default function Leads() {
     } finally {
       setResearchLeadsLoading(false);
     }
-  }, [toast]);
+  }, [selectedDatasetId, toast]);
 
   useEffect(() => {
     fetchHistory();
@@ -817,8 +847,9 @@ export default function Leads() {
       key: 'actions',
       header: 'Actions',
       align: 'right',
+      width: '220px',
       render: (lead) => (
-        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+        <div className="inline-flex items-center justify-end gap-2 whitespace-nowrap ml-auto">
           <div className="flex items-center gap-3 mr-1">
             <button
               type="button"
@@ -931,6 +962,7 @@ export default function Leads() {
     {
       key: 'company',
       header: 'Company',
+      width: '180px',
       render: (lead) => (
         <span className="text-sm font-medium text-[var(--content-primary)]">
           {lead.company || (
@@ -942,6 +974,7 @@ export default function Leads() {
     {
       key: 'research_status',
       header: 'Research Status',
+      width: '180px',
       render: (lead) => (
         <ResearchStatusBadge
           status={
@@ -954,8 +987,9 @@ export default function Leads() {
       key: 'actions',
       header: 'Actions',
       align: 'right',
+      width: '240px',
       render: (lead) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="inline-flex items-center justify-end gap-2 whitespace-nowrap ml-auto">
           <div className="flex items-center gap-3 mr-1">
             <button
               type="button"
@@ -997,7 +1031,12 @@ export default function Leads() {
               </svg>
             </button>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => handleOpenResearch(lead)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-[120px] justify-center"
+            onClick={() => handleOpenResearch(lead)}
+          >
             {researchStatuses[lead.id] === 'COMPLETED' ? 'View Research' : 'Research'}
           </Button>
         </div>
@@ -1361,30 +1400,33 @@ export default function Leads() {
 
         {activeTab === 'RESEARCH' && (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-brand-500/5 border border-brand-500/20 rounded-lg">
-              <div className="w-8 h-8 rounded-lg bg-brand-500/15 flex items-center justify-center shrink-0">
-                <svg
-                  className="w-4 h-4 text-brand-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {(importHistory.length > 0 || manualLeadsCount > 0) && (
+                  <Select
+                    options={[
+                      ...(manualLeadsCount > 0
+                        ? [
+                            {
+                              value: 'MANUAL',
+                              label: `Manual & Direct Leads (${manualLeadsCount})`,
+                            },
+                          ]
+                        : []),
+                      ...importHistory
+                        .filter((h) => h.importedCount > 0)
+                        .map((h) => ({
+                          value: h.id,
+                          label: `${h.fileName} (${h.importedCount})`,
+                        })),
+                    ]}
+                    value={selectedDatasetId}
+                    onChange={(val) => {
+                      handleDatasetChange(val);
+                    }}
+                    className="w-64"
                   />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--content-primary)]">
-                  AI Company Research
-                </p>
-                <p className="text-xs text-[var(--content-secondary)] mt-0.5">
-                  Automatically research company intelligence, pain points, and outreach
-                  opportunities using AI. Only leads with a company name can be researched.
-                </p>
+                )}
               </div>
             </div>
 
@@ -1403,7 +1445,7 @@ export default function Leads() {
               data={researchLeads}
               loading={researchLeadsLoading}
               keyExtractor={(item) => item.id}
-              emptyText="No leads with company names found. Import leads with company information to enable research."
+              emptyText="No leads found in this sheet. Import leads or select another sheet to view and research."
             />
           </div>
         )}

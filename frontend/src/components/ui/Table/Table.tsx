@@ -143,6 +143,7 @@ export function Table<T>({
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
+                      style={{ width: col.width }}
                       className={cn(
                         'px-5 py-4 text-[var(--content-primary)] align-middle whitespace-nowrap',
                         alignClasses[col.align ?? 'left']
