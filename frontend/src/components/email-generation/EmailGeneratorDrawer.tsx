@@ -16,7 +16,7 @@ import {
 import { researchService } from '../../services/research.service';
 import { emailGenerationService } from '../../services/email-generation.service';
 import { deliveryService } from '../../services/delivery.service';
-import { Drawer, Button, Card, Badge, Input, Textarea } from '../ui';
+import { Drawer, Button, Card, Input, Textarea } from '../ui';
 import { useToast } from '../../hooks/useToast';
 import { cn } from '../../utils/cn';
 
@@ -157,6 +157,7 @@ function EmailGeneratorDrawerInner({
     isGeneratingRef.current = true;
     setIsGenerating(true);
     const regenSeed = Date.now();
+    const currentSubject = subject.trim();
 
     try {
       const res: GeneratedEmailResult = await emailGenerationService.generateEmail({
@@ -164,6 +165,7 @@ function EmailGeneratorDrawerInner({
         template: selectedTpl,
         regenerate: isRegen,
         regenSeed,
+        selectedSubject: currentSubject || undefined,
         userContext: {
           userName: senderName,
           userCompany: senderCompany,
@@ -171,17 +173,31 @@ function EmailGeneratorDrawerInner({
         },
       });
 
-      const subjects = Array.isArray(res?.subjectSuggestions) ? res.subjectSuggestions : [];
-      const selectedSubj = res?.selectedSubject ?? subjects[0] ?? '';
-      const emailBody = res?.body ?? '';
+      const returnedSuggestions =
+        Array.isArray(res?.subjectSuggestions) && res.subjectSuggestions.length > 0
+          ? res.subjectSuggestions
+          : subjectSuggestions;
 
-      setSubjectSuggestions(subjects);
-      setSubject(selectedSubj);
-      setBody(emailBody);
+      // Preserve user's chosen subject: if currentSubject was set, keep it; otherwise use backend's selectedSubject or first suggestion
+      const chosenSubject = currentSubject || res?.selectedSubject || returnedSuggestions[0] || '';
+
+      // Build updated list: ensure chosenSubject is present in suggestions
+      let updatedSuggestions = [...returnedSuggestions];
+      if (chosenSubject && !updatedSuggestions.includes(chosenSubject)) {
+        if (subjectSuggestions.includes(chosenSubject)) {
+          updatedSuggestions = subjectSuggestions;
+        } else {
+          updatedSuggestions = [chosenSubject, ...updatedSuggestions];
+        }
+      }
+
+      setSubjectSuggestions(updatedSuggestions);
+      setSubject(chosenSubject);
+      setBody(res?.body ?? '');
 
       toast.success(
         isRegen
-          ? 'New AI email generated with fresh subjects & phrasing!'
+          ? 'Email regenerated successfully!'
           : 'AI Personalised Email generated successfully!'
       );
     } catch (err: unknown) {
@@ -290,7 +306,6 @@ function EmailGeneratorDrawerInner({
 
   const research = company?.research ?? null;
   const isResearchCompleted = research?.status === 'COMPLETED';
-  const painPoints = Array.isArray(research?.painPoints) ? (research!.painPoints as string[]) : [];
 
   return (
     <Drawer open={isOpen} onClose={onClose} title="AI Email Generator" width="w-[580px]">
@@ -329,55 +344,8 @@ function EmailGeneratorDrawerInner({
           </Card>
         )}
 
-        {!loadingCompany && isResearchCompleted && company && (
-          <Card
-            variant="default"
-            className="p-4 space-y-3 bg-[var(--surface-secondary)]/50 border-[var(--surface-border)]"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-black uppercase tracking-wider">
-                Intelligence Context (
-                {company.companyName || company.company?.name || companyName || 'Company'})
-              </h4>
-
-              <Badge
-                size="sm"
-                className="bg-[#5271ff]/15 text-[#5271ff] ring-[#5271ff]/30 font-semibold"
-              >
-                Research Ready
-              </Badge>
-            </div>
-
-            <p className="text-xs text-black leading-relaxed">
-              {research?.summary ??
-                research?.companyDescription ??
-                company.company?.description ??
-                'No summary available.'}
-            </p>
-
-            {painPoints.length > 0 && (
-              <div>
-                <span className="text-xs font-bold text-black block mb-1.5 uppercase tracking-wider">
-                  Key Pain Points:
-                </span>
-                <ul className="space-y-1.5 pl-1">
-                  {painPoints.slice(0, 3).map((pt, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-xs text-black font-medium">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1"
-                        aria-hidden="true"
-                      />
-                      <span className="text-black leading-snug">{pt}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Card>
-        )}
-
         <div className="space-y-2">
-          <label className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider block">
+          <label className="text-xs font-bold text-black uppercase tracking-wider block">
             Select Template
           </label>
           <div className="flex flex-wrap gap-2">
@@ -387,10 +355,10 @@ function EmailGeneratorDrawerInner({
                 type="button"
                 onClick={() => handleTemplateChange(tpl)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all border',
+                  'px-3 py-1.5 text-xs font-bold rounded-lg transition-all border',
                   template === tpl
-                    ? 'bg-brand-600 text-white border-brand-500 shadow-sm shadow-brand-500/20'
-                    : 'bg-[var(--surface-secondary)] text-[var(--content-secondary)] border-[var(--surface-border)] hover:bg-[var(--surface-tertiary)]'
+                    ? 'bg-brand-600 text-white border-brand-500 shadow-sm'
+                    : 'bg-slate-100 text-black border-slate-300 hover:bg-slate-200'
                 )}
               >
                 {tpl}
@@ -411,15 +379,15 @@ function EmailGeneratorDrawerInner({
           </Button>
 
           {body && (
-            <div className="flex bg-[var(--surface-secondary)] p-1 rounded-lg border border-[var(--surface-border)]">
+            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-300">
               <button
                 type="button"
                 onClick={() => setActiveTab('edit')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                  'px-3 py-1 text-xs font-bold rounded-md transition-colors',
                   activeTab === 'edit'
-                    ? 'bg-brand-500/20 text-brand-300'
-                    : 'text-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'text-black hover:bg-slate-200'
                 )}
               >
                 Edit
@@ -428,10 +396,10 @@ function EmailGeneratorDrawerInner({
                 type="button"
                 onClick={() => setActiveTab('preview')}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                  'px-3 py-1 text-xs font-bold rounded-md transition-colors',
                   activeTab === 'preview'
-                    ? 'bg-brand-500/20 text-brand-300'
-                    : 'text-[var(--content-tertiary)] hover:text-[var(--content-primary)]'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'text-black hover:bg-slate-200'
                 )}
               >
                 Preview
@@ -441,8 +409,8 @@ function EmailGeneratorDrawerInner({
         </div>
 
         {subjectSuggestions.length > 0 && (
-          <Card variant="default" className="p-4 space-y-2">
-            <h4 className="text-xs font-bold text-[var(--content-tertiary)] uppercase tracking-wider">
+          <Card variant="default" className="p-4 space-y-2 border-slate-200">
+            <h4 className="text-xs font-bold text-black uppercase tracking-wider">
               AI Subject Line Suggestions (Click to Select)
             </h4>
             <div className="space-y-1.5">
@@ -454,13 +422,13 @@ function EmailGeneratorDrawerInner({
                   className={cn(
                     'w-full text-left px-3 py-2 text-xs rounded-lg transition-all border flex items-center justify-between',
                     subject === subjOption
-                      ? 'bg-brand-500/15 border-brand-500/40 text-brand-200 font-semibold'
-                      : 'bg-[var(--surface-tertiary)]/50 border-[var(--surface-border)] text-[var(--content-secondary)] hover:bg-[var(--surface-tertiary)] hover:text-[var(--content-primary)]'
+                      ? 'bg-indigo-50 border-indigo-400 text-black font-bold shadow-sm'
+                      : 'bg-white border-slate-200 text-black font-semibold hover:bg-slate-50 hover:border-slate-300'
                   )}
                 >
-                  <span>{subjOption}</span>
+                  <span className="text-black font-semibold">{subjOption}</span>
                   {subject === subjOption && (
-                    <span className="text-brand-400 shrink-0">✓ Selected</span>
+                    <span className="text-black font-bold shrink-0">✓ Selected</span>
                   )}
                 </button>
               ))}
@@ -475,6 +443,7 @@ function EmailGeneratorDrawerInner({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="e.g. Quick idea for Canva"
+              className="text-black font-medium"
             />
             <Textarea
               label="Email Body"
@@ -482,46 +451,40 @@ function EmailGeneratorDrawerInner({
               onChange={(e) => setBody(e.target.value)}
               rows={12}
               placeholder="Generated personalized email body will appear here..."
-              className="font-mono text-xs leading-relaxed"
+              className="font-mono text-xs leading-relaxed text-black font-medium"
             />
           </div>
         ) : (
           <Card
             variant="default"
-            className="p-5 space-y-4 bg-[var(--surface-elevated)] border-[var(--surface-border)] rounded-xl shadow-elevation-1"
+            className="p-5 space-y-4 bg-white border-slate-200 rounded-xl shadow-elevation-1"
           >
-            <div className="border-b border-[var(--surface-border)] pb-3 space-y-1.5 text-xs text-[var(--content-secondary)]">
+            <div className="border-b border-slate-200 pb-3 space-y-1.5 text-xs text-black">
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-[var(--content-tertiary)]">From:</span>
-                <span className="text-[var(--content-primary)] font-medium">
+                <span className="w-16 font-bold text-black">From:</span>
+                <span className="text-black font-medium">
                   {senderName} &lt;you@mailflow.app&gt;
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-[var(--content-tertiary)]">To:</span>
-                <span className="text-[var(--content-primary)] font-medium">
+                <span className="w-16 font-bold text-black">To:</span>
+                <span className="text-black font-medium">
                   {leadName || 'Lead'} ({companyName || 'Company'})
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 font-semibold text-[var(--content-tertiary)]">Subject:</span>
-                <span className="text-brand-600 dark:text-brand-300 font-semibold">
-                  {subject || 'No Subject'}
-                </span>
+                <span className="w-16 font-bold text-black">Subject:</span>
+                <span className="text-black font-bold">{subject || 'No Subject'}</span>
               </div>
             </div>
 
-            <div className="text-xs text-[var(--content-primary)] whitespace-pre-wrap leading-relaxed min-h-[180px] font-sans">
-              {body || (
-                <span className="text-[var(--content-tertiary)] italic">
-                  No body content generated yet.
-                </span>
-              )}
+            <div className="text-xs text-black whitespace-pre-wrap leading-relaxed min-h-[180px] font-sans font-medium">
+              {body || <span className="text-black italic">No body content generated yet.</span>}
             </div>
 
-            <div className="border-t border-[var(--surface-border)] pt-3 text-xs text-[var(--content-tertiary)]">
-              <p className="font-semibold text-[var(--content-secondary)]">{senderName}</p>
-              <p>
+            <div className="border-t border-slate-200 pt-3 text-xs text-black">
+              <p className="font-bold text-black">{senderName}</p>
+              <p className="text-black font-medium">
                 {senderCompany} • {senderProduct}
               </p>
             </div>

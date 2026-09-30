@@ -26,7 +26,13 @@ export class EmailGenerationService {
     userId: string,
     req: GenerateEmailRequest
   ): Promise<GeneratedEmailResult> {
-    const { leadId, template = 'Cold Outreach', customInstructions, userContext } = req;
+    const {
+      leadId,
+      template = 'Cold Outreach',
+      customInstructions,
+      userContext,
+      selectedSubject,
+    } = req;
 
     // 1. Fetch Lead with company and direct lead research record (strict tenant isolation)
     const lead = await prisma.lead.findFirst({
@@ -155,6 +161,7 @@ export class EmailGenerationService {
         .join(' | '),
       regenerate: req.regenerate,
       regenSeed: req.regenSeed || Date.now(),
+      selectedSubject: selectedSubject?.trim() || undefined,
       userApiKey,
       userProvider,
       userContext: {

@@ -123,6 +123,16 @@ if ($beUrl) {
     Write-Host "  BACKEND  : URL not detected (see DEBUG above)" -ForegroundColor Red
 }
 
+if ($feUrl -and $beUrl) {
+    Write-Host ""
+    Write-Host "  --- Meta Developer Portal Checklist ---" -ForegroundColor Magenta
+    Write-Host "  1. App Settings > Basic: Privacy & Terms  : $feUrl/privacy | $feUrl/terms" -ForegroundColor DarkGray
+    Write-Host "  2. Login for Business > Allowed Domains  : $feUrl" -ForegroundColor DarkCyan
+    Write-Host "  3. WhatsApp > Embedded Signup Builder    : $feUrl" -ForegroundColor DarkCyan
+    Write-Host "  4. WhatsApp Webhook Callback URL         : $beUrl/api/whatsapp/webhook" -ForegroundColor DarkGreen
+    Write-Host "     WhatsApp Webhook Verify Token         : mailflow_verify_2026_x7k9" -ForegroundColor DarkGreen
+}
+
 Write-Host ""
 Write-Host "  Tunnels ALIVE. Press Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host "======================================================" -ForegroundColor Green

@@ -244,4 +244,38 @@ export class LeadsController {
       res.status(500).json({ error: 'Failed to fetch import history' });
     }
   }
+
+  /**
+   * Delete uploaded spreadsheet import and its exclusive leads
+   */
+  static async deleteImport(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { importId } = req.params;
+      const userId = req.user!.userId;
+
+      if (!importId || importId === 'MANUAL') {
+        res.status(400).json({
+          error: 'Manual and direct leads collection cannot be removed as a spreadsheet.',
+        });
+        return;
+      }
+
+      const result = await LeadsService.deleteImport(userId, importId);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === 'CANNOT_DELETE_MANUAL_LEADS') {
+        res.status(400).json({
+          error: 'Manual and direct leads collection cannot be removed as a spreadsheet.',
+        });
+        return;
+      }
+      if (err.message === 'IMPORT_NOT_FOUND') {
+        res.status(404).json({ error: 'Spreadsheet no longer exists.' });
+        return;
+      }
+      console.error('[leads.controller] Delete import error:', error);
+      res.status(500).json({ error: 'Unable to remove spreadsheet. Please try again.' });
+    }
+  }
 }

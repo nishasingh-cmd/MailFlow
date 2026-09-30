@@ -477,4 +477,54 @@ export class LeadsService {
       createdAt: h.createdAt.toISOString(),
     }));
   }
+
+  /**
+   * Delete uploaded spreadsheet import and its associated leads
+   */
+  static async deleteImport(userId: string, importId: string) {
+    if (!importId || importId === 'MANUAL') {
+      throw new Error('CANNOT_DELETE_MANUAL_LEADS');
+    }
+
+    const importRecord = await prisma.importHistory.findFirst({
+      where: { id: importId, userId },
+    });
+
+    if (!importRecord) {
+      throw new Error('IMPORT_NOT_FOUND');
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      // 1. Delete all leads belonging exclusively to this import
+      const deletedLeads = await tx.lead.deleteMany({
+        where: {
+          userId,
+          importHistoryId: importId,
+        },
+      });
+
+      // 2. Delete the import history record
+      await tx.importHistory.delete({
+        where: { id: importId },
+      });
+
+      // 3. Clear datasetId reference on any campaigns that were targeting this import
+      await tx.campaign.updateMany({
+        where: {
+          userId,
+          datasetId: importId,
+        },
+        data: {
+          datasetId: null,
+        },
+      });
+
+      return {
+        importId,
+        fileName: importRecord.fileName,
+        deletedLeadsCount: deletedLeads.count,
+        message: `Successfully removed spreadsheet "${importRecord.fileName}".`,
+      };
+    });
+  }
 }

@@ -11,6 +11,7 @@ import {
   UpdateLeadRequest,
   LeadQueryFilters,
   PaginatedLeadsResponse,
+  DeleteImportResponse,
 } from '@mailflow/shared';
 
 export const leadService = {
@@ -81,6 +82,11 @@ export const leadService = {
 
   async getImportHistory(): Promise<ImportHistory[]> {
     const { data } = await api.get<ImportHistory[]>('/leads/imports/history');
+    return data;
+  },
+
+  async deleteImport(importId: string): Promise<DeleteImportResponse> {
+    const { data } = await api.delete<DeleteImportResponse>(`/leads/imports/${importId}`);
     return data;
   },
 };

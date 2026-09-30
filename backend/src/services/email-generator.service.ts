@@ -235,7 +235,10 @@ export class EmailGeneratorService {
               `Growth initiatives for ${ctx.companyName}`,
             ];
 
-      let selectedSubject = parsed.selectedSubject || subjects[0];
+      let selectedSubject = ctx.selectedSubject || parsed.selectedSubject || subjects[0];
+      if (ctx.selectedSubject && !subjects.includes(ctx.selectedSubject)) {
+        subjects.unshift(ctx.selectedSubject);
+      }
 
       // Run Validation Layer
       const validation = EmailValidationService.validateEmailContent(selectedSubject, body, {
@@ -251,8 +254,10 @@ export class EmailGeneratorService {
 
       if (!validation.isValid) {
         console.warn(`[EmailGenerator] Validation violations detected:`, validation.violations);
-        if (validation.repairedBody && validation.repairedSubject) {
+        if (validation.repairedBody) {
           body = validation.repairedBody;
+        }
+        if (!ctx.selectedSubject && validation.repairedSubject) {
           selectedSubject = validation.repairedSubject;
         }
       }
@@ -299,26 +304,43 @@ export class EmailGeneratorService {
 
     // Grounded introductions based on actual research facts
     let intro = '';
-    if (primaryProduct && secondaryProduct) {
-      const intros = [
-        `I came across ${ctx.companyName}'s work across ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}. Given your focus in ${industryOrFocus}, I wanted to reach out directly.`,
-        `I was looking at ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()} across ${industryOrFocus}, and thought MailFlow could be relevant for your team.`,
-        `Given ${ctx.companyName}'s expertise in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}, I wanted to connect regarding your outbound outreach workflow.`,
-      ];
-      intro = intros[varIdx % intros.length];
-    } else if (primaryProduct) {
-      const intros = [
-        `I came across ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()}. Given your presence in ${industryOrFocus}, I wanted to reach out directly.`,
-        `I was reviewing ${ctx.companyName}'s capabilities in ${primaryProduct.toLowerCase()} and wanted to connect regarding your outreach initiatives.`,
-        `Given ${ctx.companyName}'s focus on ${primaryProduct.toLowerCase()} in ${industryOrFocus}, I thought MailFlow might be relevant for your team.`,
-      ];
-      intro = intros[varIdx % intros.length];
-    } else if (ctx.companySummary) {
-      // Use concise verified summary snippet
-      const cleanSummary = ctx.companySummary.replace(/\.$/, '').trim();
-      intro = `I came across ${ctx.companyName} and was reading about your work: "${cleanSummary}". I wanted to connect directly regarding keeping outbound outreach personalized.`;
-    } else {
-      intro = `I came across ${ctx.companyName}'s work in ${industryOrFocus} and wanted to connect directly regarding keeping outbound outreach personalized.`;
+    if (ctx.selectedSubject) {
+      const lower = ctx.selectedSubject.toLowerCase();
+      if (lower.includes('workflow')) {
+        intro = `Given ${ctx.companyName}'s work in ${primaryProduct ? primaryProduct.toLowerCase() : industryOrFocus}, I wanted to reach out regarding your outbound outreach workflow.`;
+      } else if (lower.includes('streamlining')) {
+        intro = `I was reviewing ${ctx.companyName}'s presence in ${industryOrFocus} and wanted to connect regarding streamlining your outreach operations.`;
+      } else if (lower.includes('growth')) {
+        intro = `I have been following ${ctx.companyName}'s growth in ${industryOrFocus} and wanted to connect regarding your outbound initiatives.`;
+      } else if (lower.includes('connecting')) {
+        intro = `I came across ${ctx.companyName}'s work in ${industryOrFocus} and wanted to connect directly regarding how MailFlow can support your team.`;
+      } else if (lower.includes('quick idea')) {
+        intro = `I wanted to reach out with a quick idea for ${ctx.companyName} around personalizing and automating your outbound outreach.`;
+      }
+    }
+
+    if (!intro) {
+      if (primaryProduct && secondaryProduct) {
+        const intros = [
+          `I came across ${ctx.companyName}'s work across ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}. Given your focus in ${industryOrFocus}, I wanted to reach out directly.`,
+          `I was looking at ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()} across ${industryOrFocus}, and thought MailFlow could be relevant for your team.`,
+          `Given ${ctx.companyName}'s expertise in ${primaryProduct.toLowerCase()} and ${secondaryProduct.toLowerCase()}, I wanted to connect regarding your outbound outreach workflow.`,
+        ];
+        intro = intros[varIdx % intros.length];
+      } else if (primaryProduct) {
+        const intros = [
+          `I came across ${ctx.companyName}'s work in ${primaryProduct.toLowerCase()}. Given your presence in ${industryOrFocus}, I wanted to reach out directly.`,
+          `I was reviewing ${ctx.companyName}'s capabilities in ${primaryProduct.toLowerCase()} and wanted to connect regarding your outreach initiatives.`,
+          `Given ${ctx.companyName}'s focus on ${primaryProduct.toLowerCase()} in ${industryOrFocus}, I thought MailFlow might be relevant for your team.`,
+        ];
+        intro = intros[varIdx % intros.length];
+      } else if (ctx.companySummary) {
+        // Use concise verified summary snippet
+        const cleanSummary = ctx.companySummary.replace(/\.$/, '').trim();
+        intro = `I came across ${ctx.companyName} and was reading about your work: "${cleanSummary}". I wanted to connect directly regarding keeping outbound outreach personalized.`;
+      } else {
+        intro = `I came across ${ctx.companyName}'s work in ${industryOrFocus} and wanted to connect directly regarding keeping outbound outreach personalized.`;
+      }
     }
 
     // Template specific adjustments
@@ -364,8 +386,13 @@ export class EmailGeneratorService {
       `Growth initiatives for ${ctx.companyName}`,
     ];
 
+    const chosenSubject = ctx.selectedSubject || subjects[0];
+    if (ctx.selectedSubject && !subjects.includes(ctx.selectedSubject)) {
+      subjects.unshift(ctx.selectedSubject);
+    }
+
     // Double-check with validation layer
-    const validation = EmailValidationService.validateEmailContent(subjects[0], body, {
+    const validation = EmailValidationService.validateEmailContent(chosenSubject, body, {
       leadId: ctx.leadId || '',
       leadName: ctx.leadName,
       companyName: ctx.companyName,
@@ -377,7 +404,7 @@ export class EmailGeneratorService {
     });
 
     const finalBody = validation.repairedBody || body;
-    const finalSubject = validation.repairedSubject || subjects[0];
+    const finalSubject = ctx.selectedSubject || validation.repairedSubject || chosenSubject;
 
     const sections: GeneratedEmailSections = {
       greeting,

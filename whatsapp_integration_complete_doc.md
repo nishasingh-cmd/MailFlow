@@ -463,6 +463,27 @@ Required for high-volume messaging and removing sandbox restrictions.
 
 ---
 
+## 🔄 Cloudflare Tunnel Restart Checklist (Development / Testing)
+
+Whenever you restart `npm run tunnel` and receive new Cloudflare subdomain URLs, refer to the full guide in [project-documentation/META_PORTAL_TUNNEL_CHECKLIST.md](file:///c:/Users/nisha/OneDrive/Desktop/MailFlow/project-documentation/META_PORTAL_TUNNEL_CHECKLIST.md):
+
+1. **App Settings → Basic**:
+   - Privacy Policy URL: `https://<frontend-tunnel-url>/privacy`
+   - Terms of Service URL: `https://<frontend-tunnel-url>/terms`
+   - User Data Deletion URL: `https://<frontend-tunnel-url>/privacy`
+   - App Domains: `trycloudflare.com` (can stay permanent)
+2. **Facebook Login for Business → Settings**:
+   - Valid OAuth Redirect URIs: `https://<frontend-tunnel-url>/`, `/whatsapp`, `/settings`
+   - Allowed Domains for the JavaScript SDK: `https://<frontend-tunnel-url>`
+3. **WhatsApp → Embedded Signup Builder → Manage Domains**:
+   - Add Domain / Allowed Domains: `https://<frontend-tunnel-url>`
+4. **WhatsApp → Configuration → Webhook**:
+   - Callback URL: `https://<backend-tunnel-url>/api/whatsapp/webhook`
+   - Verify Token: `mailflow_verify_2026_x7k9`
+   - Subscriptions: `messages`, `message_template_status_update`
+
+---
+
 ## Known Limitations
 
 | Limitation | Cause | Fix |

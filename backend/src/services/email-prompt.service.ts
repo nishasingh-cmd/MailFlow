@@ -26,6 +26,7 @@ export interface PromptContext {
   userContext?: UserOutreachContext;
   regenerate?: boolean;
   regenSeed?: number;
+  selectedSubject?: string;
   userApiKey?: string | null;
   userProvider?: 'OPENAI' | 'GEMINI' | null;
 }
@@ -50,12 +51,16 @@ export class EmailPromptService {
       : `- Helping ${ctx.companyName} engage prospects with tailored outreach`;
 
     const regenNotice = ctx.regenerate
-      ? `\nREGENERATION NOTICE (Seed: ${ctx.regenSeed || Date.now()}):\nGenerate a distinct variation with a fresh subject line and phrasing while adhering 100% to the verified facts.\n`
+      ? `\nREGENERATION NOTICE (Seed: ${ctx.regenSeed || Date.now()}):\nGenerate a distinct variation with fresh phrasing while adhering 100% to the verified facts.\n`
+      : '';
+
+    const selectedSubjectNotice = ctx.selectedSubject
+      ? `\nUSER PREFERRED SUBJECT:\nThe user explicitly selected the subject line: "${ctx.selectedSubject}".\nWrite the email body specifically aligned with this subject. In your JSON response, set "selectedSubject" to "${ctx.selectedSubject}" and ensure it is included among "subjectSuggestions".\n`
       : '';
 
     return `You are generating ONE personalized B2B outreach email for ONE specific lead.
 The supplied lead and lead-specific research are the single source of truth.
-${regenNotice}
+${regenNotice}${selectedSubjectNotice}
 ==================================================
 VERIFIED LEAD & COMPANY RESEARCH (SOURCE OF TRUTH)
 ==================================================

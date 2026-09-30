@@ -167,6 +167,14 @@ export default function Leads() {
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
+  // Spreadsheet Deletion Modal State
+  const [sheetToDelete, setSheetToDelete] = useState<{
+    id: string;
+    fileName: string;
+    importedCount: number;
+  } | null>(null);
+  const [isDeletingSheet, setIsDeletingSheet] = useState(false);
+
   const [selectedLeadDetail, setSelectedLeadDetail] = useState<
     (Lead & { importHistory?: ImportHistory | null }) | null
   >(null);
@@ -402,6 +410,49 @@ export default function Leads() {
       toast.error(errorObj.response?.data?.error ?? 'Failed to delete lead.');
     } finally {
       setIsDeletingLead(false);
+    }
+  };
+
+  const confirmDeleteSheet = async () => {
+    if (!sheetToDelete) return;
+    setIsDeletingSheet(true);
+    const targetId = sheetToDelete.id;
+    const targetName = sheetToDelete.fileName;
+    try {
+      const res = await leadService.deleteImport(targetId);
+      toast.success(res.message || `Spreadsheet "${targetName}" removed successfully.`);
+
+      // Clean up column selection and cached available columns for this sheet only
+      try {
+        localStorage.removeItem(getColumnStorageKey(targetId));
+        localStorage.removeItem(getAvailableColumnsStorageKey(targetId));
+      } catch {
+        // Ignore storage error
+      }
+
+      const remainingHistory = importHistory.filter((h) => h.id !== targetId);
+      setImportHistory(remainingHistory);
+
+      // If the deleted sheet was selected, safely update to next available sheet or MANUAL
+      if (selectedDatasetId === targetId) {
+        let nextDatasetId = 'MANUAL';
+        if (remainingHistory.length > 0) {
+          nextDatasetId = remainingHistory[0].id;
+        } else {
+          nextDatasetId = 'MANUAL';
+        }
+        handleDatasetChange(nextDatasetId);
+      }
+
+      setSheetToDelete(null);
+      await fetchHistory();
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        errorObj.response?.data?.error ?? 'Unable to remove spreadsheet. Please try again.'
+      );
+    } finally {
+      setIsDeletingSheet(false);
     }
   };
 
@@ -1044,6 +1095,33 @@ export default function Leads() {
     },
   ];
 
+  const datasetSelectOptions = useMemo(() => {
+    return [
+      ...(manualLeadsCount > 0
+        ? [
+            {
+              value: 'MANUAL',
+              label: `Manual & Direct Leads (${manualLeadsCount})`,
+            },
+          ]
+        : []),
+      ...importHistory
+        .filter((h) => h.importedCount > 0)
+        .map((h) => ({
+          value: h.id,
+          label: `${h.fileName} (${h.importedCount})`,
+          deleteTooltip: `Remove "${h.fileName}"`,
+          onDelete: () => {
+            setSheetToDelete({
+              id: h.id,
+              fileName: h.fileName,
+              importedCount: h.importedCount,
+            });
+          },
+        })),
+    ];
+  }, [manualLeadsCount, importHistory]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1143,22 +1221,7 @@ export default function Leads() {
               <div className="flex items-center gap-3">
                 {(importHistory.length > 0 || manualLeadsCount > 0) && (
                   <Select
-                    options={[
-                      ...(manualLeadsCount > 0
-                        ? [
-                            {
-                              value: 'MANUAL',
-                              label: `Manual & Direct Leads (${manualLeadsCount})`,
-                            },
-                          ]
-                        : []),
-                      ...importHistory
-                        .filter((h) => h.importedCount > 0)
-                        .map((h) => ({
-                          value: h.id,
-                          label: `${h.fileName} (${h.importedCount})`,
-                        })),
-                    ]}
+                    options={datasetSelectOptions}
                     value={selectedDatasetId}
                     onChange={(val) => {
                       handleDatasetChange(val);
@@ -1404,22 +1467,7 @@ export default function Leads() {
               <div className="flex items-center gap-3">
                 {(importHistory.length > 0 || manualLeadsCount > 0) && (
                   <Select
-                    options={[
-                      ...(manualLeadsCount > 0
-                        ? [
-                            {
-                              value: 'MANUAL',
-                              label: `Manual & Direct Leads (${manualLeadsCount})`,
-                            },
-                          ]
-                        : []),
-                      ...importHistory
-                        .filter((h) => h.importedCount > 0)
-                        .map((h) => ({
-                          value: h.id,
-                          label: `${h.fileName} (${h.importedCount})`,
-                        })),
-                    ]}
+                    options={datasetSelectOptions}
                     value={selectedDatasetId}
                     onChange={(val) => {
                       handleDatasetChange(val);
@@ -1589,6 +1637,29 @@ export default function Leads() {
         onConfirm={confirmBulkDelete}
         onCancel={() => {
           if (!isBulkDeleting) setBulkDeleteModalOpen(false);
+        }}
+      />
+
+      {/* Delete Spreadsheet Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!sheetToDelete}
+        title="Remove Spreadsheet?"
+        description={
+          <span>
+            You are about to remove{' '}
+            <strong className="text-[var(--content-primary)] font-semibold">
+              &quot;{sheetToDelete?.fileName}&quot;
+            </strong>{' '}
+            and its imported leads ({sheetToDelete?.importedCount ?? 0}) from MailFlow. This action
+            cannot be undone.
+          </span>
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        loading={isDeletingSheet}
+        onConfirm={confirmDeleteSheet}
+        onCancel={() => {
+          if (!isDeletingSheet) setSheetToDelete(null);
         }}
       />
     </div>

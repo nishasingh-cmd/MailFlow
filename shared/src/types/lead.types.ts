@@ -32,6 +32,13 @@ export interface ImportHistory {
   createdAt: string;
 }
 
+export interface DeleteImportResponse {
+  importId: string;
+  fileName: string;
+  deletedLeadsCount: number;
+  message: string;
+}
+
 export interface ColumnMapping {
   name?: string;
   email?: string;
@@ -282,6 +289,7 @@ export interface GenerateEmailRequest {
   userContext?: UserOutreachContext;
   regenerate?: boolean;
   regenSeed?: number;
+  selectedSubject?: string;
 }
 
 export interface GeneratedEmailSections {

@@ -30,6 +30,7 @@ router.post('/validate-mapping', upload.single('file'), LeadsController.validate
 router.post('/import', LeadsController.importLeads);
 
 router.get('/imports/history', LeadsController.getImportHistory);
+router.delete('/imports/:importId', LeadsController.deleteImport);
 
 router.post('/bulk-delete', LeadsController.bulkDelete);
 
