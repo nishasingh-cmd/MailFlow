@@ -87,7 +87,7 @@ export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsA
 
   const handleConnect = () => {
     if (!otpConfirmed || isConnecting) return;
-    launch();
+    launch(selected);
   };
 
   if (!open) return null;
@@ -233,11 +233,11 @@ export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsA
             </label>
           </div>
 
-          {/* Error Banner in Black Border Box */}
+          {/* Error Banner in Red */}
           {error && (
-            <div className="rounded-xl border-2 border-black bg-white dark:bg-zinc-900 p-3.5 flex items-start gap-3 shadow-sm animate-in fade-in">
+            <div className="rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3.5 flex items-start gap-3 shadow-sm animate-in fade-in">
               <svg
-                className="w-4 h-4 text-black dark:text-white shrink-0 mt-0.5"
+                className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -250,10 +250,10 @@ export function ConnectWhatsAppModal({ open, onClose, onSuccess }: ConnectWhatsA
                 />
               </svg>
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
+                <p className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wider">
                   Meta OAuth Error
                 </p>
-                <div className="text-xs text-black dark:text-zinc-200 leading-relaxed font-medium">
+                <div className="text-xs text-red-600 dark:text-red-300 leading-relaxed font-medium">
                   {toEnglishError(error)}
                 </div>
               </div>

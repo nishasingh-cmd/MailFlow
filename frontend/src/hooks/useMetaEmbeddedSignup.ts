@@ -96,6 +96,8 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
   });
 }
 
+export type OnboardingNumberType = 'new' | 'active';
+
 export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) => void) {
   const [state, setState] = useState<EmbeddedSignupState>({
     status: 'idle',
@@ -109,139 +111,145 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
     setState((prev) => ({ ...prev, status, error }));
   }, []);
 
-  const launch = useCallback(async () => {
-    if (processingRef.current) return;
-    processingRef.current = true;
-
-    try {
-      setStatus('loading_sdk');
-      let appId: string;
-      let configId: string;
-      let graphApiVersion: string;
+  const launch = useCallback(
+    async (onboardingType: OnboardingNumberType = 'new') => {
+      if (processingRef.current) return;
+      processingRef.current = true;
 
       try {
-        const sdkConfig = await whatsappService.initConnect();
-        appId = sdkConfig.appId;
-        configId = sdkConfig.configId;
-        graphApiVersion = sdkConfig.graphApiVersion;
-      } catch (err) {
-        const msg = (err as Error).message || 'Unable to retrieve WhatsApp App configuration.';
-        setStatus('error', msg);
-        return;
-      }
+        setStatus('loading_sdk');
+        let appId: string;
+        let configId: string;
+        let graphApiVersion: string;
 
-      if (!appId || !configId) {
-        setStatus(
-          'error',
-          'WhatsApp App ID or Config ID is not configured on the server. Please add WHATSAPP_APP_ID and WHATSAPP_CONFIG_ID to your .env file.'
-        );
-        return;
-      }
-
-      try {
-        await loadFacebookSDK(appId, graphApiVersion);
-      } catch {
-        setStatus('error', 'Failed to load Facebook SDK. Please check your internet connection.');
-        return;
-      }
-
-      setStatus('signing_up');
-
-      let metaWabaId: string | undefined;
-      let metaPhoneId: string | undefined;
-
-      const messageHandler = (event: MessageEvent) => {
-        if (event.origin && event.origin.includes('facebook.com')) {
-          try {
-            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-            if (data?.type === 'WA_EMBEDDED_SIGNUP' || data?.event === 'WA_EMBEDDED_SIGNUP') {
-              const info = data.data || data.event_data;
-              if (info) {
-                metaWabaId = info.waba_id || info.wabaId;
-                metaPhoneId = info.phone_number_id || info.phoneNumberId;
-              }
-            }
-          } catch {
-            // ignore non-json messages
-          }
+        try {
+          const sdkConfig = await whatsappService.initConnect();
+          appId = sdkConfig.appId;
+          configId = sdkConfig.configId;
+          graphApiVersion = sdkConfig.graphApiVersion;
+        } catch (err) {
+          const msg = (err as Error).message || 'Unable to retrieve WhatsApp App configuration.';
+          setStatus('error', msg);
+          return;
         }
-      };
 
-      window.addEventListener('message', messageHandler);
-
-      try {
-        await new Promise<void>((resolve, reject) => {
-          window.FB.login(
-            (response: FacebookLoginResponse) => {
-              (async () => {
-                try {
-                  const auth = response.authResponse;
-                  if (response.status === 'connected' && (auth?.code || auth?.accessToken)) {
-                    setStatus('processing');
-
-                    const result = await whatsappService.handleCallback({
-                      code: auth.code,
-                      accessToken: auth.accessToken,
-                      wabaId: metaWabaId,
-                      phoneNumberId: metaPhoneId,
-                      redirectUri: window.location.href,
-                    });
-
-                    setState({
-                      status: 'connected',
-                      error: null,
-                      config: result.config,
-                    });
-
-                    onSuccess?.(result.config);
-                    resolve();
-                  } else if (response.status === 'not_authorized') {
-                    reject(
-                      new Error(
-                        'WhatsApp Business permissions were not granted. Please allow the required permissions to connect.'
-                      )
-                    );
-                  } else {
-                    reject(new Error('Connection cancelled. Please try again.'));
-                  }
-                } catch (callbackErr: unknown) {
-                  const axiosErr = callbackErr as {
-                    response?: { data?: { error?: string } };
-                    message?: string;
-                  };
-                  const msg =
-                    axiosErr.response?.data?.error ||
-                    axiosErr.message ||
-                    'Failed to complete WhatsApp connection.';
-                  reject(new Error(msg));
-                }
-              })();
-            },
-            {
-              config_id: configId,
-              response_type: 'code',
-              override_default_response_type: true,
-              extras: {
-                version: 'v4',
-                sessionInfoVersion: '3',
-              },
-            }
+        if (!appId || !configId) {
+          setStatus(
+            'error',
+            'WhatsApp App ID or Config ID is not configured on the server. Please add WHATSAPP_APP_ID and WHATSAPP_CONFIG_ID to your .env file.'
           );
-        });
+          return;
+        }
+
+        try {
+          await loadFacebookSDK(appId, graphApiVersion);
+        } catch {
+          setStatus('error', 'Failed to load Facebook SDK. Please check your internet connection.');
+          return;
+        }
+
+        setStatus('signing_up');
+
+        let metaWabaId: string | undefined;
+        let metaPhoneId: string | undefined;
+
+        const messageHandler = (event: MessageEvent) => {
+          if (event.origin && event.origin.includes('facebook.com')) {
+            try {
+              const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+              if (data?.type === 'WA_EMBEDDED_SIGNUP' || data?.event === 'WA_EMBEDDED_SIGNUP') {
+                const info = data.data || data.event_data;
+                if (info) {
+                  metaWabaId = info.waba_id || info.wabaId;
+                  metaPhoneId = info.phone_number_id || info.phoneNumberId;
+                }
+              }
+            } catch {
+              // ignore non-json messages
+            }
+          }
+        };
+
+        window.addEventListener('message', messageHandler);
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            window.FB.login(
+              (response: FacebookLoginResponse) => {
+                (async () => {
+                  try {
+                    const auth = response.authResponse;
+                    if (response.status === 'connected' && (auth?.code || auth?.accessToken)) {
+                      setStatus('processing');
+
+                      const result = await whatsappService.handleCallback({
+                        code: auth.code,
+                        accessToken: auth.accessToken,
+                        wabaId: metaWabaId,
+                        phoneNumberId: metaPhoneId,
+                        redirectUri: window.location.href,
+                      });
+
+                      setState({
+                        status: 'connected',
+                        error: null,
+                        config: result.config,
+                      });
+
+                      onSuccess?.(result.config);
+                      resolve();
+                    } else if (response.status === 'not_authorized') {
+                      reject(
+                        new Error(
+                          'WhatsApp Business permissions were not granted. Please allow the required permissions to connect.'
+                        )
+                      );
+                    } else {
+                      reject(new Error('Connection cancelled. Please try again.'));
+                    }
+                  } catch (callbackErr: unknown) {
+                    const axiosErr = callbackErr as {
+                      response?: { data?: { error?: string } };
+                      message?: string;
+                    };
+                    const msg =
+                      axiosErr.response?.data?.error ||
+                      axiosErr.message ||
+                      'Failed to complete WhatsApp connection.';
+                    reject(new Error(msg));
+                  }
+                })();
+              },
+              {
+                config_id: configId,
+                response_type: 'code',
+                override_default_response_type: true,
+                extras: {
+                  version: 'v4',
+                  sessionInfoVersion: '3',
+                  ...(onboardingType === 'active' && {
+                    featureType: 'whatsapp_business_app_onboarding',
+                  }),
+                },
+              }
+            );
+          });
+        } finally {
+          window.removeEventListener('message', messageHandler);
+        }
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
+        const message =
+          axiosErr.response?.data?.error ||
+          axiosErr.message ||
+          'An unexpected error occurred. Please try again.';
+        setStatus('error', message);
       } finally {
-        window.removeEventListener('message', messageHandler);
+        processingRef.current = false;
       }
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
-      const message =
-        axiosErr.response?.data?.error ||
-        axiosErr.message ||
-        'An unexpected error occurred. Please try again.';
-      setStatus('error', message);
-    } finally {
-      processingRef.current = false;
-    }
-  }, [onSuccess, setStatus]);
+    },
+    [onSuccess, setStatus]
+  );
 
   const reset = useCallback(() => {
     setState({ status: 'idle', error: null, config: null });
