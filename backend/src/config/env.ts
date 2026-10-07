@@ -33,6 +33,7 @@ export const env = {
   WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET ?? '',
   WHATSAPP_APP_ID: process.env.WHATSAPP_APP_ID ?? '',
   WHATSAPP_CONFIG_ID: process.env.WHATSAPP_CONFIG_ID ?? '',
+  WHATSAPP_CONFIG_ID_ACTIVE: process.env.WHATSAPP_CONFIG_ID_ACTIVE ?? '',
   WHATSAPP_REDIRECT_URI: process.env.WHATSAPP_REDIRECT_URI ?? '',
   WHATSAPP_DEFAULT_TEMPLATE_NAME: process.env.WHATSAPP_DEFAULT_TEMPLATE_NAME ?? 'cold_outreach',
   FRONTEND_URL: (process.env.FRONTEND_URL ?? 'https://localhost:5173').replace(

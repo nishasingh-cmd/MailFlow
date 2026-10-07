@@ -24,11 +24,13 @@ export class WhatsappOnboardingController {
 
   /**
    * POST /api/whatsapp/connect
-   * Returns Meta App ID and SDK config needed for frontend to open the Embedded Signup popup
+   * Returns Meta App ID and SDK config needed for frontend to open the Embedded Signup popup.
+   * Body: { onboardingType?: 'new' | 'active' }
    */
-  static async initConnect(_req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async initConnect(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const config = await WhatsappOnboardingService.initConnect();
+      const onboardingType = (req.body?.onboardingType as 'new' | 'active') || 'new';
+      const config = await WhatsappOnboardingService.initConnect(onboardingType);
       res.status(200).json({ success: true, data: config });
     } catch (error: unknown) {
       const err = error as Error;

@@ -52,11 +52,57 @@ const sdkCallbacks: Array<() => void> = [];
 
 function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    // ── Fast path: already fully initialised ──────────────────────────────
     if (sdkLoaded && window.FB) {
       resolve();
       return;
     }
 
+    // ── Recovery path: window.FB exists but our flag is stale (e.g. HMR) ─
+    if (window.FB) {
+      try {
+        window.FB.init({
+          appId,
+          autoLogAppEvents: true,
+          xfbml: false,
+          version: graphVersion,
+        });
+      } catch {
+        // FB.init is idempotent in practice; swallow duplicate-init errors
+      }
+      sdkLoaded = true;
+      sdkLoading = false;
+      resolve();
+      return;
+    }
+
+    // ── Script already in DOM but fbAsyncInit not yet fired ───────────────
+    if (document.getElementById('facebook-jssdk')) {
+      sdkCallbacks.push(resolve);
+      // Poll until FB appears (max 15 s)
+      const deadline = Date.now() + 15_000;
+      const poll = setInterval(() => {
+        if (window.FB) {
+          clearInterval(poll);
+          sdkLoaded = true;
+          sdkLoading = false;
+          const cbs = sdkCallbacks.splice(0);
+          cbs.forEach((cb) => cb());
+        } else if (Date.now() > deadline) {
+          clearInterval(poll);
+          sdkLoading = false;
+          sdkCallbacks.length = 0;
+          reject(
+            new Error(
+              'Facebook SDK is taking too long to load. Please refresh the page and try again.'
+            )
+          );
+        }
+      }, 200);
+      return;
+    }
+
+    // ── Normal path: first load ───────────────────────────────────────────
     if (sdkLoading) {
       sdkCallbacks.push(resolve);
       return;
@@ -65,7 +111,21 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
     sdkLoading = true;
     sdkCallbacks.push(resolve);
 
+    // Hard timeout — never leave the user stuck on "Loading Meta SDK…"
+    const timeoutId = setTimeout(() => {
+      if (!sdkLoaded) {
+        sdkLoading = false;
+        sdkCallbacks.length = 0;
+        reject(
+          new Error(
+            'Facebook SDK failed to load within 15 seconds. Check your internet connection and try again.'
+          )
+        );
+      }
+    }, 15_000);
+
     window.fbAsyncInit = () => {
+      clearTimeout(timeoutId);
       window.FB.init({
         appId,
         autoLogAppEvents: true,
@@ -87,12 +147,19 @@ function loadFacebookSDK(appId: string, graphVersion: string): Promise<void> {
     script.defer = true;
     script.crossOrigin = 'anonymous';
     script.onerror = () => {
+      clearTimeout(timeoutId);
       sdkLoading = false;
+      sdkCallbacks.length = 0;
       reject(new Error('Failed to load Facebook SDK. Please check your internet connection.'));
     };
 
+    // Insert before first existing script, or fall back to <head>
     const firstScript = document.getElementsByTagName('script')[0];
-    firstScript?.parentNode?.insertBefore(script, firstScript);
+    if (firstScript?.parentNode) {
+      firstScript.parentNode.insertBefore(script, firstScript);
+    } else {
+      document.head.appendChild(script);
+    }
   });
 }
 
@@ -123,7 +190,7 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
         let graphApiVersion: string;
 
         try {
-          const sdkConfig = await whatsappService.initConnect();
+          const sdkConfig = await whatsappService.initConnect(onboardingType);
           appId = sdkConfig.appId;
           configId = sdkConfig.configId;
           graphApiVersion = sdkConfig.graphApiVersion;
@@ -254,6 +321,11 @@ export function useMetaEmbeddedSignup(onSuccess?: (config: WhatsappConfigData) =
   const reset = useCallback(() => {
     setState({ status: 'idle', error: null, config: null });
     processingRef.current = false;
+    // Reset SDK loading flags so a fresh attempt can be made if the user
+    // re-opens the modal after a failed or cancelled attempt.
+    sdkLoaded = false;
+    sdkLoading = false;
+    sdkCallbacks.length = 0;
   }, []);
 
   return { ...state, launch, reset };

@@ -270,18 +270,29 @@ export class WhatsappOnboardingService {
 
   /**
    * POST /api/whatsapp/connect
-   * Returns Meta App config needed for the frontend to initialise the FB SDK
+   * Returns Meta App config needed for the frontend to initialise the FB SDK.
+   * @param onboardingType 'new' = register a new number; 'active' = migrate an
+   *   existing WhatsApp Business App number. When 'active', the dedicated
+   *   WHATSAPP_CONFIG_ID_ACTIVE is used if configured (it must enable the
+   *   "WhatsApp Business App onboarding" flow in Meta App Dashboard).
    */
-  static async initConnect(): Promise<{
+  static async initConnect(onboardingType: 'new' | 'active' = 'new'): Promise<{
     appId: string;
     configId: string;
     graphApiVersion: string;
   }> {
     if (!env.WHATSAPP_APP_ID) throw new Error('WHATSAPP_APP_ID is not configured.');
     if (!env.WHATSAPP_CONFIG_ID) throw new Error('WHATSAPP_CONFIG_ID is not configured.');
+
+    // Use a separate config for migrating an existing active number if provided
+    const configId =
+      onboardingType === 'active' && env.WHATSAPP_CONFIG_ID_ACTIVE
+        ? env.WHATSAPP_CONFIG_ID_ACTIVE
+        : env.WHATSAPP_CONFIG_ID;
+
     return {
       appId: env.WHATSAPP_APP_ID,
-      configId: env.WHATSAPP_CONFIG_ID,
+      configId,
       graphApiVersion: env.WHATSAPP_GRAPH_API_VERSION || 'v25.0',
     };
   }

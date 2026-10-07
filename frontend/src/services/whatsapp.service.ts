@@ -216,9 +216,13 @@ export const whatsappService = {
     return envelope.data;
   },
 
-  async initConnect(): Promise<WhatsappConnectInitResponse> {
-    const { data: envelope } =
-      await api.post<ApiEnvelope<WhatsappConnectInitResponse>>('/whatsapp/connect');
+  async initConnect(
+    onboardingType: 'new' | 'active' = 'new'
+  ): Promise<WhatsappConnectInitResponse> {
+    const { data: envelope } = await api.post<ApiEnvelope<WhatsappConnectInitResponse>>(
+      '/whatsapp/connect',
+      { onboardingType }
+    );
     return envelope.data;
   },
 
